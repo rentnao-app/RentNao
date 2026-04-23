@@ -1,0 +1,21 @@
+{
+  "name": "bkash",
+  "version": "1.0.0",
+  "description": "Sandbox simulation server for bKash payments API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "test": "echo \"No tests configured yet\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "morgan": "^1.10.1",
+    "uuid": "^13.0.0"
+  }
+}

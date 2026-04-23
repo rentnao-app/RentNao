@@ -1,0 +1,620 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Added Role Enum
+enum UserRole {
+  TENANT
+  OWNER
+  ADMIN
+}
+
+enum OnboardingStatus {
+  AUTH_PENDING
+  PROFILE_PENDING
+  COMPLETED
+}
+
+enum KycVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VerificationSubmissionStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum DocumentVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum IdentityDocumentType {
+  NATIONAL_ID
+  BIRTH_REGISTRATION
+  PROOF_OF_OWNERSHIP
+}
+
+enum IdentifierType {
+  EMAIL
+  PHONE
+}
+
+enum OAuthProvider {
+  GOOGLE
+  FACEBOOK
+}
+
+enum VerificationTokenType {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  PASSWORD_RESET
+  MAGIC_LINK
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum FamilyStatus {
+  FAMILY
+  BACHELOR
+}
+
+enum TenantType {
+  FAMILY
+  BACHELOR
+  BOTH
+}
+
+enum PropertyCategory {
+  RESIDENTIAL
+  COMMERCIAL
+}
+
+enum PropertyType {
+  APARTMENT
+}
+
+enum AreaName {
+  DHANMONDI
+  GULSHAN
+  BANANI
+  UTTARA
+  MIRPUR
+  MOHAMMADPUR
+  BASHUNDHARA
+  BADDA
+}
+
+enum BuildingFacing {
+  EAST
+  WEST
+  NORTH
+  SOUTH
+}
+
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  PENDING_PAYMENT
+  RENTED
+  UNLISTED
+  EXPIRED
+}
+
+enum RentalRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum IncomeRange {
+  BELOW_20K
+  RANGE_20K_40K
+  RANGE_40K_60K
+  RANGE_60K_100K
+  RANGE_100K_200K
+  ABOVE_200K
+}
+
+enum EmploymentStatus {
+  EMPLOYED
+  SELF_EMPLOYED
+  UNEMPLOYED
+  STUDENT
+  RETIRED
+}
+
+enum JobCategory {
+  TECHNOLOGY
+  HEALTHCARE
+  EDUCATION
+  FINANCE
+  CONSTRUCTION
+  HOSPITALITY
+  RETAIL
+  GOVERNMENT
+  SELF_EMPLOYED
+  OTHER
+}
+
+enum WalletStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum WalletTxnDirection {
+  CREDIT
+  DEBIT
+}
+
+enum WalletTxnType {
+  TOPUP
+  LISTING_FEE
+  REFUND
+  ADJUSTMENT
+  REVERSAL
+}
+
+enum WalletTxnStatus {
+  PENDING
+  POSTED
+  FAILED
+  REVERSED
+}
+
+enum TopupProvider {
+  BKASH
+}
+
+enum TopupStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+}
+
+enum ChargeStatus {
+  PENDING
+  SETTLED
+  FAILED
+  VOID
+}
+
+model User {
+  user_id           String           @id @default(cuid())
+  role              UserRole         @default(TENANT)
+  onboarding_status OnboardingStatus @default(AUTH_PENDING)
+
+  // Contact info (populated after verification)
+  contact_email String? @unique
+  contact_phone String? @unique
+
+  // KYC verification (document-based)
+  kyc_verification_status KycVerificationStatus @default(PENDING)
+
+  // Metadata
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?  @updatedAt @db.Timestamptz(6)
+  deleted_at    DateTime? @db.Timestamptz(6)
+  is_active     Boolean   @default(true)
+  last_login_at DateTime? @db.Timestamptz(6)
+
+  // Relations
+  credentials              Credentials[]
+  oauth_accounts           OAuthAccount[]
+  base_profile             BaseUserProfile?
+  owner_profile            OwnerProfile?
+  tenant_profile           TenantProfile?
+  wallet_account           WalletAccount?
+  charges                  Charge[]
+  listing_unlocks          ListingUnlock[]
+  identity_documents       UserIdentityDocument[]
+  verification_submissions VerificationSubmission?
+  rental_requests_as_tenant RentalRequest[] @relation("RentalRequestsTenant")
+  notifications            Notification[]
+}
+
+model Credentials {
+  id      String @id @default(cuid())
+  user_id String
+
+  identifier      String
+  identifier_type IdentifierType
+  password_hash   String
+
+  verified_at DateTime? @db.Timestamptz(6)
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+
+  @@unique([identifier_type, identifier])
+  @@index([user_id])
+  @@index([identifier])
+}
+
+model OAuthAccount {
+  id      String @id @default(cuid())
+  user_id String
+
+  provider         OAuthProvider
+  provider_user_id String
+
+  email String?
+
+  // OAuth tokens
+  access_token     String?   @db.Text
+  refresh_token    String?   @db.Text
+  token_expires_at DateTime? @db.Timestamptz(6)
+  token_type       String?
+  scope            String?
+  id_token         String?   @db.Text
+
+  verified_at DateTime @default(now()) @db.Timestamptz(6)
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+
+  @@unique([provider, provider_user_id])
+  @@index([user_id])
+  @@index([email])
+}
+
+model BaseUserProfile {
+  id      String @id @default(cuid())
+  user_id String @unique
+
+  // Personal info
+  first_name    String?
+  last_name     String?
+  date_of_birth DateTime?    @db.Date
+  gender        Gender?
+  religion      String?
+  profession    String?
+  job_category  JobCategory?
+
+  profile_picture_path String?
+
+  // Location
+  current_lat  Float?
+  current_lng  Float?
+  current_area String?
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+}
+
+model OwnerProfile {
+  owner_id    String  @id @default(cuid())
+  user_id     String  @unique
+  owner_score Decimal @default(0)
+
+  // Owner preferences
+  owner_category PropertyCategory?
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user       User       @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  properties Property[]
+}
+
+model TenantProfile {
+  tenant_id String @id @default(cuid())
+  user_id   String @unique
+
+  // Tenant-specific fields
+  income_range      IncomeRange?
+  employment_status EmploymentStatus?
+  tenant_score      Decimal?          @default(0)
+  family_status     FamilyStatus?
+  family_size       Int?
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user            User            @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  wishlist_items  Wishlist[]
+}
+
+model Property {
+  property_id    String   @id @default(cuid())
+  owner_id       String
+  property_type  PropertyType @default(APARTMENT)
+  property_size_sqft Decimal
+  room_count     Decimal
+  bathroom_count Decimal
+  balcony_count  Int     @default(0)
+  area_name      AreaName
+  exact_lat      Float
+  exact_lng      Float
+
+  // Property details
+  title       String
+  description String @db.Text
+  address     String
+
+  // Building features
+  building_floors    Int
+  building_facing    BuildingFacing
+  has_lift           Boolean         @default(false)
+  has_generator      Boolean         @default(false)
+  has_security_guard Boolean         @default(false)
+
+  // Property preferences
+  intended_tenant_type TenantType
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  owner    OwnerProfile    @relation(fields: [owner_id], references: [owner_id], onDelete: Restrict)
+  listings Listing[]
+  images   PropertyImage[]
+
+  @@index([owner_id])
+}
+
+model WalletAccount {
+  id                String        @id @default(cuid())
+  user_id           String        @unique
+  status            WalletStatus  @default(ACTIVE)
+  currency          String        @default("BDT")
+  available_balance Decimal       @default(0)
+  created_at        DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?     @updatedAt @db.Timestamptz(6)
+
+  user              User              @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  transactions      WalletTransaction[]
+  topup_requests    WalletTopupRequest[]
+
+  @@index([status])
+}
+
+model WalletTransaction {
+  id                String            @id @default(cuid())
+  wallet_account_id String
+  direction         WalletTxnDirection
+  type              WalletTxnType
+  status            WalletTxnStatus   @default(PENDING)
+  amount            Decimal
+  currency          String            @default("BDT")
+  reference_type    String?
+  reference_id      String?
+  description       String?
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  posted_at         DateTime?         @db.Timestamptz(6)
+
+  wallet_account    WalletAccount     @relation(fields: [wallet_account_id], references: [id], onDelete: Restrict)
+
+  @@index([wallet_account_id, created_at])
+  @@index([reference_type, reference_id])
+  @@index([status, created_at])
+}
+
+model FeePolicy {
+  id            String   @id @default(cuid())
+  code          String
+  version       Int
+  name          String
+  currency      String   @default("BDT")
+  base_amount   Decimal
+  is_active     Boolean  @default(true)
+  effective_from DateTime @db.Timestamptz(6)
+  effective_to  DateTime? @db.Timestamptz(6)
+  created_by    String?
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  charges       Charge[]
+
+  @@unique([code, version])
+  @@index([code])
+  @@index([is_active, effective_from])
+}
+
+model Charge {
+  id                String       @id @default(cuid())
+  user_id           String
+  fee_policy_id     String
+  reference_type    String
+  reference_id      String
+  currency          String       @default("BDT")
+  base_amount       Decimal
+  final_amount      Decimal
+  status            ChargeStatus @default(PENDING)
+  failure_reason    String?
+  created_at        DateTime     @default(now()) @db.Timestamptz(6)
+  settled_at        DateTime?    @db.Timestamptz(6)
+  updated_at        DateTime?    @updatedAt @db.Timestamptz(6)
+
+  user              User         @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  fee_policy        FeePolicy    @relation(fields: [fee_policy_id], references: [id], onDelete: Restrict)
+
+  @@index([user_id, created_at])
+  @@index([reference_type, reference_id])
+  @@index([status, created_at])
+}
+
+model WalletTopupRequest {
+  id                 String        @id @default(cuid())
+  wallet_account_id  String
+  provider           TopupProvider @default(BKASH)
+  status             TopupStatus   @default(PENDING)
+  requested_amount   Decimal
+  currency           String        @default("BDT")
+  external_request_id String        @unique
+  external_payment_id String?
+  external_trx_id    String?
+  provider_payload   Json?
+  failure_reason     String?
+  expires_at         DateTime?     @db.Timestamptz(6)
+  completed_at       DateTime?     @db.Timestamptz(6)
+  created_at         DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?     @updatedAt @db.Timestamptz(6)
+
+  wallet_account     WalletAccount  @relation(fields: [wallet_account_id], references: [id], onDelete: Restrict)
+
+  @@index([wallet_account_id, created_at])
+  @@index([status, created_at])
+}
+
+model Listing {
+  listing_id         String        @id @default(cuid())
+  property_id        String
+  rent               Decimal
+  listing_start_date DateTime      @db.Timestamptz(6)
+  listing_end_date   DateTime?     @db.Timestamptz(6)
+  listing_status     ListingStatus @default(DRAFT)
+  view_count         Int           @default(0)
+  created_at         DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?      @updatedAt @db.Timestamptz(6)
+
+  property        Property        @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
+  listing_unlocks ListingUnlock[]
+  wishlist_items  Wishlist[]
+  rental_requests RentalRequest[]
+
+  @@index([property_id])
+  @@index([listing_status, listing_start_date])
+}
+
+model ListingUnlock {
+  id             String   @id @default(cuid())
+  listing_id     String
+  tenant_user_id String
+  charge_id      String?
+  unlocked_at    DateTime @default(now()) @db.Timestamptz(6)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  listing         Listing  @relation(fields: [listing_id], references: [listing_id], onDelete: Restrict)
+  tenant_user     User     @relation(fields: [tenant_user_id], references: [user_id], onDelete: Restrict)
+
+  @@unique([listing_id, tenant_user_id])
+  @@index([listing_id])
+  @@index([tenant_user_id, unlocked_at])
+}
+
+model Wishlist {
+  tenant_id  String
+  listing_id String
+  added_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant  TenantProfile @relation(fields: [tenant_id], references: [tenant_id], onDelete: Restrict)
+  listing Listing       @relation(fields: [listing_id], references: [listing_id], onDelete: Restrict)
+
+  @@id([tenant_id, listing_id])
+}
+
+model RentalRequest {
+  rental_request_id String              @id @default(cuid())
+  listing_id         String
+  tenant_user_id     String
+  status             RentalRequestStatus @default(PENDING)
+  message            String?             @db.Text
+  created_at         DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?           @updatedAt @db.Timestamptz(6)
+
+  listing Listing @relation(fields: [listing_id], references: [listing_id], onDelete: Cascade)
+  tenant  User    @relation("RentalRequestsTenant", fields: [tenant_user_id], references: [user_id], onDelete: Restrict)
+
+  @@index([listing_id])
+  @@index([tenant_user_id])
+  @@index([status])
+}
+
+model Notification {
+  notification_id String   @id @default(cuid())
+  user_id         String
+  title           String
+  message         String   @db.Text
+  data            Json?
+  is_read         Boolean  @default(false)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([user_id, created_at])
+  @@index([user_id, is_read])
+}
+
+model VerificationSubmission {
+  id                  String                       @id @default(cuid())
+  user_id             String                       @unique
+  submission_status   VerificationSubmissionStatus @default(DRAFT)
+  submitted_at        DateTime?                    @db.Timestamptz(6)
+  reviewed_at         DateTime?                    @db.Timestamptz(6)
+  reviewed_by         String?                      // admin userId
+  rejection_reason    String?
+  created_at          DateTime                     @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?                    @updatedAt @db.Timestamptz(6)
+
+  user                User                         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  identity_documents  UserIdentityDocument[]
+
+  @@index([user_id])
+  @@index([submission_status])
+  @@index([submitted_at])
+}
+
+model UserIdentityDocument {
+  id                    String                    @id @default(cuid())
+  user_id               String
+  submission_id         String?
+  document_type         IdentityDocumentType
+  document_number       String?
+  file_path             String?
+  file_name             String?
+  mime_type             String?
+  file_size_bytes       Int?
+  verification_status   DocumentVerificationStatus @default(PENDING)
+  rejection_reason      String?
+  uploaded_at           DateTime                  @default(now()) @db.Timestamptz(6)
+  reviewed_at           DateTime?                 @db.Timestamptz(6)
+  reviewed_by           String?                   // admin userId
+  created_at            DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?                 @updatedAt @db.Timestamptz(6)
+
+  user                  User                      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  submission            VerificationSubmission?   @relation(fields: [submission_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id])
+  @@index([submission_id])
+  @@index([document_type])
+  @@index([verification_status])
+}
+
+model PropertyImage {
+  image_id    String @id @default(cuid())
+  property_id String
+
+  // Supabase storage fields
+  storage_path String
+  file_name    String
+  file_size    Int?
+  mime_type    String?
+
+  // Display configuration
+  display_order Int     @default(0)
+  is_primary    Boolean @default(false)
+  alt_text      String?
+
+  uploaded_at DateTime @default(now()) @db.Timestamptz(6)
+
+  property Property @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
+
+  @@index([property_id])
+  @@index([property_id, display_order])
+}

@@ -1,0 +1,22 @@
+@import 'leaflet/dist/leaflet.css';
+@plugin "daisyui";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Bear Sans';
+  src: local('Bear Sans'), local('BEAR SANS'), local('BearSans');
+  font-style: normal;
+  font-weight: 100 900;
+}
+
+@layer base {
+  html {
+    font-family: 'Bear Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  body, button, input, select, textarea {
+    font-family: inherit;
+  }
+}
