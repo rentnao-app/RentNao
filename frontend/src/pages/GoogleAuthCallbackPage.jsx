@@ -1,6 +1,12 @@
 import { useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getApiUrl, setAuthSession } from '../lib/api';
+import {
+  clipPhoneInput,
+  isValidBdMobileLocal11,
+  rememberSignupPhoneLocal11,
+  toLocal11Digits,
+} from '../lib/phone';
 
 function getDashboardPath(role) {
   if (role === 'ADMIN') return '/admin-dashboard';
@@ -49,7 +55,15 @@ export default function GoogleAuthCallbackPage() {
           const onboardingStatus = data.user?.onboardingStatus;
           const shouldGoToRegistration =
             onboardingStatus === 'PROFILE_PENDING' || onboardingStatus === 'PENDING';
-          const target = shouldGoToRegistration ? getRegistrationPath(role) : getDashboardPath(role);
+          let target = shouldGoToRegistration ? getRegistrationPath(role) : getDashboardPath(role);
+          if (shouldGoToRegistration) {
+            const raw = data.user?.contactPhone || data.user?.contact_phone || '';
+            const local11 = toLocal11Digits(clipPhoneInput(raw));
+            if (local11 && isValidBdMobileLocal11(local11)) {
+              rememberSignupPhoneLocal11(local11);
+              target += `?phone=${encodeURIComponent(local11)}`;
+            }
+          }
           window.location.href = target;
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Exchange failed';

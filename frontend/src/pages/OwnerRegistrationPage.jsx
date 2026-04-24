@@ -1,23 +1,56 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch, getCurrentUser, splitName } from '../lib/api';
+import {
+  clearPendingSignupPhone,
+  clipPhoneInput,
+  consumeSignupPhoneLocal11,
+  digitsOnly,
+  isValidBdMobileLocal11,
+  local11ToAfter880,
+  toLocal11Digits,
+} from '../lib/phone';
 
-const CONTACT_OPTIONS = [
-  { value: 'phone', label: 'Phone' },
-  { value: 'email', label: 'Email' },
-  { value: 'both', label: 'Both' },
+/** Matches backend `createOwnerProfileSchema` / Prisma `AreaName`-style areas for UX */
+const LOCATION_OPTIONS = [
+  'Dhanmondi',
+  'Gulshan',
+  'Banani',
+  'Uttara',
+  'Mirpur',
+  'Mohammadpur',
+  'Bashundhara',
+  'Badda',
 ];
 
-const PROPERTY_FOCUS_OPTIONS = [
-  { value: 'residential', label: 'Residential' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'both', label: 'Both' },
+const RELIGION_OPTIONS = ['Islam', 'Hinduism', 'Christianity', 'Buddhism', 'Other'];
+
+const PROFESSION_OPTIONS = [
+  'Property Owner',
+  'Real Estate / Broker',
+  'Business',
+  'Engineer',
+  'Doctor',
+  'Lawyer',
+  'Government Service',
+  'Teacher',
+  'Finance / Banking',
+  'Retired',
+  'Other',
 ];
 
-const EXPERIENCE_OPTIONS = [
-  { value: 'first-time', label: 'First-time Owner' },
-  { value: 'experienced', label: 'Experienced' },
-  { value: 'professional', label: 'Professional Landlord' },
+/** Backend `JobCategory` enum */
+const JOB_CATEGORY_OPTIONS = [
+  { value: 'TECHNOLOGY', label: 'Technology' },
+  { value: 'HEALTHCARE', label: 'Healthcare' },
+  { value: 'EDUCATION', label: 'Education' },
+  { value: 'FINANCE', label: 'Finance' },
+  { value: 'CONSTRUCTION', label: 'Construction' },
+  { value: 'HOSPITALITY', label: 'Hospitality' },
+  { value: 'RETAIL', label: 'Retail' },
+  { value: 'GOVERNMENT', label: 'Government' },
+  { value: 'SELF_EMPLOYED', label: 'Self-employed' },
+  { value: 'OTHER', label: 'Other' },
 ];
 
 const SIDE_IMAGE = '/side-image.jpg';
@@ -37,16 +70,38 @@ function StepItem({ number, label, active }) {
   );
 }
 
+function Icon({ children }) {
+  return <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600">{children}</span>;
+}
+
 export default function OwnerRegistrationPage() {
+  const [searchParams] = useSearchParams();
+
   const [form, setForm] = useState({
     fullName: '',
-    phoneNumber: '',
-    preferredContact: '',
-    propertyFocus: '',
-    experienceLevel: '',
+    phoneAfter880: '',
+    dateOfBirth: '',
+    gender: 'male',
+    religion: '',
+    profession: '',
+    jobCategory: '',
+    currentLocation: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fromQuery = searchParams.get('phone');
+    if (fromQuery) clearPendingSignupPhone();
+    const fromSession = fromQuery ? '' : consumeSignupPhoneLocal11();
+    const user = getCurrentUser();
+    const fromUser = user?.contactPhone || user?.contact_phone || '';
+    const raw = fromQuery || fromSession || fromUser;
+    const local11 = toLocal11Digits(clipPhoneInput(raw));
+    if (!local11 || !isValidBdMobileLocal11(local11)) return;
+    const after = local11ToAfter880(local11);
+    setForm((prev) => ({ ...prev, phoneAfter880: after }));
+  }, [searchParams]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -64,8 +119,32 @@ export default function OwnerRegistrationPage() {
         return;
       }
 
+      const suffix = digitsOnly(form.phoneAfter880);
+      if (!/^1[3-9]\d{8}$/.test(suffix)) {
+        setError(
+          'Enter the 10 digits after +880 (e.g. 1712345678). Your full number must be a valid 01… mobile.'
+        );
+        return;
+      }
+
+      if (!form.dateOfBirth) {
+        setError('Please select your date of birth.');
+        return;
+      }
+      if (!form.religion || !form.profession || !form.jobCategory || !form.currentLocation) {
+        setError('Please complete all required fields.');
+        return;
+      }
+
       const { firstName, lastName } = splitName(form.fullName);
-      const ownerCategory = form.propertyFocus === 'commercial' ? 'COMMERCIAL' : 'RESIDENTIAL';
+      if (!firstName || firstName.length < 2) {
+        setError('Please enter your full name (at least 2 characters for your first name).');
+        return;
+      }
+
+      const ownerCategory = 'RESIDENTIAL';
+
+      const mapGender = { male: 'MALE', female: 'FEMALE', other: 'OTHER' };
 
       const ownerRes = await apiFetch(`/users/${currentUser.userId}/profile`, {
         method: 'POST',
@@ -73,15 +152,15 @@ export default function OwnerRegistrationPage() {
         body: JSON.stringify({
           firstName,
           lastName,
-          dateOfBirth: '1990-01-01',
-          gender: 'OTHER',
-          religion: 'Not specified',
-          profession: 'Property Owner',
-          jobCategory: 'OTHER',
+          dateOfBirth: form.dateOfBirth,
+          gender: mapGender[form.gender] || 'OTHER',
+          religion: form.religion,
+          profession: form.profession,
+          jobCategory: form.jobCategory,
           profilePhotoUrl: 'https://example.com/profile.jpg',
           currentLat: 23.8103,
           currentLng: 90.4125,
-          currentArea: 'Dhaka',
+          currentArea: form.currentLocation,
           ownerCategory,
           role: 'OWNER',
         }),
@@ -89,7 +168,7 @@ export default function OwnerRegistrationPage() {
 
       if (!ownerRes.ok) {
         const data = await ownerRes.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to create owner profile');
+        throw new Error(data.error || data.message || 'Failed to create owner profile');
       }
 
       window.location.href = '/verification?role=OWNER';
@@ -106,7 +185,6 @@ export default function OwnerRegistrationPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f7f5]">
-      {/* UPDATED HEADER */}
       <header className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
@@ -115,10 +193,18 @@ export default function OwnerRegistrationPage() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-            <Link to="/" className="text-gray-700 hover:text-emerald-700 transition">Home</Link>
-            <Link to="/listings" className="text-gray-700 hover:text-emerald-700 transition">Find Property</Link>
-            <Link to="/owner-dashboard/create-listing" className="text-gray-700 hover:text-emerald-700 transition">List Property</Link>
-            <Link to="/services" className="text-gray-700 hover:text-emerald-700 transition">Services</Link>
+            <Link to="/" className="text-gray-700 hover:text-emerald-700 transition">
+              Home
+            </Link>
+            <Link to="/listings" className="text-gray-700 hover:text-emerald-700 transition">
+              Find Property
+            </Link>
+            <Link to="/owner-dashboard/create-listing" className="text-gray-700 hover:text-emerald-700 transition">
+              List Property
+            </Link>
+            <Link to="/services" className="text-gray-700 hover:text-emerald-700 transition">
+              Services
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -139,12 +225,12 @@ export default function OwnerRegistrationPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-6">
-          {/* Left panel */}
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-10">
           <aside className="rounded-3xl bg-gradient-to-b from-[#eef8f1] to-[#e2f2e8] border border-emerald-100 p-5 shadow-sm">
-            <h2 className="text-4xl font-extrabold leading-tight text-emerald-900">Create Your Owner Profile</h2>
+            <h2 className="text-4xl font-extrabold leading-tight text-emerald-900">Create your owner profile</h2>
             <p className="mt-4 text-emerald-700 text-lg">
-              Share a few details to complete your owner onboarding quickly.
+              We collect the same core profile details as for tenants, plus how you plan to use RentNao—so verification
+              and matching stay accurate.
             </p>
 
             <div className="mt-6 grid grid-cols-3 gap-2">
@@ -154,25 +240,23 @@ export default function OwnerRegistrationPage() {
                     <path d="M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z" />
                   </svg>
                 </div>
-                <p className="text-[11px] font-semibold text-gray-700">List Properties</p>
+                <p className="text-[11px] font-semibold text-gray-700">List properties</p>
               </div>
-
               <div className="bg-white/80 border border-emerald-100 rounded-xl p-2 text-center">
                 <div className="text-emerald-700 mb-1 flex justify-center">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-6 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
                   </svg>
                 </div>
-                <p className="text-[11px] font-semibold text-gray-700">Talk to Tenants</p>
+                <p className="text-[11px] font-semibold text-gray-700">Talk to tenants</p>
               </div>
-
               <div className="bg-white/80 border border-emerald-100 rounded-xl p-2 text-center">
                 <div className="text-emerald-700 mb-1 flex justify-center">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5z" />
                   </svg>
                 </div>
-                <p className="text-[11px] font-semibold text-gray-700">Safe & Secure</p>
+                <p className="text-[11px] font-semibold text-gray-700">Verified onboarding</p>
               </div>
             </div>
 
@@ -181,10 +265,9 @@ export default function OwnerRegistrationPage() {
             </div>
           </aside>
 
-          {/* Right panel */}
           <section className="rounded-3xl bg-white border border-gray-100 shadow-[0_10px_28px_rgba(15,23,42,0.08)] p-5 sm:p-7">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-emerald-800 tracking-tight">Owner Information</h1>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-emerald-800 tracking-tight">Owner information</h1>
               <div className="flex items-center gap-4">
                 <StepItem number={1} label="Details" active />
                 <span className="text-gray-300">—</span>
@@ -193,66 +276,155 @@ export default function OwnerRegistrationPage() {
             </div>
 
             {error && (
-              <div className="mb-5 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
-                {error}
-              </div>
+              <div className="mb-5 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">{error}</div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <p className="text-sm text-gray-600 border-b border-gray-100 pb-4">
+                Complete your details so we can verify your account and match you with tenants.
+              </p>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                 <div className="md:col-span-2">
-                  <label className={labelClass}>Full Name</label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={form.fullName}
-                    onChange={handleChange}
-                    className={inputClass}
-                    placeholder="Enter your full name"
-                    required
-                  />
+                  <label className={labelClass}>Full name</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={form.fullName}
+                      onChange={handleChange}
+                      className={inputClass}
+                      placeholder="As on your NID / documents"
+                      required
+                    />
+                    <Icon>
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.42 0-8 2.01-8 4.5V21h16v-2.5C20 16.01 16.42 14 12 14z" />
+                      </svg>
+                    </Icon>
+                  </div>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Phone Number</label>
-                  <input
-                    type="tel"
-                    name="phoneNumber"
-                    value={form.phoneNumber}
-                    onChange={handleChange}
-                    className={inputClass}
-                    placeholder="+880..."
-                  />
+                  <label className={labelClass}>Mobile number</label>
+                  <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="px-3 bg-gray-50 border-r border-gray-200 flex items-center text-sm text-gray-600">+880</div>
+                    <input
+                      type="tel"
+                      name="phoneAfter880"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      value={form.phoneAfter880}
+                      onChange={(e) => {
+                        const d = digitsOnly(e.target.value).slice(0, 10);
+                        setForm((prev) => ({ ...prev, phoneAfter880: d }));
+                      }}
+                      className="w-full px-3 py-3 text-sm outline-none"
+                      placeholder="1712345678"
+                      required
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">10 digits after +880 (same mobile you used to sign up).</p>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Preferred Contact Method</label>
-                  <select name="preferredContact" value={form.preferredContact} onChange={handleChange} className={inputClass}>
-                    <option value="">Select</option>
-                    {CONTACT_OPTIONS.map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
+                  <label className={labelClass}>Date of birth</label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      name="dateOfBirth"
+                      value={form.dateOfBirth}
+                      onChange={handleChange}
+                      className={inputClass}
+                      required
+                    />
+                    <Icon>
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7 2h2v2h6V2h2v2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3V2zm13 8H4v10h16V10z" />
+                      </svg>
+                    </Icon>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Gender</label>
+                  <div className="flex items-center gap-5 h-[50px] rounded-xl border border-gray-200 px-3">
+                    {['male', 'female', 'other'].map((g) => (
+                      <label key={g} className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="gender"
+                          value={g}
+                          checked={form.gender === g}
+                          onChange={handleChange}
+                          className="accent-emerald-700"
+                        />
+                        <span className="capitalize">{g}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Religion</label>
+                  <select name="religion" value={form.religion} onChange={handleChange} className={inputClass} required>
+                    <option value="">Select religion</option>
+                    {RELIGION_OPTIONS.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Property Focus</label>
-                  <select name="propertyFocus" value={form.propertyFocus} onChange={handleChange} className={inputClass}>
-                    <option value="">Select</option>
-                    {PROPERTY_FOCUS_OPTIONS.map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
+                  <label className={labelClass}>Profession</label>
+                  <select name="profession" value={form.profession} onChange={handleChange} className={inputClass} required>
+                    <option value="">Select profession</option>
+                    {PROFESSION_OPTIONS.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Experience Level</label>
-                  <select name="experienceLevel" value={form.experienceLevel} onChange={handleChange} className={inputClass}>
-                    <option value="">Select</option>
-                    {EXPERIENCE_OPTIONS.map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
+                  <label className={labelClass}>Job category</label>
+                  <select name="jobCategory" value={form.jobCategory} onChange={handleChange} className={inputClass} required>
+                    <option value="">Select category</option>
+                    {JOB_CATEGORY_OPTIONS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
                     ))}
                   </select>
+                  <p className="mt-1 text-xs text-gray-500">Used for analytics; pick the closest match.</p>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Primary area (current)</label>
+                  <div className="relative">
+                    <select
+                      name="currentLocation"
+                      value={form.currentLocation}
+                      onChange={handleChange}
+                      className={inputClass}
+                      required
+                    >
+                      <option value="">Where are you based?</option>
+                      {LOCATION_OPTIONS.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                    <Icon>
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z" />
+                      </svg>
+                    </Icon>
+                  </div>
                 </div>
               </div>
 
@@ -273,10 +445,10 @@ export default function OwnerRegistrationPage() {
               </div>
 
               <p className="text-sm text-emerald-700 flex items-center gap-2">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5z" />
                 </svg>
-                Your information is safe and secure
+                Your information is safe and secure. Next: upload owner verification documents (NID + proof of ownership).
               </p>
             </form>
           </section>

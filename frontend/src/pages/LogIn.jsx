@@ -2,9 +2,18 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch, getApiErrorMessage, setAuthSession } from '../lib/api';
 import GoogleAuthButton from '../components/GoogleAuthButton';
+import {
+  clipPhoneInput,
+  isValidBdMobileLocal11,
+  normalizeBdPhoneForApi,
+  toLocal11Digits,
+} from '../lib/phone';
+
+const PHONE_HINT =
+  'Use your 11-digit mobile starting with 01 (e.g. 01712345678). Third digit must be 3–9.';
 
 export default function LogIn() {
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -16,12 +25,26 @@ export default function LogIn() {
     setError('');
     setSuccess('');
 
+    const local11 = toLocal11Digits(clipPhoneInput(phone));
+    if (!isValidBdMobileLocal11(local11)) {
+      setError(PHONE_HINT);
+      setLoading(false);
+      return;
+    }
+
+    const forApi = normalizeBdPhoneForApi(local11);
+    if (!forApi) {
+      setError(PHONE_HINT);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await apiFetch('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          identifier: email,
+          identifier: forApi,
           password,
         }),
       });
@@ -44,7 +67,7 @@ export default function LogIn() {
       }
 
       setSuccess('Login successful! Redirecting...');
-      setEmail('');
+      setPhone('');
       setPassword('');
 
       setTimeout(() => {
@@ -84,7 +107,7 @@ export default function LogIn() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-            <p className="text-gray-500">Log in to access your dashboard</p>
+            <p className="text-gray-500">Log in with your mobile number or Google</p>
           </div>
 
           {error && (
@@ -102,17 +125,18 @@ export default function LogIn() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
             <form onSubmit={handleLogIn} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mobile number</label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(clipPhoneInput(e.target.value))}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                  placeholder="user@example.com"
+                  placeholder="01XXXXXXXXX"
                   required
                 />
+                <p className="mt-1.5 text-xs text-gray-500">{PHONE_HINT}</p>
               </div>
 
               <div>
@@ -159,9 +183,9 @@ export default function LogIn() {
             </Link>
           </p>
           <p className="mt-2 text-center text-gray-500 text-sm">
-            Need to verify email or mobile?{' '}
-            <Link to="/auth-verification" className="text-teal-700 hover:text-teal-800 font-semibold">
-              Verify Now
+            Need to verify your mobile?{' '}
+            <Link to="/auth-verification?type=PHONE" className="text-teal-700 hover:text-teal-800 font-semibold">
+              Verify now
             </Link>
           </p>
           <p className="mt-3 text-center text-xs font-medium tracking-wide text-gray-500 uppercase">
@@ -172,4 +196,3 @@ export default function LogIn() {
     </div>
   );
 }
-

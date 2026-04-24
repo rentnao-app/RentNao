@@ -43,13 +43,6 @@ const headerNav = [
   { to: '/signup', label: 'Sign Up', emphasize: true },
 ];
 
-const footerNav = [
-  { to: '/about', label: 'About' },
-  { to: '/terms', label: 'Terms' },
-  { to: '/faq', label: 'FAQ' },
-  { to: '/service', label: 'Services' },
-];
-
 function navLinkClass(emphasize) {
   if (emphasize) {
     return 'font-semibold text-teal-700 hover:text-teal-800 transition py-2.5 px-1 rounded-lg';

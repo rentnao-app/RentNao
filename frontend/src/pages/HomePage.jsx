@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
@@ -87,8 +87,6 @@ export default function HomePage() {
     type: '',
     maxRent: '',
   });
-  const [wishlistedIds, setWishlistedIds] = useState(() => new Set());
-
   const loggedIn = isLoggedIn();
   const currentUser = getCurrentUser();
   const userRole = currentUser?.role || currentUser?.userRole;

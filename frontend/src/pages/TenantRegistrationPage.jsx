@@ -1,6 +1,15 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch, getCurrentUser, splitName } from "../lib/api";
+import {
+  clearPendingSignupPhone,
+  clipPhoneInput,
+  consumeSignupPhoneLocal11,
+  digitsOnly,
+  isValidBdMobileLocal11,
+  local11ToAfter880,
+  toLocal11Digits,
+} from "../lib/phone";
 
 const LOCATION_OPTIONS = [
   "Dhanmondi",
@@ -71,6 +80,8 @@ function Icon({ children }) {
 }
 
 export default function TenantRegistrationPage() {
+  const [searchParams] = useSearchParams();
+
   const [form, setForm] = useState({
     fullName: "",
     phoneNumber: "",
@@ -89,6 +100,21 @@ export default function TenantRegistrationPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const isFamilyType = form.familyType === "family";
+
+  useEffect(() => {
+    const fromQuery = searchParams.get("phone");
+    if (fromQuery) clearPendingSignupPhone();
+    const fromSession = fromQuery ? "" : consumeSignupPhoneLocal11();
+    const user = getCurrentUser();
+    const fromUser = user?.contactPhone || user?.contact_phone || "";
+    const raw = fromQuery || fromSession || fromUser;
+    const local11 = toLocal11Digits(clipPhoneInput(raw));
+    if (!local11 || !isValidBdMobileLocal11(local11)) return;
+    setForm((prev) => ({
+      ...prev,
+      phoneNumber: local11ToAfter880(local11),
+    }));
+  }, [searchParams]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -110,6 +136,14 @@ export default function TenantRegistrationPage() {
       const currentUser = getCurrentUser();
       if (!currentUser?.userId) {
         setError("Not authenticated. Please log in again.");
+        return;
+      }
+
+      const suffix = digitsOnly(form.phoneNumber);
+      if (!/^1[3-9]\d{8}$/.test(suffix)) {
+        setError(
+          "Enter the 10 digits after +880 (e.g. 1712345678). Your full number must be a valid 01… mobile."
+        );
         return;
       }
 
@@ -407,10 +441,15 @@ export default function TenantRegistrationPage() {
                     <input
                       type="tel"
                       name="phoneNumber"
+                      inputMode="numeric"
+                      autoComplete="tel"
                       value={form.phoneNumber}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        const d = digitsOnly(e.target.value).slice(0, 10);
+                        setForm((prev) => ({ ...prev, phoneNumber: d }));
+                      }}
                       className="w-full px-3 py-3 text-sm outline-none"
-                      placeholder="Your phone number"
+                      placeholder="1712345678"
                     />
                   </div>
                 </div>

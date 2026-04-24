@@ -6,10 +6,6 @@ import { listOwnerIncomingRequests, reviewOwnerRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
 
-function parseRequestsPayload(data) {
-  return data?.data?.requests ?? data?.requests ?? [];
-}
-
 export default function IncomingRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);

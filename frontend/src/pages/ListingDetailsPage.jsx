@@ -114,7 +114,7 @@ export default function ListingDetailsPage() {
     }
 
     setListing(merged);
-  }, [id, loggedIn, viewerRole]);
+  }, [id, loggedIn]);
 
   useEffect(() => {
     const load = async () => {

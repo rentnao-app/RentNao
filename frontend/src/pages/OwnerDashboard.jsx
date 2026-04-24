@@ -94,11 +94,6 @@ function listingToResume(property) {
   return listings.find((l) => l.listingStatus === 'UNLISTED') || null;
 }
 
-function listingStatusLabel(status) {
-  if (status === 'UNLISTED') return 'Paused (inactive)';
-  return status || '—';
-}
-
 const FILTER_OPTIONS = [
   { value: 'ALL', label: 'All' },
   { value: 'ACTIVE', label: 'Active only' },

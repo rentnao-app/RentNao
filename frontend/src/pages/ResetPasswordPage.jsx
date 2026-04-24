@@ -115,7 +115,7 @@ export default function ResetPasswordPage() {
                       setTokenChecked(false);
                       setTokenValid(false);
                     }}
-                    placeholder="Enter token from email/SMS"
+                    placeholder="Enter token from SMS"
                     className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                     required
                   />
