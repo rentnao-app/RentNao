@@ -8,6 +8,7 @@ import { z } from 'zod';
 const envSchema = z.object({
   PORT: z.string().default('3000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PUBLIC_API_ORIGIN: z.string().url().optional(),
   DATABASE_URL: z.url(),
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default('7d') as z.ZodType<SignOptions['expiresIn']>,
@@ -18,6 +19,8 @@ const envSchema = z.object({
   SUPABASE_URL: z.url().optional(),
   SUPABASE_KEY: z.string().optional(),
   // S3-compatible storage (local MinIO/LocalStack)
+  S3_INTERNAL_ENDPOINT: z.string().url().optional(),
+  S3_PUBLIC_ENDPOINT: z.string().url().optional(),
   S3_ENDPOINT: z.string().url().optional(),
   S3_BUCKET: z.string().optional(),
   S3_ACCESS_KEY: z.string().optional(),

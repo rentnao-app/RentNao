@@ -30,22 +30,34 @@ export interface StorageProvider {
 }
 
 export class LocalS3StorageProvider implements StorageProvider {
-  private client: S3Client;
+  private internalClient: S3Client;
+  private signingClient: S3Client;
   private bucket: string;
-  private endpoint: string;
+  private internalEndpoint: string;
+  private publicEndpoint: string;
 
   constructor() {
-    this.endpoint = env.S3_ENDPOINT || 'http://localhost:9000';
+    this.internalEndpoint = env.S3_INTERNAL_ENDPOINT || env.S3_ENDPOINT || 'http://localhost:9000';
+    this.publicEndpoint = env.S3_PUBLIC_ENDPOINT || env.S3_ENDPOINT || this.internalEndpoint;
     this.bucket = env.S3_BUCKET || 'rentnao-dev';
 
-    this.client = new S3Client({
+    const baseConfig = {
       region: env.AWS_REGION || 'us-east-1',
-      endpoint: this.endpoint,
       credentials: {
         accessKeyId: env.S3_ACCESS_KEY || 'minioadmin',
         secretAccessKey: env.S3_SECRET_KEY || 'minioadmin',
       },
       forcePathStyle: true,
+    };
+
+    this.internalClient = new S3Client({
+      ...baseConfig,
+      endpoint: this.internalEndpoint,
+    });
+
+    this.signingClient = new S3Client({
+      ...baseConfig,
+      endpoint: this.publicEndpoint,
     });
   }
 
@@ -63,7 +75,7 @@ export class LocalS3StorageProvider implements StorageProvider {
     });
 
     const expiresIn = 3600;
-    const uploadUrl = await getSignedUrl(this.client, command, { expiresIn });
+    const uploadUrl = await getSignedUrl(this.signingClient, command, { expiresIn });
 
     return { uploadUrl, expiresIn };
   }
@@ -74,7 +86,7 @@ export class LocalS3StorageProvider implements StorageProvider {
       Key: key,
     });
 
-    return getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+    return getSignedUrl(this.signingClient, command, { expiresIn: expiresInSeconds });
   }
 
   async deleteObject(key: string): Promise<void> {
@@ -83,7 +95,7 @@ export class LocalS3StorageProvider implements StorageProvider {
       Key: key,
     });
 
-    await this.client.send(command);
+    await this.internalClient.send(command);
   }
 
   async exists(key: string): Promise<boolean> {
@@ -93,7 +105,7 @@ export class LocalS3StorageProvider implements StorageProvider {
         Key: key,
       });
 
-      await this.client.send(command);
+      await this.internalClient.send(command);
       return true;
     } catch (error: any) {
       if (error.name === 'NotFound') {
@@ -109,7 +121,7 @@ export class LocalS3StorageProvider implements StorageProvider {
         Bucket: this.bucket,
       });
 
-      await this.client.send(command);
+      await this.internalClient.send(command);
       return true;
     } catch (error: any) {
       console.error('[S3] Health check failed:', {
@@ -125,7 +137,7 @@ export class LocalS3StorageProvider implements StorageProvider {
       const headCommand = new HeadBucketCommand({
         Bucket: this.bucket,
       });
-      await this.client.send(headCommand);
+      await this.internalClient.send(headCommand);
       return;
     } catch (error: any) {
       const notFound =
@@ -142,7 +154,7 @@ export class LocalS3StorageProvider implements StorageProvider {
       const createCommand = new CreateBucketCommand({
         Bucket: this.bucket,
       });
-      await this.client.send(createCommand);
+      await this.internalClient.send(createCommand);
       console.log(`[S3] Created bucket: ${this.bucket}`);
     } catch (error: any) {
       const alreadyExists =

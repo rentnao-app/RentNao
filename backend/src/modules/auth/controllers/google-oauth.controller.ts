@@ -37,6 +37,14 @@ function getRequiredGoogleEnv() {
   return { clientId, clientSecret };
 }
 
+function getGoogleCallbackUrl(requestUrl: string) {
+  const configuredOrigin = env.PUBLIC_API_ORIGIN?.trim();
+  if (configuredOrigin) {
+    return `${new URL(configuredOrigin).origin}/auth/google/callback`;
+  }
+  return `${new URL(requestUrl).origin}/auth/google/callback`;
+}
+
 async function exchangeCodeForTokens(args: {
   code: string;
   redirectUri: string;
@@ -243,8 +251,7 @@ export function registerGoogleOAuthRoutes(app: OpenAPIHono) {
       throw new AppError(400, 'Invalid redirect_uri');
     }
 
-    const origin = new URL(c.req.url).origin;
-    const callbackUrl = `${origin}/auth/google/callback`;
+    const callbackUrl = getGoogleCallbackUrl(c.req.url);
 
     const state: GoogleStatePayload = {
       redirectUri: parsedRedirect.toString(),
@@ -298,8 +305,7 @@ export function registerGoogleOAuthRoutes(app: OpenAPIHono) {
     }
 
     const state = jwt.verify(stateToken, env.JWT_SECRET) as GoogleStatePayload;
-    const origin = new URL(c.req.url).origin;
-    const callbackUrl = `${origin}/auth/google/callback`;
+    const callbackUrl = getGoogleCallbackUrl(c.req.url);
 
     const token = await exchangeCodeForTokens({
       code,
