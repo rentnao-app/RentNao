@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { setAuthSession } from '../lib/api';
+import { getApiUrl, setAuthSession } from '../lib/api';
 
 function getDashboardPath(role) {
   if (role === 'ADMIN') return '/admin-dashboard';
@@ -15,6 +15,7 @@ function getRegistrationPath(role) {
 
 export default function GoogleAuthCallbackPage() {
   const [searchParams] = useSearchParams();
+  const apiUrl = getApiUrl();
 
   const callbackData = useMemo(() => {
     const error = searchParams.get('error');
@@ -29,7 +30,7 @@ export default function GoogleAuthCallbackPage() {
     if (callbackData.code) {
       const exchangeCode = async () => {
         try {
-          const res = await fetch('http://localhost:3000/auth/google/exchange', {
+          const res = await fetch(`${apiUrl}/auth/google/exchange`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code: callbackData.code }),
@@ -59,7 +60,7 @@ export default function GoogleAuthCallbackPage() {
 
       exchangeCode();
     }
-  }, [callbackData.code, callbackData.error]);
+  }, [apiUrl, callbackData.code, callbackData.error]);
 
   const hasPayload = Boolean(callbackData.code);
   const isError = Boolean(callbackData.error);
