@@ -12,6 +12,7 @@ type OAuthMode = 'login' | 'signup';
 type GoogleStatePayload = {
   redirectUri: string;
   mode: OAuthMode;
+  role: string;
   nonce: string;
 };
 
@@ -155,16 +156,17 @@ async function upsertGoogleAccount(args: {
   );
 }
 
-async function createUserFromGoogle(args: { email: string }) {
+async function createUserFromGoogle(args: { email: string; role: string }) {
   const client = await db.connect();
+  const role = ['TENANT', 'OWNER', 'ADMIN'].includes(args.role) ? args.role : 'TENANT';
   try {
     await client.query('BEGIN');
 
     const userResult = await client.query(
       `INSERT INTO "User" (user_id, role, onboarding_status, kyc_verification_status, contact_email, is_active)
-       VALUES (gen_random_uuid()::text, 'TENANT', 'PROFILE_PENDING', 'PENDING', $1, true)
+       VALUES (gen_random_uuid()::text, $1, 'PROFILE_PENDING', 'PENDING', $2, true)
        RETURNING user_id, role, onboarding_status, kyc_verification_status, contact_email, contact_phone, is_active, created_at`,
-      [args.email]
+      [role, args.email]
     );
     const user = userResult.rows[0];
 
@@ -219,12 +221,16 @@ function toFrontendUser(row: any) {
  *   mode=login|signup
  */
 export function registerGoogleOAuthRoutes(app: OpenAPIHono) {
+  /**
+   * 1. Initiate Google OAuth
+   */
   app.get('/google', async (c) => {
     const { clientId } = getRequiredGoogleEnv();
 
     const redirectUri = c.req.query('redirect_uri')?.trim();
     const modeRaw = (c.req.query('mode') || 'login').toLowerCase();
     const mode: OAuthMode = modeRaw === 'signup' ? 'signup' : 'login';
+    const role = (c.req.query('role') || 'TENANT').toUpperCase();
 
     if (!redirectUri) {
       throw new AppError(400, 'Missing redirect_uri');
@@ -243,6 +249,7 @@ export function registerGoogleOAuthRoutes(app: OpenAPIHono) {
     const state: GoogleStatePayload = {
       redirectUri: parsedRedirect.toString(),
       mode,
+      role,
       nonce: randomUUID(),
     };
 
@@ -260,6 +267,9 @@ export function registerGoogleOAuthRoutes(app: OpenAPIHono) {
     return c.redirect(googleAuth.toString(), 302);
   });
 
+  /**
+   * 2. Google Redirect Callback
+   */
   app.get('/google/callback', async (c) => {
     const { clientId, clientSecret } = getRequiredGoogleEnv();
 
@@ -323,17 +333,10 @@ export function registerGoogleOAuthRoutes(app: OpenAPIHono) {
     let userRow = await findUserForGoogle(idClaims.sub, idClaims.email);
 
     if (!userRow) {
-      if (state.mode === 'login') {
-        return c.redirect(
-          buildRedirect(state.redirectUri, {
-            error: 'no_account',
-            message: 'No account found for this Google email. Please sign up first.',
-          }),
-          302
-        );
-      }
-
-      userRow = await createUserFromGoogle({ email: idClaims.email });
+      userRow = await createUserFromGoogle({
+        email: idClaims.email,
+        role: state.role,
+      });
     }
 
     if (!userRow.is_active) {
@@ -361,23 +364,74 @@ export function registerGoogleOAuthRoutes(app: OpenAPIHono) {
       idToken: token.idToken,
     });
 
-    const accessToken = generateAccessToken({
+    const exchangePayload = {
       userId: userRow.user_id,
       role: userRow.role,
       onboardingStatus: userRow.onboarding_status,
       kycVerificationStatus: userRow.kyc_verification_status,
-    });
-    const refreshToken = generateRefreshToken(userRow.user_id);
+      contactEmail: userRow.contact_email,
+      contactPhone: userRow.contact_phone,
+      isActive: userRow.is_active,
+      createdAt: userRow.created_at,
+    };
+    const exchangeCode = jwt.sign(exchangePayload, env.JWT_SECRET, { expiresIn: '2m' });
 
-    const frontendUser = toFrontendUser(userRow);
     return c.redirect(
       buildRedirect(state.redirectUri, {
-        accessToken,
-        refreshToken,
-        user: encodeURIComponent(JSON.stringify(frontendUser)),
+        code: exchangeCode,
       }),
       302
     );
+  });
+
+  /**
+   * 3. Exchange short-lived code for real tokens (Secure POST)
+   */
+  app.post('/google/exchange', async (c) => {
+    const { code } = await c.req.json().catch(() => ({}));
+
+    if (!code) {
+      return c.json({ success: false, error: 'missing_code' }, 400);
+    }
+
+    try {
+      const payload = jwt.verify(code, env.JWT_SECRET) as any;
+
+      const accessToken = generateAccessToken({
+        userId: payload.userId,
+        role: payload.role,
+        onboardingStatus: payload.onboardingStatus,
+        kycVerificationStatus: payload.kycVerificationStatus,
+      });
+      const refreshToken = generateRefreshToken(payload.userId);
+
+      const frontendUser = toFrontendUser({
+        user_id: payload.userId,
+        role: payload.role,
+        onboarding_status: payload.onboardingStatus,
+        kyc_verification_status: payload.kycVerificationStatus,
+        contact_email: payload.contactEmail,
+        contact_phone: payload.contactPhone,
+        is_active: payload.isActive,
+        created_at: payload.createdAt,
+      });
+
+      return c.json({
+        success: true,
+        accessToken,
+        refreshToken,
+        user: frontendUser,
+      });
+    } catch (err: any) {
+      return c.json(
+        {
+          success: false,
+          error: 'invalid_code',
+          message: err.message === 'jwt expired' ? 'Code expired. Please try again.' : 'Invalid exchange code.',
+        },
+        401
+      );
+    }
   });
 }
 

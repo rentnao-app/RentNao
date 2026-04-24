@@ -1,7 +1,7 @@
 const GOOGLE_AUTH_URL = import.meta.env.VITE_GOOGLE_AUTH_URL || '';
 
-export default function GoogleAuthButton({ mode = 'login' }) {
-  const label = mode === 'signup' ? 'Sign up with Google' : 'Continue with Google';
+export default function GoogleAuthButton({ mode = 'login', role = 'TENANT' }) {
+  const label = mode === 'signup' ? `Sign up as ${role.toLowerCase()} with Google` : 'Continue with Google';
   const isConfigured = Boolean(GOOGLE_AUTH_URL.trim());
 
   const handleClick = () => {
@@ -9,7 +9,7 @@ export default function GoogleAuthButton({ mode = 'login' }) {
 
     const callbackUrl = `${window.location.origin}/auth/callback`;
     const separator = GOOGLE_AUTH_URL.includes('?') ? '&' : '?';
-    const target = `${GOOGLE_AUTH_URL}${separator}redirect_uri=${encodeURIComponent(callbackUrl)}&mode=${encodeURIComponent(mode)}`;
+    const target = `${GOOGLE_AUTH_URL}${separator}redirect_uri=${encodeURIComponent(callbackUrl)}&mode=${encodeURIComponent(mode)}&role=${encodeURIComponent(role)}`;
     window.location.href = target;
   };
 

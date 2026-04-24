@@ -203,7 +203,7 @@ export default function SignUp() {
                 <div className="h-px bg-gray-200 flex-1"></div>
               </div>
 
-              <GoogleAuthButton mode="signup" />
+              <GoogleAuthButton mode="signup" role={role} />
             </form>
           </div>
 

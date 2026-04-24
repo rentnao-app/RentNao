@@ -8,58 +8,58 @@ function getDashboardPath(role) {
   return '/tenant-dashboard';
 }
 
-function parseUser(userParam) {
-  if (!userParam) return null;
-  try {
-    return JSON.parse(userParam);
-  } catch {
-    try {
-      return JSON.parse(decodeURIComponent(userParam));
-    } catch {
-      return null;
-    }
-  }
-}
-
 export default function GoogleAuthCallbackPage() {
   const [searchParams] = useSearchParams();
 
   const callbackData = useMemo(() => {
     const error = searchParams.get('error');
     const message = searchParams.get('message');
-    const accessToken = searchParams.get('accessToken');
-    const refreshToken = searchParams.get('refreshToken');
-    const user = parseUser(searchParams.get('user'));
-    return { error, message, accessToken, refreshToken, user };
+    const code = searchParams.get('code');
+    return { error, message, code };
   }, [searchParams]);
 
   useEffect(() => {
-    if (callbackData.error || !callbackData.accessToken || !callbackData.user) {
-      return;
+    if (callbackData.error) return;
+
+    if (callbackData.code) {
+      const exchangeCode = async () => {
+        try {
+          const res = await fetch('http://localhost:3000/auth/google/exchange', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: callbackData.code }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || 'Exchange failed');
+
+          setAuthSession({
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+            user: data.user,
+          });
+
+          const role = data.user?.role;
+          const target = getDashboardPath(role);
+          window.location.href = target;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Exchange failed';
+          console.error('Code exchange failed:', err);
+          window.location.search = `?error=exchange_failed&message=${encodeURIComponent(message)}`;
+        }
+      };
+
+      exchangeCode();
     }
+  }, [callbackData.code, callbackData.error]);
 
-    setAuthSession({
-      accessToken: callbackData.accessToken,
-      refreshToken: callbackData.refreshToken,
-      user: callbackData.user,
-    });
-
-    const role = callbackData.user?.role || callbackData.user?.userRole;
-    const target = getDashboardPath(role);
-    const timeout = setTimeout(() => {
-      window.location.href = target;
-    }, 800);
-
-    return () => clearTimeout(timeout);
-  }, [callbackData]);
-
-  const hasPayload = Boolean(callbackData.accessToken && callbackData.user);
-  const isError = Boolean(callbackData.error || !hasPayload);
+  const hasPayload = Boolean(callbackData.code);
+  const isError = Boolean(callbackData.error);
   const status = callbackData.error
     ? callbackData.message || callbackData.error || 'Google login failed'
     : hasPayload
-      ? 'Login successful! Redirecting...'
-      : 'Missing authentication payload from Google callback.';
+      ? 'Authenticating securely...'
+      : 'Missing authentication payload from Google.';
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
