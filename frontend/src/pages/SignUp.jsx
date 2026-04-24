@@ -43,7 +43,6 @@ export default function SignUp() {
         user: body?.data?.user,
       });
 
-      const needsVerification = Boolean(body?.data?.needsVerification);
       const createdUser = body?.data?.user || {};
       const createdUserId = createdUser?.userId || createdUser?.user_id || createdUser?.id || '';
       if (createdUserId) {
@@ -52,30 +51,20 @@ export default function SignUp() {
           name: createdUser?.username || 'User',
           email,
           role: role || createdUser?.role || '',
-          verificationStatus: needsVerification ? 'PENDING' : 'APPROVED',
+          verificationStatus: 'PENDING',
         });
       }
       addLocalNotification({
         title: 'Account Created',
-        message: needsVerification
-          ? 'Welcome! Please verify your email/phone to continue.'
-          : 'Welcome to RentNao. Your account is ready.',
-        url: needsVerification ? '/auth-verification' : '/account',
+        message: 'Welcome! Complete your role registration to continue.',
+        url: role === 'TENANT' ? '/tenant-registration' : '/owner-registration',
         type: 'AUTH',
       });
-      setSuccess(
-        needsVerification
-          ? 'Sign up successful! Please verify your contact information.'
-          : 'Sign up successful! Redirecting...'
-      );
+      setSuccess('Sign up successful! Redirecting...');
       setEmail('');
       setPassword('');
 
       setTimeout(() => {
-        if (needsVerification) {
-          window.location.href = `/auth-verification?identifier=${encodeURIComponent(email)}&type=EMAIL`;
-          return;
-        }
         window.location.href = role === 'TENANT' ? '/tenant-registration' : '/owner-registration';
       }, 1500);
     } catch (err) {

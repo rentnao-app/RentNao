@@ -48,6 +48,12 @@ function StepPill({ number, label, active }) {
   );
 }
 
+function getDashboardPath(role) {
+  if (role === 'OWNER') return '/owner-dashboard';
+  if (role === 'ADMIN') return '/admin-dashboard';
+  return '/tenant-dashboard';
+}
+
 function UploadCard({
   title,
   description,
@@ -242,12 +248,12 @@ export default function VerificationPage() {
       addLocalNotification({
         title: 'Verification Submitted',
         message: 'Your KYC documents were submitted for admin review.',
-        url: '/verification-holding',
+        url: getDashboardPath(role),
         type: 'KYC',
       });
       setSuccess('Documents uploaded successfully!');
       setTimeout(() => {
-        window.location.href = '/verification-holding';
+        window.location.href = getDashboardPath(role);
       }, 1800);
     } catch (err) {
       setError(err.message || 'Failed to upload documents');

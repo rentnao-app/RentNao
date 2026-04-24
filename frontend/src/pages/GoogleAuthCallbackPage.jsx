@@ -8,6 +8,11 @@ function getDashboardPath(role) {
   return '/tenant-dashboard';
 }
 
+function getRegistrationPath(role) {
+  if (role === 'OWNER') return '/owner-registration';
+  return '/tenant-registration';
+}
+
 export default function GoogleAuthCallbackPage() {
   const [searchParams] = useSearchParams();
 
@@ -40,7 +45,10 @@ export default function GoogleAuthCallbackPage() {
           });
 
           const role = data.user?.role;
-          const target = getDashboardPath(role);
+          const onboardingStatus = data.user?.onboardingStatus;
+          const shouldGoToRegistration =
+            onboardingStatus === 'PROFILE_PENDING' || onboardingStatus === 'PENDING';
+          const target = shouldGoToRegistration ? getRegistrationPath(role) : getDashboardPath(role);
           window.location.href = target;
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Exchange failed';
