@@ -16,6 +16,7 @@ import {
 import { hashPassword, verifyPassword } from '../utils/password';
 import { generateVerificationToken, generateOTP } from '../utils/token-generator';
 import { storeVerificationToken } from './token-storage.service';
+import { sendPhoneOtp } from './sms.service';
 import { TOKEN_TTL } from '../config/token-ttl';
 import type { RegisterInput, LoginInput } from '../schemas';
 import type { UserWithTokens } from '../types/auth.types';
@@ -125,8 +126,18 @@ export async function registerUser(input: RegisterInput): Promise<UserWithTokens
 
     const refreshToken = generateRefreshToken(user.user_id);
 
-    // TODO: Send verification email/SMS
-    console.log(`Verification ${identifierType.toLowerCase()}: ${verificationToken}`);
+    // Send verification token
+    if (identifierType === 'PHONE') {
+      await sendPhoneOtp({
+        identifier,
+        otp: verificationToken,
+        purpose: 'PHONE_VERIFICATION',
+        ttlSeconds: ttl,
+      });
+    } else {
+      // TODO: Send verification email
+      console.log(`Verification email: ${verificationToken}`);
+    }
 
     return {
       user: {

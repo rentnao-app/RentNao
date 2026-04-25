@@ -7,6 +7,7 @@ import { db } from '@/db/client';
 import { AppError } from '@/middlewares/error-handler';
 import { generateVerificationToken, generateOTP } from '../utils/token-generator';
 import { verifyToken, deleteVerificationToken, storeVerificationToken } from './token-storage.service';
+import { sendPhoneOtp } from './sms.service';
 import { TOKEN_TTL } from '../config/token-ttl';
 import type { IdentifierTypeType } from '@/types/enums';
 
@@ -244,8 +245,17 @@ export async function resendVerification(
   // Store new token in Redis
   await storeVerificationToken(identifier, newToken, tokenType, ttl);
 
-  // TODO: Send verification email/SMS
-  console.log(`New verification ${type}: ${newToken}`);
+  if (type === 'PHONE') {
+    await sendPhoneOtp({
+      identifier,
+      otp: newToken,
+      purpose: 'PHONE_VERIFICATION',
+      ttlSeconds: ttl,
+    });
+  } else {
+    // TODO: Send verification email
+    console.log(`New verification email token: ${newToken}`);
+  }
 
   return {
     success: true,

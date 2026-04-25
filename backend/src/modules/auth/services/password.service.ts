@@ -8,6 +8,7 @@ import { AppError } from '@/middlewares/error-handler';
 import { hashPassword } from '../utils/password';
 import { generateVerificationToken, generateOTP } from '../utils/token-generator';
 import { verifyToken, deleteVerificationToken, storeVerificationToken } from './token-storage.service';
+import { sendPhoneOtp } from './sms.service';
 import { TOKEN_TTL } from '../config/token-ttl';
 import type { IdentifierTypeType, VerificationTokenTypeType } from '@/types/enums';
 
@@ -60,8 +61,17 @@ export async function requestPasswordReset(
   // Store new token in Redis with 1-hour TTL
   await storeVerificationToken(identifier, resetToken, tokenType, TOKEN_TTL.PASSWORD_RESET);
 
-  // TODO: Send password reset email/SMS
-  console.log(`Password reset ${type}: ${resetToken}`);
+  if (type === 'PHONE') {
+    await sendPhoneOtp({
+      identifier,
+      otp: resetToken,
+      purpose: 'PASSWORD_RESET',
+      ttlSeconds: TOKEN_TTL.PASSWORD_RESET,
+    });
+  } else {
+    // TODO: Send password reset email
+    console.log(`Password reset email token: ${resetToken}`);
+  }
 
   return {
     success: true,
