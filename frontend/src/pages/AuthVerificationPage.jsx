@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { apiFetch, getApiErrorMessage } from '../lib/api';
+import {
+  apiFetch,
+  fetchProfileStatus,
+  getApiErrorMessage,
+  getCurrentUser,
+  getUserId,
+  getUserRole,
+  resolveOnboardingRoute,
+} from '../lib/api';
 import {
   clipPhoneInput,
   isValidBdMobileLocal11,
@@ -70,6 +78,21 @@ export default function AuthVerificationPage() {
       }
       setSuccess(body?.message || 'Verification successful.');
       setPhoneOtp('');
+
+      const currentUser = getCurrentUser();
+      const userId = getUserId(currentUser);
+      const localRole = getUserRole(currentUser);
+      if (!userId) {
+        window.location.href = '/login';
+        return;
+      }
+
+      const { res: statusRes, profileStatus, role } = await fetchProfileStatus(userId);
+      if (!statusRes.ok) {
+        throw new Error('Verification succeeded but profile status could not be loaded');
+      }
+
+      window.location.href = resolveOnboardingRoute(profileStatus, role || localRole);
     } catch (err) {
       setError(err.message || 'Verification failed');
     } finally {

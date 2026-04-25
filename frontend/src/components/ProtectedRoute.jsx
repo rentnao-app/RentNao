@@ -1,39 +1,57 @@
 import { createElement, useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { apiFetch, getCurrentUser, clearAuthSession } from '../lib/api';
+import {
+  clearAuthSession,
+  fetchProfileStatus,
+  getCurrentUser,
+  getUserId,
+  getUserRole,
+  resolveOnboardingRoute,
+} from '../lib/api';
 
 export default function ProtectedRoute({ component, requiredRole }) {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const [redirectTo, setRedirectTo] = useState(null);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const localUser = getCurrentUser();
-        const localUserId = localUser?.userId || localUser?.user_id || localUser?.id;
+        const localUserId = getUserId(localUser);
+        const localRole = getUserRole(localUser);
         if (!localUserId) {
-          setLoading(false);
+          setRedirectTo('/login');
           return;
         }
 
-        const res = await apiFetch(`/users/${localUserId}/profile-status`);
-        const body = await res.json().catch(() => ({}));
+        const { res, profileStatus, role } = await fetchProfileStatus(localUserId);
         if (!res.ok) {
-          if (res.status === 401 || res.status === 403) clearAuthSession();
-          setLoading(false);
+          if (res.status === 401 || res.status === 403) {
+            clearAuthSession();
+          }
+          setRedirectTo('/login');
           return;
         }
-        const userData = {
-          role: body?.data?.role || localUser?.role || localUser?.userRole || null,
-        };
-        // Any authenticated user (e.g. for /account) or role must match
+
+        const effectiveRole = role || localRole;
+
+        if (profileStatus !== 'COMPLETED') {
+          setRedirectTo(resolveOnboardingRoute(profileStatus, effectiveRole));
+          return;
+        }
+
+        // Any authenticated completed user (e.g. /account) or role must match.
         if (requiredRole == null || requiredRole === '') {
           setAuthorized(true);
-        } else if (userData.role === requiredRole) {
+        } else if (effectiveRole === requiredRole) {
           setAuthorized(true);
+        } else {
+          setRedirectTo('/login');
         }
       } catch (err) {
         console.error('Error checking authentication:', err);
+        setRedirectTo('/login');
       } finally {
         setLoading(false);
       }
@@ -51,6 +69,10 @@ export default function ProtectedRoute({ component, requiredRole }) {
         </div>
       </div>
     );
+  }
+
+  if (redirectTo) {
+    return <Navigate to={redirectTo} replace />;
   }
 
   if (!authorized) {

@@ -7,6 +7,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AuthVerificationPage from './pages/AuthVerificationPage';
 import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
+import OAuthPhoneSetupPage from './pages/OAuthPhoneSetupPage';
 import TenantRegistrationPage from './pages/TenantRegistrationPage';
 import OwnerRegistrationPage from './pages/OwnerRegistrationPage';
 import VerificationPage from './pages/VerificationPage';
@@ -71,6 +72,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/auth-verification" element={<AuthVerificationPage />} />
+            <Route path="/auth/phone-setup" element={<OAuthPhoneSetupPage />} />
             <Route path="/auth/callback" element={<GoogleAuthCallbackPage />} />
             <Route path="/tenant-registration" element={<TenantRegistrationPage />} />
             <Route path="/owner-registration" element={<OwnerRegistrationPage />} />

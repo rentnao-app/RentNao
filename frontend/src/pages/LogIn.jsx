@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiFetch, getApiErrorMessage, setAuthSession } from '../lib/api';
+import {
+  apiFetch,
+  fetchProfileStatus,
+  getApiErrorMessage,
+  getUserId,
+  getUserRole,
+  resolveOnboardingRoute,
+  setAuthSession,
+} from '../lib/api';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import {
   clipPhoneInput,
@@ -70,11 +78,22 @@ export default function LogIn() {
       setPhone('');
       setPassword('');
 
+      const userId = getUserId(user);
+      const localRole = getUserRole(user);
+      if (!userId) {
+        setError('Login succeeded but user identifier is missing.');
+        return;
+      }
+
+      const { res: statusRes, profileStatus, role } = await fetchProfileStatus(userId);
+      if (!statusRes.ok) {
+        setError('Login succeeded but profile status could not be loaded.');
+        return;
+      }
+
+      const target = resolveOnboardingRoute(profileStatus, role || localRole);
       setTimeout(() => {
-        if (user.role === 'OWNER') window.location.href = '/owner-dashboard';
-        else if (user.role === 'TENANT') window.location.href = '/tenant-dashboard';
-        else if (user.role === 'ADMIN') window.location.href = '/admin-dashboard';
-        else window.location.href = '/';
+        window.location.href = target;
       }, 1000);
     } catch (err) {
       setError(err.message || 'An unexpected error occurred');

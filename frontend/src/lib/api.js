@@ -78,3 +78,40 @@ export function splitName(fullName) {
     lastName: parts.slice(1).join(' ') || parts[0] || '',
   };
 }
+
+export function resolveOnboardingRoute(profileStatus, role) {
+  if (profileStatus === 'PHONE_REQUIRED') return '/auth/phone-setup';
+  if (profileStatus === 'PHONE_VERIFICATION_PENDING') return '/auth-verification?type=PHONE';
+  if (profileStatus === 'PROFILE_PENDING') {
+    return role === 'OWNER' ? '/owner-registration' : '/tenant-registration';
+  }
+  if (profileStatus === 'COMPLETED') {
+    if (role === 'ADMIN') return '/admin-dashboard';
+    if (role === 'OWNER') return '/owner-dashboard';
+    return '/tenant-dashboard';
+  }
+
+  // Safe fallback when backend status is missing or unknown.
+  if (role === 'ADMIN') return '/admin-dashboard';
+  if (role === 'OWNER') return '/owner-dashboard';
+  return '/tenant-dashboard';
+}
+
+export function extractProfileStatusPayload(body) {
+  const data = body?.data || {};
+  return {
+    profileStatus: data?.onboardingStatus || data?.onboarding_status || null,
+    role: data?.role || data?.userRole || data?.user_role || null,
+    data,
+  };
+}
+
+export async function fetchProfileStatus(userId) {
+  const res = await apiFetch(`/users/${userId}/profile-status`);
+  const body = await res.json().catch(() => ({}));
+  return {
+    res,
+    body,
+    ...extractProfileStatusPayload(body),
+  };
+}

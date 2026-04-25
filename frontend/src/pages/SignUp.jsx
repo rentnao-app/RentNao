@@ -81,8 +81,8 @@ export default function SignUp() {
       }
       addLocalNotification({
         title: 'Account Created',
-        message: 'Welcome! Complete your role registration to continue.',
-        url: role === 'TENANT' ? '/tenant-registration' : '/owner-registration',
+        message: 'Welcome! Verify your mobile number to continue onboarding.',
+        url: '/auth-verification?type=PHONE',
         type: 'AUTH',
       });
       setSuccess('Sign up successful! Redirecting...');
@@ -90,10 +90,8 @@ export default function SignUp() {
       setPhone('');
       setPassword('');
 
-      const regPath = role === 'TENANT' ? '/tenant-registration' : '/owner-registration';
-      const qp = new URLSearchParams({ phone: local11 });
       setTimeout(() => {
-        window.location.href = `${regPath}?${qp.toString()}`;
+        window.location.href = '/auth-verification?type=PHONE';
       }, 1500);
     } catch (err) {
       setError(err.message || 'An unexpected error occurred');
