@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch, getCurrentUser, splitName } from '../lib/api';
 
@@ -47,6 +47,7 @@ export default function OwnerRegistrationPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -107,36 +108,137 @@ export default function OwnerRegistrationPage() {
   return (
     <div className="min-h-screen bg-[#f4f7f5]">
       {/* UPDATED HEADER */}
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2.5">
             <img src="/logo.jpg" alt="Rent Nao" className="h-10 w-10 rounded-md object-cover border border-emerald-100" />
-            <span className="text-3xl font-extrabold text-emerald-800 tracking-tight">Rent Nao</span>
+            <span className="text-xl sm:text-3xl font-extrabold text-emerald-800 tracking-tight leading-none">Rent Nao</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
+          <nav className="hidden lg:flex items-center gap-8 text-sm font-medium">
             <Link to="/" className="text-gray-700 hover:text-emerald-700 transition">Home</Link>
             <Link to="/listings" className="text-gray-700 hover:text-emerald-700 transition">Find Property</Link>
             <Link to="/owner-dashboard/create-listing" className="text-gray-700 hover:text-emerald-700 transition">List Property</Link>
             <Link to="/services" className="text-gray-700 hover:text-emerald-700 transition">Services</Link>
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2.5 sm:gap-3 shrink-0">
             <Link
               to="/login"
-              className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+              className="px-3 sm:px-5 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
             >
               Login
             </Link>
             <Link
               to="/signup"
-              className="px-5 py-2 rounded-xl bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition"
+              className="px-3 sm:px-5 py-2 rounded-xl bg-emerald-700 text-white text-xs sm:text-sm font-semibold hover:bg-emerald-800 transition"
             >
               Sign Up
             </Link>
           </div>
+
+          <button
+            type="button"
+            className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-800 shadow-sm hover:bg-emerald-50 transition"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="owner-mobile-nav"
+          >
+            {mobileMenuOpen ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </header>
+
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
+            aria-label="Close menu"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <aside
+            id="owner-mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="owner-mobile-nav-title"
+            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+          >
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <img src="/logo.jpg" alt="" className="h-9 w-9 rounded-lg object-cover border border-green-100 shrink-0" />
+                <p id="owner-mobile-nav-title" className="font-semibold text-[#1e4732] text-sm tracking-tight truncate">
+                  Rent Nao
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
+                aria-label="Close menu"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
+              <Link
+                to="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-[#2f8444] bg-[#eef7ef]"
+              >
+                Home
+              </Link>
+              <Link
+                to="/listings"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                Find Property
+              </Link>
+              <Link
+                to="/owner-dashboard/create-listing"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                List Property
+              </Link>
+              <Link
+                to="/services"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                Services
+              </Link>
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
+              >
+                Sign Up
+              </Link>
+            </nav>
+          </aside>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10">
         <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-6">
@@ -187,7 +289,7 @@ export default function OwnerRegistrationPage() {
               <h1 className="text-3xl sm:text-4xl font-extrabold text-emerald-800 tracking-tight">Owner Information</h1>
               <div className="flex items-center gap-4">
                 <StepItem number={1} label="Details" active />
-                <span className="text-gray-300">—</span>
+                <span className="text-gray-300"></span>
                 <StepItem number={2} label="Verify" />
               </div>
             </div>
@@ -256,19 +358,19 @@ export default function OwnerRegistrationPage() {
                 </div>
               </div>
 
-              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="pt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Link
                   to="/signup"
-                  className="h-11 px-6 rounded-xl border border-gray-200 bg-white text-gray-600 font-semibold flex items-center justify-center hover:bg-gray-50 transition"
+                  className="h-11 w-full rounded-xl border border-gray-200 bg-white text-gray-600 font-semibold flex items-center justify-center hover:bg-gray-50 transition"
                 >
-                  ← Back
+                  Back
                 </Link>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="h-11 px-8 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-11 w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Saving...' : 'Continue →'}
+                  {loading ? 'Saving...' : 'Continue'}
                 </button>
               </div>
 
@@ -285,3 +387,4 @@ export default function OwnerRegistrationPage() {
     </div>
   );
 }
+

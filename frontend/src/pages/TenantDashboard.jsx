@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { apiFetch, getCurrentUser, logout } from "../lib/api";
 import NotificationBell from "../components/NotificationBell";
@@ -33,7 +33,7 @@ function budgetFromIncomeRange(incomeRange) {
 }
 
 function formatBdt(n) {
-  if (n == null || Number.isNaN(Number(n))) return "—";
+  if (n == null || Number.isNaN(Number(n))) return "-";
   try {
     return new Intl.NumberFormat("en-BD", {
       style: "currency",
@@ -294,24 +294,8 @@ export default function TenantDashboard() {
   return (
     <div className="min-h-screen bg-[#f2f7f3] text-gray-800">
       {/* Top header */}
-      <header className="bg-white border-b border-emerald-100 sticky top-0 z-20">
+      <header className="bg-white border-b border-emerald-100 sticky top-0 z-20 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-[1500px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
-          <button
-            type="button"
-            className="lg:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition"
-            aria-label="Open menu"
-            aria-expanded={mobileMenuOpen}
-            aria-controls="tenant-mobile-nav"
-            onClick={() => setMobileMenuOpen((open) => !open)}
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-              {mobileMenuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
           <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2.5">
             <img
               src="/logo.jpg"
@@ -323,8 +307,8 @@ export default function TenantDashboard() {
             </span>
           </Link>
 
-          <div className="hidden min-w-0 flex-1 justify-center sm:flex">
-            <nav className="flex items-center gap-6 text-sm font-medium">
+          <div className="ml-auto flex items-center gap-4 sm:gap-5 shrink-0">
+            <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
               <Link to="/listings" className="text-gray-700 hover:text-emerald-700 transition">
                 Find Property
               </Link>
@@ -338,25 +322,32 @@ export default function TenantDashboard() {
                 Wallet
               </Link>
             </nav>
-          </div>
-
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <NotificationBell />
-            <Link
-              to="/account"
-              className="hidden md:inline text-sm font-medium text-gray-600 hover:text-emerald-700 transition px-2 py-2"
-            >
-              Profile
-            </Link>
             <div className="h-9 w-9 rounded-full bg-emerald-700 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
               {avatarInitial}
             </div>
+            <button
+              type="button"
+              className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition"
+              aria-label="Open menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="tenant-mobile-nav"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
           </div>
         </div>
       </header>
 
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
+        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
           <button
             type="button"
             className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
@@ -443,11 +434,11 @@ export default function TenantDashboard() {
                 <Link to="/" className="font-medium text-[#2f8444] hover:underline" onClick={() => setMobileMenuOpen(false)}>
                   Home
                 </Link>
-                <span className="mx-2 text-gray-300">·</span>
+                <span className="mx-2 text-gray-300">-</span>
                 <Link to="/listings" className="font-medium text-[#2f8444] hover:underline" onClick={() => setMobileMenuOpen(false)}>
                   Find Property
                 </Link>
-                <span className="mx-2 text-gray-300">·</span>
+                <span className="mx-2 text-gray-300">-</span>
                 <Link to="/services" className="font-medium text-[#2f8444] hover:underline" onClick={() => setMobileMenuOpen(false)}>
                   Services
                 </Link>
@@ -458,7 +449,7 @@ export default function TenantDashboard() {
       )}
 
       <div className="mx-auto max-w-[1500px] lg:flex">
-        {/* Sidebar — desktop only; mobile uses header hamburger drawer */}
+        {/* Sidebar - desktop only; mobile uses header hamburger drawer */}
         <aside className="hidden lg:block lg:w-72 shrink-0 border-r border-emerald-100 bg-[#f4f8f5]">
           <nav className="p-4 space-y-1.5">
             {menuItems.map((item) => {
@@ -693,7 +684,7 @@ export default function TenantDashboard() {
                         <li key={txn.transactionId || txn.id} className="flex items-start justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-3">
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold text-gray-900">{txn.description || txn.type || "Transaction"}</p>
-                            <p className="mt-0.5 text-xs text-gray-500">{txn.type} · {txn.status || "—"}</p>
+                            <p className="mt-0.5 text-xs text-gray-500">{txn.type} - {txn.status || "-"}</p>
                             <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(txn.createdAt)}</p>
                           </div>
                           <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${
@@ -717,4 +708,5 @@ export default function TenantDashboard() {
     </div>
   );
 }
+
 

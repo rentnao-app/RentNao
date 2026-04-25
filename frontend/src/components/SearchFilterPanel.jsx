@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const AREA_OPTIONS = [
   { value: 'DHANMONDI', label: 'Dhanmondi' },
@@ -26,9 +26,32 @@ const SORT_OPTIONS = [
 ];
 
 function MultiSelectDropdown({ label, options, selectedValues, onChange, placeholder }) {
+  const detailsRef = useRef(null);
   const selectedLabels = options
     .filter((option) => selectedValues.includes(option.value))
     .map((option) => option.label);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      const detailsEl = detailsRef.current;
+      if (!detailsEl) return;
+      if (!detailsEl.contains(event.target)) {
+        detailsEl.removeAttribute('open');
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      detailsRef.current?.removeAttribute('open');
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
 
   const toggleValue = (value) => {
     if (selectedValues.includes(value)) {
@@ -39,7 +62,7 @@ function MultiSelectDropdown({ label, options, selectedValues, onChange, placeho
   };
 
   return (
-    <details className="relative min-w-[220px]">
+    <details ref={detailsRef} className="relative min-w-[220px]">
       <summary className="list-none cursor-pointer">
         <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
         <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white flex items-center justify-between">

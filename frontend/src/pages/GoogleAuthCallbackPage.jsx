@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+﻿import { useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { setAuthSession } from '../lib/api';
 
@@ -85,3 +85,4 @@ export default function GoogleAuthCallbackPage() {
     </div>
   );
 }
+

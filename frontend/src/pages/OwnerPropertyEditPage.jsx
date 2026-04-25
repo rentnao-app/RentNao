@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch, isLoggedIn } from '../lib/api';
 import toast from 'react-hot-toast';
@@ -227,7 +227,7 @@ export default function OwnerPropertyEditPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/owner-dashboard" className="text-2xl font-bold text-teal-800 tracking-tight">
             RentNao
@@ -419,7 +419,7 @@ export default function OwnerPropertyEditPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Media</h2>
-              <p className="text-sm text-gray-500 mt-0.5">JPEG, PNG, Webp, MP4, WebM, MOV or M4V · up to 100MB each</p>
+              <p className="text-sm text-gray-500 mt-0.5">JPEG, PNG, Webp, MP4, WebM, MOV or M4V - up to 100MB each</p>
             </div>
             <span className="text-sm text-gray-500">{sortedImages.length} total</span>
           </div>
@@ -474,7 +474,7 @@ export default function OwnerPropertyEditPage() {
                         onClick={() => handleDeleteImage(imgId)}
                         className="w-full text-sm border border-red-200 text-red-600 hover:bg-red-50 rounded-lg py-2 transition disabled:opacity-50"
                       >
-                        {deletingImageId === imgId ? 'Removing…' : 'Remove image'}
+                        {deletingImageId === imgId ? 'Removing...' : 'Remove image'}
                       </button>
                     </div>
                   </div>
@@ -487,4 +487,5 @@ export default function OwnerPropertyEditPage() {
     </div>
   );
 }
+
 

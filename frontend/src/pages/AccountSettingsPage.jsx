@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch, getApiErrorMessage, getCurrentUser, getUserId, getUserRole, isLoggedIn } from '../lib/api';
 import { addLocalNotification } from '../lib/notifications';
@@ -256,11 +256,11 @@ export default function AccountSettingsPage() {
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
         <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
+          <h1 className="lg:text-3xl  md:text-2xl text-xl font-bold text-gray-900">Account Settings</h1>
           <div className="flex items-center gap-4">
             <Link to="/wallet" className="text-teal-700 hover:text-teal-800 text-sm font-semibold">Wallet</Link>
             <Link to={dashboardPath} className="text-blue-600 hover:text-blue-800 text-sm font-semibold">
-              Back to dashboard
+              Dashboard
             </Link>
           </div>
         </div>
@@ -424,3 +424,4 @@ export default function AccountSettingsPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { listTenantRequests, withdrawTenantRequest } from '../lib/requests';
@@ -26,25 +26,25 @@ export default function MyApplicationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/tenant-dashboard" className="text-2xl font-bold text-teal-800 tracking-tight">
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
+          <Link to="/tenant-dashboard" className="text-xl sm:text-2xl font-bold text-teal-800 tracking-tight leading-none">
             RentNao
           </Link>
-          <div className="flex items-center gap-4">
-            <Link to="/listings" className="text-sm font-medium text-teal-700 hover:text-teal-800">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <Link to="/listings" className="text-xs sm:text-sm font-medium text-teal-700 hover:text-teal-800">
               Browse Listings
             </Link>
-            <button type="button" onClick={load} className="text-sm font-medium text-gray-600 hover:text-gray-800">
+            <button type="button" onClick={load} className="text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-800">
               Refresh
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">My Applications</h1>
-        <p className="text-sm text-gray-500 mb-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">My Applications</h1>
+        <p className="text-sm text-gray-500 mb-5 sm:mb-6">
           {remoteAvailable ? 'Applications synced with backend.' : 'Using local interaction fallback for requests.'}
         </p>
 
@@ -58,16 +58,16 @@ export default function MyApplicationsPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {items.map((item) => (
-              <div key={item.requestId} className="bg-white rounded-xl border border-gray-100 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
+              <div key={item.requestId} className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                  <div className="min-w-0">
                     <Link to={`/listings/${item.listingId}`} className="font-semibold text-gray-900 hover:text-teal-700">
                       Listing #{item.listingId}
                     </Link>
                     <p className="text-sm text-gray-500 mt-1">
-                      {item.listing?.areaName || 'Unknown area'} • {item.listing?.rent ? `$${item.listing.rent}/mo` : 'Rent N/A'}
+                      {item.listing?.areaName || 'Unknown area'} - {item.listing?.rent ? `$${item.listing.rent}/mo` : 'Rent N/A'}
                     </p>
                     {item.ownerUserId && (
                       <p className="text-sm mt-1">
@@ -80,7 +80,7 @@ export default function MyApplicationsPage() {
                       Requested on {new Date(item.requestedAt).toLocaleString()}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  <span className={`self-start px-3 py-1 rounded-full text-xs font-semibold ${
                     item.requestStatus === 'ACCEPTED'
                       ? 'bg-green-100 text-green-700'
                       : item.requestStatus === 'REJECTED'
@@ -93,7 +93,7 @@ export default function MyApplicationsPage() {
                   </span>
                 </div>
                 {item.requestStatus === 'PENDING' && (
-                  <div className="mt-4">
+                  <div className="mt-3 sm:mt-4">
                     <button
                       type="button"
                       onClick={async () => {
@@ -111,7 +111,7 @@ export default function MyApplicationsPage() {
                         toast.success('Request withdrawn');
                         await load();
                       }}
-                      className="text-sm font-semibold text-red-600 hover:text-red-700"
+                      className="w-full sm:w-auto text-left text-sm font-semibold text-red-600 hover:text-red-700"
                     >
                       Withdraw Request
                     </button>
@@ -125,3 +125,4 @@ export default function MyApplicationsPage() {
     </div>
   );
 }
+

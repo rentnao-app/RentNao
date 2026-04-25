@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { apiFetch, isLoggedIn, logout } from '../lib/api';
@@ -592,14 +592,12 @@ export default function AdminDashboard() {
       label: 'Settings',
       icon: 'M10.325 4.317a1 1 0 011.35-.936l1.06.396a1 1 0 00.95-.106l.985-.574a1 1 0 011.366.366l.5.866a1 1 0 00.79.49l1.145.15a1 1 0 01.878 1.12l-.1 1.11a1 1 0 00.287.829l.79.79a1 1 0 010 1.414l-.79.79a1 1 0 00-.287.829l.1 1.11a1 1 0 01-.878 1.12l-1.146.15a1 1 0 00-.789.49l-.5.866a1 1 0 01-1.366.366l-.985-.574a1 1 0 00-.95-.106l-1.06.396a1 1 0 01-1.35-.936l-.086-1.148a1 1 0 00-.522-.795l-.94-.542a1 1 0 01-.366-1.366l.574-.985a1 1 0 00.106-.95l-.396-1.06a1 1 0 01.936-1.35l1.148-.086a1 1 0 00.795-.522l.542-.94z',
     },
-  ];
-
-  const headerNavItems = [
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'listings', label: 'Properties' },
-    { key: 'users', label: 'Users' },
-    { key: 'fees', label: 'Payments' },
-    { key: 'reports', label: 'Reports' },
+    {
+      key: 'account',
+      label: 'Account',
+      to: '/account',
+      icon: 'M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z',
+    },
   ];
 
   const renderDashboardSection = () => {
@@ -683,7 +681,7 @@ export default function AdminDashboard() {
                 }}
                 className="inline-flex shrink-0 items-center text-xs font-semibold leading-none text-emerald-700 hover:text-emerald-900 sm:text-sm"
               >
-                View All →
+                View All ->
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col">
@@ -732,7 +730,7 @@ export default function AdminDashboard() {
                               disabled={selectingListingId === row.listingId}
                               className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"
                             >
-                              {selectingListingId === row.listingId ? 'Loading…' : 'View Details'}
+                              {selectingListingId === row.listingId ? 'Loading...' : 'View Details'}
                             </button>
                           </div>
                         </div>
@@ -755,7 +753,7 @@ export default function AdminDashboard() {
                 }}
                 className="inline-flex shrink-0 items-center text-xs font-semibold leading-none text-emerald-700 hover:text-emerald-900 sm:text-sm"
               >
-                View All →
+                View All ->
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col">
@@ -780,7 +778,7 @@ export default function AdminDashboard() {
                           <p className="truncate text-sm font-semibold text-gray-900">{displayUserName(u)}</p>
                           <p className="text-xs text-gray-500">
                             {u.role === 'OWNER' ? 'Property Owner' : u.role === 'TENANT' ? 'Tenant' : toLabel(u.role)}
-                            {u.contactPhone ? ` · ${u.contactPhone}` : ''}
+                            {u.contactPhone ? ` - ${u.contactPhone}` : ''}
                           </p>
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
                             {verified ? (
@@ -814,7 +812,7 @@ export default function AdminDashboard() {
                 }}
                 className="inline-flex shrink-0 items-center text-xs font-semibold leading-none text-emerald-700 hover:text-emerald-900 sm:text-sm"
               >
-                View All →
+                View All ->
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col">
@@ -841,21 +839,22 @@ export default function AdminDashboard() {
             </div>
           </section>
 
-          <section className="flex min-h-0 flex-col rounded-xl border border-gray-200/90 bg-white p-3.5 shadow-sm sm:p-5 xl:col-span-5 xl:h-full xl:min-h-[22rem]">
+          <section className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-emerald-100/80 bg-gradient-to-br from-white via-emerald-50/[0.35] to-teal-50/[0.45] p-3.5 shadow-sm sm:p-5 xl:col-span-5 xl:h-full xl:min-h-[22rem]">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-200/25 blur-2xl" />
             <div className="mb-3 flex min-h-10 shrink-0 items-center justify-between gap-3 sm:min-h-11">
-              <h2 className="min-w-0 flex-1 truncate text-base font-semibold leading-snug text-gray-900">System Analytics</h2>
-              <span className="inline-flex shrink-0 items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold leading-none text-gray-600 sm:text-sm">
+              <h2 className="min-w-0 flex-1 truncate text-base font-bold leading-snug text-gray-900">System Analytics</h2>
+              <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-200/80 bg-white/90 px-2.5 py-1 text-xs font-semibold leading-none text-emerald-800 sm:text-sm">
                 Past 7 days
               </span>
             </div>
             <div className="flex min-h-0 flex-1 flex-col">
               <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto pr-0.5 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5">
-                <div className="inline-flex shrink-0 rounded-lg border border-gray-200 p-0.5">
+                <div className="inline-flex shrink-0 rounded-xl border border-emerald-200/80 bg-white p-0.5 shadow-sm">
                   <button
                     type="button"
                     onClick={() => setAnalyticsTab('users')}
                     className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                      analyticsTab === 'users' ? 'bg-emerald-700 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+                      analyticsTab === 'users' ? 'bg-emerald-700 text-white shadow-sm' : 'text-gray-600 hover:bg-emerald-50/70'
                     }`}
                   >
                     Users
@@ -864,7 +863,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={() => setAnalyticsTab('properties')}
                     className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                      analyticsTab === 'properties' ? 'bg-emerald-700 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+                      analyticsTab === 'properties' ? 'bg-emerald-700 text-white shadow-sm' : 'text-gray-600 hover:bg-emerald-50/70'
                     }`}
                   >
                     Properties
@@ -872,16 +871,16 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row sm:items-stretch sm:justify-between">
-                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-emerald-100/80 bg-white/90 px-3 py-3 shadow-sm">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                       {analyticsTab === 'users' ? 'New registrations' : 'Listing activity'}
                     </p>
-                    <p className="mt-0.5 text-xl font-bold text-gray-900 sm:text-2xl">
+                    <p className="mt-1 text-2xl font-extrabold text-gray-900 sm:text-[1.7rem]">
                       {analyticsTab === 'users'
                         ? (stats?.usersCreatedLast7Days ?? 0).toLocaleString()
                         : (stats?.listingsCreatedLast7Days ?? 0).toLocaleString()}
                     </p>
-                    <p className="mt-0.5 text-xs text-gray-500 sm:text-sm">
+                    <p className="mt-1 text-xs text-slate-500 sm:text-sm">
                       {analyticsTab === 'users'
                         ? `${(stats?.activeToday ?? 0).toLocaleString()} active users today`
                         : `${(stats?.activeListingsCount ?? 0).toLocaleString()} live listings`}
@@ -890,13 +889,13 @@ export default function AdminDashboard() {
                       {[35, 50, 42, 68, 55, 72, 60].map((h, i) => (
                         <div
                           key={i}
-                          className="min-w-0 flex-1 rounded-t bg-emerald-200/90"
+                          className="min-w-0 flex-1 rounded-t bg-gradient-to-t from-emerald-500/80 to-emerald-300/80"
                           style={{ height: `${h}%` }}
                         />
                       ))}
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-col justify-center rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2.5 text-right sm:max-w-[11rem] sm:self-stretch">
+                  <div className="flex shrink-0 flex-col justify-center rounded-xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-teal-50 px-3 py-2.5 text-right shadow-sm sm:max-w-[11rem] sm:self-stretch">
                     <p className="text-[11px] font-semibold text-emerald-800">
                       {analyticsTab === 'users'
                         ? `${userWeekPct >= 0 ? '+' : ''}${userWeekPct}% this week`
@@ -1308,7 +1307,7 @@ export default function AdminDashboard() {
                   </div>
                   <p className="text-xs text-slate-500">
                     {doc.fileName || 'Unnamed file'}
-                    {doc.mimeType ? ` · ${doc.mimeType}` : ''}
+                    {doc.mimeType ? ` - ${doc.mimeType}` : ''}
                   </p>
                   {doc.signedUrl ? (
                     <div className="mt-2">
@@ -1439,7 +1438,7 @@ export default function AdminDashboard() {
                     <p className="line-clamp-2 text-sm font-semibold text-slate-900">{item.title}</p>
                     <p className="mt-1 text-xs font-medium text-emerald-800">{formatBdt(item.rent)}</p>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      {toLabel(item.areaName)} · {item.roomCount} bed · {formatDate(item.listingStartDate)}
+                      {toLabel(item.areaName)} - {item.roomCount} bed - {formatDate(item.listingStartDate)}
                     </p>
                   </div>
                   {selectingListingId === item.listingId ? (
@@ -1512,7 +1511,7 @@ export default function AdminDashboard() {
                   <p className="text-xs text-slate-500">Listing period</p>
                   <p className="text-sm font-semibold text-slate-900">
                     {formatDate(selectedListingDetails.listingStartDate)}
-                    {selectedListingDetails.listingEndDate ? ` → ${formatDate(selectedListingDetails.listingEndDate)}` : ''}
+                    {selectedListingDetails.listingEndDate ? ` -> ${formatDate(selectedListingDetails.listingEndDate)}` : ''}
                   </p>
                 </div>
                 <div>
@@ -1522,7 +1521,7 @@ export default function AdminDashboard() {
                 <div>
                   <p className="text-xs text-slate-500">Building</p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {selectedListingDetails.buildingFloors} fl · {toLabel(selectedListingDetails.buildingFacing)}
+                    {selectedListingDetails.buildingFloors} fl - {toLabel(selectedListingDetails.buildingFacing)}
                   </p>
                 </div>
                 <div>
@@ -1780,47 +1779,6 @@ export default function AdminDashboard() {
     );
   }
 
-  const renderHeaderNav = (variant) => {
-    const isCompact = variant === 'mobile';
-    const wrap = isCompact
-      ? 'flex w-full snap-x snap-mandatory gap-1 overflow-x-auto pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
-      : 'mx-auto hidden max-w-full min-w-0 flex-1 items-center justify-center gap-0.5 px-2 md:flex lg:gap-1';
-    const btnBase = isCompact
-      ? 'snap-start shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition whitespace-nowrap'
-      : 'rounded-lg px-2 py-2 text-sm font-medium transition sm:px-3';
-    return (
-      <nav className={wrap} aria-label="Admin sections">
-        {headerNavItems.map((item) => {
-          const isNavActive = activeSection === item.key;
-          return (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => {
-                setActiveSection(item.key);
-                setMobileDrawerOpen(false);
-              }}
-              className={`${btnBase} ${
-                isNavActive
-                  ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/80'
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-emerald-800'
-              }`}
-            >
-              {item.label}
-            </button>
-          );
-        })}
-        <Link
-          to="/notifications"
-          className={`${btnBase} shrink-0 text-gray-700 hover:bg-gray-50 hover:text-emerald-800`}
-          onClick={() => setMobileDrawerOpen(false)}
-        >
-          Notifications
-        </Link>
-      </nav>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-[#f2f7f3] text-gray-800">
       <div className="mx-auto w-full max-w-[1440px] lg:pl-[270px]">
@@ -1833,8 +1791,8 @@ export default function AdminDashboard() {
         ) : null}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-40 flex h-screen w-[min(270px,88vw)] max-w-[270px] flex-col overflow-y-auto overscroll-contain border-r border-[#dceadf] bg-[#f7fbf8] transition-transform duration-200 ease-out lg:translate-x-0 ${
-            mobileDrawerOpen ? 'translate-x-0 shadow-[4px_0_24px_rgba(30,71,50,0.08)]' : '-translate-x-full lg:shadow-none'
+          className={`fixed inset-y-0 right-0 z-40 flex h-screen w-[min(270px,88vw)] max-w-[270px] flex-col overflow-y-auto overscroll-contain border-l border-[#dceadf] bg-[#f7fbf8] transition-transform duration-200 ease-out lg:left-0 lg:right-auto lg:border-l-0 lg:border-r lg:translate-x-0 ${
+            mobileDrawerOpen ? 'translate-x-0 shadow-[-4px_0_24px_rgba(30,71,50,0.08)]' : 'translate-x-full lg:shadow-none'
           }`}
         >
           <div className="border-b border-[#dceadf]/80 bg-white/90 px-4 pb-4 pt-4 sm:px-5 sm:pt-5">
@@ -1863,7 +1821,34 @@ export default function AdminDashboard() {
             <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">Menu</p>
             <nav className="space-y-1" aria-label="Admin sidebar">
               {sideMenuItems.map((item) => {
-                const isActive = activeSection === item.key;
+                const isActive = item.to
+                  ? typeof window !== 'undefined' && window.location.pathname.startsWith(item.to)
+                  : activeSection === item.key;
+                const itemClass = `group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-white text-emerald-900 shadow-sm ring-1 ring-emerald-200/60'
+                    : 'text-gray-700 hover:bg-white/90 hover:text-emerald-900'
+                }`;
+                const iconClass = `grid h-8 w-8 shrink-0 place-items-center rounded-lg transition ${
+                  isActive
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-white/80 text-gray-500 ring-1 ring-gray-200/80 group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:ring-emerald-100'
+                }`;
+                if (item.to) {
+                  return (
+                    <Link
+                      key={item.key}
+                      to={item.to}
+                      onClick={() => setMobileDrawerOpen(false)}
+                      className={itemClass}
+                    >
+                      <span className={iconClass}>
+                        <Icon className="h-4 w-4" path={item.icon} />
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                }
                 return (
                   <button
                     key={item.key}
@@ -1872,19 +1857,9 @@ export default function AdminDashboard() {
                       setActiveSection(item.key);
                       setMobileDrawerOpen(false);
                     }}
-                    className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium transition ${
-                      isActive
-                        ? 'bg-white text-emerald-900 shadow-sm ring-1 ring-emerald-200/60'
-                        : 'text-gray-700 hover:bg-white/90 hover:text-emerald-900'
-                    }`}
+                    className={itemClass}
                   >
-                    <span
-                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg transition ${
-                        isActive
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-white/80 text-gray-500 ring-1 ring-gray-200/80 group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:ring-emerald-100'
-                      }`}
-                    >
+                    <span className={iconClass}>
                       <Icon className="h-4 w-4" path={item.icon} />
                     </span>
                     <span className="truncate">{item.label}</span>
@@ -1909,18 +1884,9 @@ export default function AdminDashboard() {
         </aside>
 
         <div className="min-w-0">
-          <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white">
+          <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
             <div className="mx-auto max-w-[1500px] px-3 sm:px-5 lg:px-6">
               <div className="flex items-center gap-2 py-2.5 sm:gap-3 sm:py-3">
-                <button
-                  type="button"
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-gray-200 text-gray-600 transition hover:bg-gray-50 lg:hidden"
-                  aria-label="Open menu"
-                  onClick={() => setMobileDrawerOpen((v) => !v)}
-                >
-                  <Icon className="h-4 w-4" path="M4 7h16M4 12h16M4 17h16" />
-                </button>
-
                 <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5" onClick={() => setMobileDrawerOpen(false)}>
                   <img
                     src="/logo.jpg"
@@ -1930,25 +1896,24 @@ export default function AdminDashboard() {
                   <span className="truncate text-base font-semibold text-[#2f8444] sm:text-xl sm:tracking-tight">Rent Nao</span>
                 </Link>
 
-                {renderHeaderNav('desktop')}
-
-                <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+                <div className="ml-auto flex shrink-0 items-center gap-2.5 sm:gap-2 md:gap-3.5">
                   <NotificationBell />
-                  <Link
-                    to="/account"
-                    className="hidden rounded-lg px-2 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 hover:text-emerald-800 sm:inline sm:px-3"
-                  >
-                    Account
-                  </Link>
                   <div
                     className="grid h-8 w-8 place-items-center rounded-full bg-emerald-700 text-xs font-semibold text-white shadow-sm sm:h-9 sm:w-9 sm:text-sm"
                     title="Admin"
                   >
                     A
                   </div>
+                  <button
+                    type="button"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-gray-200 text-gray-600 transition hover:bg-gray-50 lg:hidden"
+                    aria-label="Open menu"
+                    onClick={() => setMobileDrawerOpen((v) => !v)}
+                  >
+                    <Icon className="h-4 w-4" path="M4 7h16M4 12h16M4 17h16" />
+                  </button>
                 </div>
               </div>
-              <div className="border-t border-gray-100 md:hidden">{renderHeaderNav('mobile')}</div>
             </div>
           </header>
 
@@ -1957,7 +1922,7 @@ export default function AdminDashboard() {
               <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
                 <span className="text-sm font-medium">{error}</span>
                 <button type="button" onClick={() => setError('')} className="text-lg font-bold leading-none">
-                  ×
+                  Ã—
                 </button>
               </div>
             ) : null}
@@ -1976,4 +1941,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
 

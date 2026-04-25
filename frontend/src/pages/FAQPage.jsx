@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 
 const FAQ = [
   {
@@ -86,7 +86,7 @@ const FAQ = [
 export default function FAQPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="text-2xl font-bold text-teal-800 tracking-tight">RentNao</Link>
           <nav className="flex gap-6">
@@ -125,4 +125,5 @@ export default function FAQPage() {
     </div>
   );
 }
+
 
