@@ -11,6 +11,136 @@ import { sendPhoneOtp } from './sms.service';
 import { TOKEN_TTL } from '../config/token-ttl';
 import type { IdentifierTypeType } from '@/types/enums';
 
+export async function startPhoneVerification(
+  userId: string,
+  phone: string
+): Promise<{ phone: string; message: string }> {
+  const userResult = await db.query(
+    `SELECT user_id, onboarding_status, is_active, deleted_at
+     FROM "User"
+     WHERE user_id = $1`,
+    [userId]
+  );
+
+  if (userResult.rows.length === 0) {
+    throw new AppError(404, 'User not found');
+  }
+
+  const user = userResult.rows[0];
+  if (user.deleted_at) {
+    throw new AppError(410, 'This account has been deleted');
+  }
+  if (!user.is_active) {
+    throw new AppError(403, 'This account is inactive. Please contact support.');
+  }
+  if (user.onboarding_status === 'COMPLETED') {
+    throw new AppError(409, 'Phone verification cannot be restarted for completed onboarding');
+  }
+
+  const ownerByCredential = await db.query(
+    `SELECT user_id
+     FROM "Credentials"
+     WHERE identifier_type = 'PHONE' AND identifier = $1
+     LIMIT 1`,
+    [phone]
+  );
+
+  if (ownerByCredential.rows[0] && ownerByCredential.rows[0].user_id !== userId) {
+    throw new AppError(409, 'This phone number is already linked to another account');
+  }
+
+  const ownerByContact = await db.query(
+    `SELECT user_id
+     FROM "User"
+     WHERE contact_phone = $1 AND user_id <> $2
+     LIMIT 1`,
+    [phone, userId]
+  );
+
+  if (ownerByContact.rows.length > 0) {
+    throw new AppError(409, 'This phone number is already linked to another account');
+  }
+
+  const passwordSource = await db.query(
+    `SELECT password_hash
+     FROM "Credentials"
+     WHERE user_id = $1
+     ORDER BY verified_at DESC NULLS LAST, created_at ASC
+     LIMIT 1`,
+    [userId]
+  );
+
+  if (passwordSource.rows.length === 0) {
+    throw new AppError(400, 'Cannot initialize phone verification without account credentials');
+  }
+
+  const existingPhoneCred = await db.query(
+    `SELECT id, identifier, verified_at
+     FROM "Credentials"
+     WHERE user_id = $1 AND identifier_type = 'PHONE'
+     LIMIT 1`,
+    [userId]
+  );
+
+  if (existingPhoneCred.rows[0]?.verified_at && existingPhoneCred.rows[0].identifier === phone) {
+    throw new AppError(409, 'Phone number is already verified for this account');
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (existingPhoneCred.rows.length > 0) {
+      await client.query(
+        `UPDATE "Credentials"
+         SET identifier = $1, verified_at = NULL, updated_at = NOW()
+         WHERE id = $2`,
+        [phone, existingPhoneCred.rows[0].id]
+      );
+    } else {
+      await client.query(
+        `INSERT INTO "Credentials" (id, user_id, identifier, identifier_type, password_hash)
+         VALUES (gen_random_uuid()::text, $1, $2, 'PHONE', $3)`,
+        [userId, phone, passwordSource.rows[0].password_hash]
+      );
+    }
+
+    await client.query(
+      `UPDATE "User"
+       SET contact_phone = $1,
+           onboarding_status = CASE
+             WHEN onboarding_status IN ('PHONE_REQUIRED', 'PHONE_VERIFICATION_PENDING', 'PROFILE_PENDING') THEN 'PHONE_VERIFICATION_PENDING'
+             ELSE onboarding_status
+           END,
+           updated_at = NOW()
+       WHERE user_id = $2`,
+      [phone, userId]
+    );
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  await deleteVerificationToken(phone, 'PHONE_VERIFICATION');
+  const otp = generateOTP();
+  await storeVerificationToken(phone, otp, 'PHONE_VERIFICATION', TOKEN_TTL.PHONE_VERIFICATION);
+  await sendPhoneOtp({
+    identifier: phone,
+    otp,
+    purpose: 'PHONE_VERIFICATION',
+    ttlSeconds: TOKEN_TTL.PHONE_VERIFICATION,
+  });
+
+  return {
+    phone,
+    message: 'Verification SMS sent successfully',
+  };
+}
+
 /**
  * Verify email using token
  */
@@ -81,14 +211,6 @@ export async function verifyEmail(token: string): Promise<{ success: boolean; me
     }
 
     const userId = updateResult.rows[0].user_id;
-
-    // Update user onboarding status
-    await client.query(
-      `UPDATE "User" 
-       SET onboarding_status = 'PROFILE_PENDING'
-       WHERE user_id = $1 AND onboarding_status = 'AUTH_PENDING'`,
-      [userId]
-    );
 
     await client.query('COMMIT');
 
@@ -173,12 +295,17 @@ export async function verifyPhone(token: string): Promise<{ success: boolean; me
 
     const userId = updateResult.rows[0].user_id;
 
-    // Update user onboarding status
+    // Phone verification unlocks profile completion stage.
     await client.query(
-      `UPDATE "User" 
-       SET onboarding_status = 'PROFILE_PENDING'
-       WHERE user_id = $1 AND onboarding_status = 'AUTH_PENDING'`,
-      [userId]
+      `UPDATE "User"
+       SET contact_phone = COALESCE(contact_phone, $1),
+           onboarding_status = CASE
+             WHEN onboarding_status IN ('PHONE_REQUIRED', 'PHONE_VERIFICATION_PENDING') THEN 'PROFILE_PENDING'
+             ELSE onboarding_status
+           END,
+           updated_at = NOW()
+       WHERE user_id = $2`,
+      [matchedIdentifier, userId]
     );
 
     await client.query('COMMIT');
@@ -244,6 +371,19 @@ export async function resendVerification(
 
   // Store new token in Redis
   await storeVerificationToken(identifier, newToken, tokenType, ttl);
+
+  if (type === 'PHONE') {
+    await db.query(
+      `UPDATE "User"
+       SET onboarding_status = CASE
+         WHEN onboarding_status = 'PHONE_REQUIRED' THEN 'PHONE_VERIFICATION_PENDING'
+         ELSE onboarding_status
+       END,
+           updated_at = NOW()
+       WHERE user_id = $1`,
+      [credential.user_id]
+    );
+  }
 
   if (type === 'PHONE') {
     await sendPhoneOtp({

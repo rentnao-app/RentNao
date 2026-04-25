@@ -11,7 +11,8 @@ enum UserRole {
 }
 
 enum OnboardingStatus {
-  AUTH_PENDING
+  PHONE_REQUIRED
+  PHONE_VERIFICATION_PENDING
   PROFILE_PENDING
   COMPLETED
 }
@@ -195,7 +196,7 @@ enum ChargeStatus {
 model User {
   user_id           String           @id @default(cuid())
   role              UserRole         @default(TENANT)
-  onboarding_status OnboardingStatus @default(AUTH_PENDING)
+  onboarding_status OnboardingStatus @default(PHONE_VERIFICATION_PENDING)
 
   // Contact info (populated after verification)
   contact_email String? @unique

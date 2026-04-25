@@ -371,7 +371,7 @@ export async function createOrUpdateProfile(
     // Update User onboarding status
     await client.query(
       `UPDATE "User" SET onboarding_status = 'PROFILE_PENDING', updated_at = NOW() 
-       WHERE user_id = $1 AND onboarding_status = 'AUTH_PENDING'`,
+       WHERE user_id = $1 AND onboarding_status IN ('PHONE_REQUIRED', 'PHONE_VERIFICATION_PENDING')`,
       [userId]
     );
 

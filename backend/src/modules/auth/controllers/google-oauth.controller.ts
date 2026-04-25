@@ -172,7 +172,7 @@ async function createUserFromGoogle(args: { email: string; role: string }) {
 
     const userResult = await client.query(
       `INSERT INTO "User" (user_id, role, onboarding_status, kyc_verification_status, contact_email, is_active)
-       VALUES (gen_random_uuid()::text, $1, 'PROFILE_PENDING', 'PENDING', $2, true)
+       VALUES (gen_random_uuid()::text, $1, 'PHONE_REQUIRED', 'PENDING', $2, true)
        RETURNING user_id, role, onboarding_status, kyc_verification_status, contact_email, contact_phone, is_active, created_at`,
       [role, args.email]
     );

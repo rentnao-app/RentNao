@@ -80,7 +80,10 @@ export async function requireProfileComplete(c: Context, next: Next) {
     return error(c, 'Authentication required', 401);
   }
 
-  if (user.onboardingStatus === 'AUTH_PENDING') {
+  if (
+    user.onboardingStatus === 'PHONE_REQUIRED' ||
+    user.onboardingStatus === 'PHONE_VERIFICATION_PENDING'
+  ) {
     return error(c, 'Profile completion required', 403);
   }
 

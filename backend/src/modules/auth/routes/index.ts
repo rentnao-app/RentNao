@@ -31,6 +31,7 @@ export {
   verifyEmailRoute,
   verifyPhoneRoute,
   resendVerificationRoute,
+  startPhoneVerificationRoute,
 } from './verification.routes';
 
 // Password reset routes

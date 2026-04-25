@@ -14,7 +14,7 @@ export const userSchema = z.object({
   userId: z.string().openapi({ example: 'cm4abc123xyz' }),
   role: UserRole.openapi({ example: 'TENANT' }),
   onboardingStatus: OnboardingStatus.openapi({
-    example: 'AUTH_PENDING',
+    example: 'PHONE_VERIFICATION_PENDING',
   }),
   contactEmail: z.email().nullable().openapi({ example: 'user@example.com' }),
   contactPhone: z.string().nullable().openapi({ example: '+8801712345678' }),

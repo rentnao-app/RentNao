@@ -27,6 +27,10 @@ import type { UserWithTokens } from '../types/auth.types';
 export async function registerUser(input: RegisterInput): Promise<UserWithTokens> {
   const { identifier, identifierType, password, role } = input;
 
+  if (identifierType !== 'PHONE') {
+    throw new AppError(400, 'Registration currently requires a phone number');
+  }
+
   // Check if user already exists
   const existingCredential = await db.query(
     `SELECT c.id, c.user_id, c.verified_at, u.is_active, u.deleted_at 
@@ -68,7 +72,7 @@ export async function registerUser(input: RegisterInput): Promise<UserWithTokens
     // Create user
     const userResult = await client.query(
       `INSERT INTO "User" (user_id, role, onboarding_status, is_active)
-       VALUES (gen_random_uuid()::text, $1, 'AUTH_PENDING', true)
+       VALUES (gen_random_uuid()::text, $1, 'PHONE_VERIFICATION_PENDING', true)
        RETURNING user_id, role, onboarding_status, kyc_verification_status, contact_email, contact_phone, is_active, created_at`,
       [role]
     );

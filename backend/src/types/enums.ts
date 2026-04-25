@@ -12,7 +12,12 @@ import { z } from '@hono/zod-openapi';
 export const UserRole = z.enum(['TENANT', 'OWNER', 'ADMIN']);
 export type UserRoleType = z.infer<typeof UserRole>;
 
-export const OnboardingStatus = z.enum(['AUTH_PENDING', 'PROFILE_PENDING', 'COMPLETED']);
+export const OnboardingStatus = z.enum([
+  'PHONE_REQUIRED',
+  'PHONE_VERIFICATION_PENDING',
+  'PROFILE_PENDING',
+  'COMPLETED',
+]);
 export type OnboardingStatusType = z.infer<typeof OnboardingStatus>;
 
 export const Verification = z.enum(['ACCEPTED', 'REJECTED', 'PENDING']);

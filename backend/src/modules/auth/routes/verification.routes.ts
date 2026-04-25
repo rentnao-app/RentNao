@@ -13,8 +13,10 @@ import {
   verifyEmailSchema,
   verifyPhoneSchema,
   resendVerificationSchema,
+  startPhoneVerificationSchema,
   verificationResponseSchema,
   resendVerificationResponseSchema,
+  startPhoneVerificationResponseSchema,
 } from '../schemas';
 import { commonErrors } from './helpers';
 
@@ -116,6 +118,42 @@ export const resendVerificationRoute = createRoute({
     },
     ...commonErrors.badRequest,
     ...commonErrors.notFound,
+    ...commonErrors.internalError,
+  },
+});
+
+// ============================================================================
+// POST /auth/phone/start
+// ============================================================================
+
+export const startPhoneVerificationRoute = createRoute({
+  method: 'post',
+  path: '/phone/start',
+  tags: ['Authentication'],
+  summary: 'Start authenticated phone verification',
+  description: 'Attach a phone number to the current user (if needed) and send an OTP for verification',
+  security: [{ bearerAuth: [] }],
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: startPhoneVerificationSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Verification OTP sent successfully',
+      content: {
+        'application/json': {
+          schema: startPhoneVerificationResponseSchema,
+        },
+      },
+    },
+    ...commonErrors.badRequest,
+    ...commonErrors.unauthorized,
+    ...commonErrors.conflict,
     ...commonErrors.internalError,
   },
 });
