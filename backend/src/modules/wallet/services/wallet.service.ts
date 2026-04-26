@@ -23,6 +23,7 @@ export interface PaidActionInput {
   referenceId: string;
   walletTxnType: 'TOPUP' | 'LISTING_FEE' | 'REFUND' | 'ADJUSTMENT' | 'REVERSAL';
   description?: string;
+  referenceData?: Record<string, number>; // e.g., { rent: 10000 } to calculate percentage on
 }
 
 export interface PaidActionResult {
@@ -30,6 +31,40 @@ export interface PaidActionResult {
   walletTransactionId: string;
   debitedAmount: string;
   currency: string;
+}
+
+/**
+ * Calculate final fee amount from flexible fee policy
+ * Supports fixed amount, percentage (of reference field), min/max bounds
+ */
+function calculateFeeAmount(
+  feePolicy: any,
+  referenceData?: Record<string, number>
+): number {
+  let amount = 0;
+
+  // Add fixed component
+  if (feePolicy.fixed_amount) {
+    amount += Number(feePolicy.fixed_amount);
+  }
+
+  // Add percentage component
+  if (feePolicy.percentage && feePolicy.percent_base_field && referenceData) {
+    const baseValue = referenceData[feePolicy.percent_base_field];
+    if (baseValue !== undefined) {
+      amount += (baseValue * Number(feePolicy.percentage)) / 100;
+    }
+  }
+
+  // Apply min/max bounds
+  if (feePolicy.min_amount && amount < Number(feePolicy.min_amount)) {
+    amount = Number(feePolicy.min_amount);
+  }
+  if (feePolicy.max_amount && amount > Number(feePolicy.max_amount)) {
+    amount = Number(feePolicy.max_amount);
+  }
+
+  return amount;
 }
 
 /**
@@ -41,7 +76,7 @@ export async function assertPaidActionAndDebit(
   input: PaidActionInput
 ): Promise<PaidActionResult> {
   const feePolicyResult = await client.query(
-    `SELECT id, code, currency, base_amount
+    `SELECT id, code, currency, fixed_amount, percentage, percent_base_field, min_amount, max_amount
      FROM "FeePolicy"
      WHERE code = $1
        AND is_active = true
@@ -57,7 +92,11 @@ export async function assertPaidActionAndDebit(
   }
 
   const feePolicy = feePolicyResult.rows[0];
-  const requiredAmount = Number(feePolicy.base_amount);
+  const requiredAmount = calculateFeeAmount(feePolicy, input.referenceData);
+
+  if (requiredAmount <= 0) {
+    throw new AppError(400, `Fee policy ${input.feeCode} does not calculate a valid amount`);
+  }
 
   const walletResult = await client.query(
     `SELECT id, status, currency, available_balance
@@ -109,8 +148,8 @@ export async function assertPaidActionAndDebit(
       input.referenceType,
       input.referenceId,
       feePolicy.currency,
-      feePolicy.base_amount,
-      feePolicy.base_amount,
+      requiredAmount,
+      requiredAmount,
     ]
   );
 
@@ -119,7 +158,7 @@ export async function assertPaidActionAndDebit(
      SET available_balance = available_balance - $1,
          updated_at = NOW()
      WHERE id = $2`,
-    [feePolicy.base_amount, wallet.id]
+    [requiredAmount, wallet.id]
   );
 
   const walletTransactionId = createId();
@@ -137,7 +176,7 @@ export async function assertPaidActionAndDebit(
       walletTransactionId,
       wallet.id,
       input.walletTxnType,
-      feePolicy.base_amount,
+      requiredAmount,
       feePolicy.currency,
       input.description || `Charge applied for ${input.feeCode}`,
       input.referenceType,
@@ -155,7 +194,7 @@ export async function assertPaidActionAndDebit(
   return {
     chargeId,
     walletTransactionId,
-    debitedAmount: String(feePolicy.base_amount),
+    debitedAmount: requiredAmount.toFixed(2),
     currency: feePolicy.currency,
   };
 }

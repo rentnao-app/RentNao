@@ -20,6 +20,24 @@ const LISTING_STATUS_FILTERS = [
 
 const parseFeePolicies = (body) => body?.data?.feePolicies || body?.data?.items || body?.feePolicies || [];
 
+const feeFormulaLabel = (policy) => {
+  const parts = [];
+  if (policy.fixedAmount != null && policy.fixedAmount !== '') {
+    parts.push(`Fixed ${policy.fixedAmount}`);
+  }
+  if (policy.percentage != null && policy.percentage !== '') {
+    const base = policy.percentBaseField || 'base';
+    parts.push(`${policy.percentage}% of ${base}`);
+  }
+  if (policy.minAmount != null && policy.minAmount !== '') {
+    parts.push(`Min ${policy.minAmount}`);
+  }
+  if (policy.maxAmount != null && policy.maxAmount !== '') {
+    parts.push(`Max ${policy.maxAmount}`);
+  }
+  return parts.length ? parts.join(' + ') : 'No formula';
+};
+
 function Icon({ path, className = 'h-5 w-5' }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -93,7 +111,11 @@ export default function AdminDashboard() {
     code: '',
     name: '',
     currency: 'BDT',
-    baseAmount: '',
+    fixedAmount: '',
+    percentage: '',
+    percentBaseField: 'rent',
+    minAmount: '',
+    maxAmount: '',
     effectiveFrom: '',
     isActive: true,
   });
@@ -478,14 +500,25 @@ export default function AdminDashboard() {
     event.preventDefault();
     setFeeBusy(true);
     try {
-      if (!feeForm.code.trim() || !feeForm.name.trim() || !feeForm.baseAmount) {
-        throw new Error('Code, name and base amount are required');
+      const hasFixed = feeForm.fixedAmount !== '';
+      const hasPercent = feeForm.percentage !== '';
+
+      if (!feeForm.code.trim() || !feeForm.name.trim() || (!hasFixed && !hasPercent)) {
+        throw new Error('Code, name and at least one fee component are required');
       }
+      if (hasPercent && !feeForm.percentBaseField.trim()) {
+        throw new Error('Base field is required when percentage is set');
+      }
+
       const payload = {
         code: feeForm.code.trim().toUpperCase(),
         name: feeForm.name.trim(),
         currency: feeForm.currency.trim().toUpperCase() || 'BDT',
-        baseAmount: Number(feeForm.baseAmount),
+        fixedAmount: hasFixed ? Number(feeForm.fixedAmount) : undefined,
+        percentage: hasPercent ? Number(feeForm.percentage) : undefined,
+        percentBaseField: hasPercent ? feeForm.percentBaseField.trim() : undefined,
+        minAmount: feeForm.minAmount !== '' ? Number(feeForm.minAmount) : undefined,
+        maxAmount: feeForm.maxAmount !== '' ? Number(feeForm.maxAmount) : undefined,
         effectiveFrom: toIsoString(feeForm.effectiveFrom),
         effectiveTo: null,
         isActive: feeForm.isActive,
@@ -504,7 +537,11 @@ export default function AdminDashboard() {
         code: '',
         name: '',
         currency: 'BDT',
-        baseAmount: '',
+        fixedAmount: '',
+        percentage: '',
+        percentBaseField: 'rent',
+        minAmount: '',
+        maxAmount: '',
         effectiveFrom: '',
         isActive: true,
       });
@@ -535,20 +572,56 @@ export default function AdminDashboard() {
   const handleEditFeePolicy = async (policy) => {
     const name = prompt('Update fee policy name', policy.name || '');
     if (name === null) return;
-    const baseAmountRaw = prompt('Update base amount', String(policy.baseAmount || ''));
-    if (baseAmountRaw === null) return;
-    const baseAmount = Number(baseAmountRaw);
-    if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
-      toast.error('Base amount must be a positive number');
+
+    const fixedRaw = prompt('Update fixed amount (leave empty to clear)', String(policy.fixedAmount ?? ''));
+    if (fixedRaw === null) return;
+    const percentageRaw = prompt('Update percentage (leave empty to clear)', String(policy.percentage ?? ''));
+    if (percentageRaw === null) return;
+    const baseFieldRaw = prompt('Update percentage base field (e.g. rent)', String(policy.percentBaseField ?? ''));
+    if (baseFieldRaw === null) return;
+    const minRaw = prompt('Update min amount (leave empty to clear)', String(policy.minAmount ?? ''));
+    if (minRaw === null) return;
+    const maxRaw = prompt('Update max amount (leave empty to clear)', String(policy.maxAmount ?? ''));
+    if (maxRaw === null) return;
+
+    const toNumberOrNull = (value) => {
+      if (value.trim() === '') return null;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : NaN;
+    };
+
+    const fixedAmount = toNumberOrNull(fixedRaw);
+    const percentage = toNumberOrNull(percentageRaw);
+    const minAmount = toNumberOrNull(minRaw);
+    const maxAmount = toNumberOrNull(maxRaw);
+
+    if ([fixedAmount, percentage, minAmount, maxAmount].some((v) => Number.isNaN(v))) {
+      toast.error('Numeric inputs must be valid numbers');
+      return;
+    }
+    if (typeof minAmount === 'number' && typeof maxAmount === 'number' && minAmount > maxAmount) {
+      toast.error('Min amount cannot be greater than max amount');
+      return;
+    }
+    if (typeof percentage === 'number' && !baseFieldRaw.trim()) {
+      toast.error('Base field is required when percentage is set');
       return;
     }
 
     setFeeBusy(true);
     try {
+      const patchPayload = {
+        name: name.trim(),
+        fixedAmount,
+        percentage,
+        percentBaseField: baseFieldRaw.trim() || null,
+        minAmount,
+        maxAmount,
+      };
       const res = await apiFetch(`/admin/fee-policies/${policy.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), baseAmount }),
+        body: JSON.stringify(patchPayload),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body?.error || 'Failed to update fee policy');
@@ -1636,35 +1709,69 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <form onSubmit={handleCreateFeePolicy} className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-6">
+      <form onSubmit={handleCreateFeePolicy} className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-12">
         <input
           type="text"
           placeholder="Code (e.g. LISTING_CREATE)"
           value={feeForm.code}
           onChange={(e) => setFeeForm((prev) => ({ ...prev, code: e.target.value }))}
-          className="md:col-span-2 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+          className="md:col-span-3 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
         />
         <input
           type="text"
           placeholder="Policy name"
           value={feeForm.name}
           onChange={(e) => setFeeForm((prev) => ({ ...prev, name: e.target.value }))}
+          className="md:col-span-3 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+        />
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="Fixed amount"
+          value={feeForm.fixedAmount}
+          onChange={(e) => setFeeForm((prev) => ({ ...prev, fixedAmount: e.target.value }))}
+          className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+        />
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="Percent"
+          value={feeForm.percentage}
+          onChange={(e) => setFeeForm((prev) => ({ ...prev, percentage: e.target.value }))}
+          className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+        />
+        <input
+          type="text"
+          placeholder="Percent base field (e.g. rent)"
+          value={feeForm.percentBaseField}
+          onChange={(e) => setFeeForm((prev) => ({ ...prev, percentBaseField: e.target.value }))}
           className="md:col-span-2 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
         />
         <input
           type="number"
-          min="1"
+          min="0"
           step="0.01"
-          placeholder="Amount"
-          value={feeForm.baseAmount}
-          onChange={(e) => setFeeForm((prev) => ({ ...prev, baseAmount: e.target.value }))}
+          placeholder="Min amount"
+          value={feeForm.minAmount}
+          onChange={(e) => setFeeForm((prev) => ({ ...prev, minAmount: e.target.value }))}
+          className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+        />
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="Max amount"
+          value={feeForm.maxAmount}
+          onChange={(e) => setFeeForm((prev) => ({ ...prev, maxAmount: e.target.value }))}
           className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
         />
         <input
           type="datetime-local"
           value={feeForm.effectiveFrom}
           onChange={(e) => setFeeForm((prev) => ({ ...prev, effectiveFrom: e.target.value }))}
-          className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+          className="md:col-span-2 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
         />
         <label className="md:col-span-2 flex items-center gap-2 text-sm text-slate-600">
           <input
@@ -1701,7 +1808,7 @@ export default function AdminDashboard() {
                 <th className="py-2 pr-4">Code</th>
                 <th className="py-2 pr-4">Version</th>
                 <th className="py-2 pr-4">Name</th>
-                <th className="py-2 pr-4">Amount</th>
+                <th className="py-2 pr-4">Formula</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2 pr-4">Effective from</th>
                 <th className="py-2">Actions</th>
@@ -1714,7 +1821,7 @@ export default function AdminDashboard() {
                   <td className="py-2 pr-4 text-slate-700">{policy.version}</td>
                   <td className="py-2 pr-4 text-slate-700">{policy.name}</td>
                   <td className="py-2 pr-4 text-slate-700">
-                    {formatAmount(policy.baseAmount)} {policy.currency}
+                    {feeFormulaLabel(policy)} {policy.currency}
                   </td>
                   <td className="py-2 pr-4">
                     <span

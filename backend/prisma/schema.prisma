@@ -407,19 +407,28 @@ model WalletTransaction {
 }
 
 model FeePolicy {
-  id            String   @id @default(cuid())
-  code          String
-  version       Int
-  name          String
-  currency      String   @default("BDT")
-  base_amount   Decimal
-  is_active     Boolean  @default(true)
-  effective_from DateTime @db.Timestamptz(6)
-  effective_to  DateTime? @db.Timestamptz(6)
-  created_by    String?
-  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  id                  String   @id @default(cuid())
+  code                String
+  version             Int
+  name                String
+  currency            String   @default("BDT")
+  
+  // Fee composition: any combination of fixed + percentage
+  fixed_amount        Decimal?
+  percentage          Decimal?
+  percent_base_field  String?  // Field name to calculate percentage on (e.g., "rent")
+  
+  // Bounds
+  min_amount          Decimal?
+  max_amount          Decimal?
+  
+  is_active           Boolean  @default(true)
+  effective_from      DateTime @db.Timestamptz(6)
+  effective_to        DateTime? @db.Timestamptz(6)
+  created_by          String?
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
 
-  charges       Charge[]
+  charges             Charge[]
 
   @@unique([code, version])
   @@index([code])

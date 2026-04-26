@@ -32,7 +32,7 @@ async function ensureActiveFeePolicy(
 
   await client.query(
     `INSERT INTO "FeePolicy" (
-      id, code, version, name, currency, base_amount, is_active, effective_from, effective_to, created_by, created_at
+      id, code, version, name, currency, fixed_amount, is_active, effective_from, effective_to, created_by, created_at
     ) VALUES (
       gen_random_uuid()::text, $1, $2, $3, 'BDT', $4, true, NOW() - INTERVAL '1 day', NULL, 'manual-seed', NOW()
     )`,
@@ -49,7 +49,7 @@ async function main() {
     await ensureActiveFeePolicy(client, 'LISTING_UNLOCK', 'Listing Unlock Fee', 50);
 
     const result = await client.query(
-      `SELECT code, version, base_amount, is_active, effective_from, effective_to
+      `SELECT code, version, fixed_amount, percentage, percent_base_field, min_amount, max_amount, is_active, effective_from, effective_to
        FROM "FeePolicy"
        WHERE code IN ('LISTING_CREATE', 'LISTING_UNLOCK')
        ORDER BY code, version`

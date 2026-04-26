@@ -351,6 +351,9 @@ export async function createListingForProperty(
         referenceId: listingId,
         walletTxnType: 'LISTING_FEE',
         description: `Listing creation fee for property ${propertyId}`,
+        referenceData: {
+          rent: Number(input.rent),
+        },
       });
     }
 

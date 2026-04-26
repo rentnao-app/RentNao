@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   apiFetch,
@@ -14,32 +14,41 @@ import {
   isValidBdMobileLocal11,
   normalizeBdPhoneForApi,
   toLocal11Digits,
+  consumeSignupPhoneLocal11,
 } from '../lib/phone';
-
-const PHONE_HINT =
-  'Enter your 11-digit mobile starting with 01 (e.g. 01712345678). Third digit must be 3–9.';
 
 export default function AuthVerificationPage() {
   const [searchParams] = useSearchParams();
-  const defaultIdentifier = searchParams.get('identifier') || '';
-
-  const [identifier, setIdentifier] = useState(defaultIdentifier);
+  
+  const [identifier, setIdentifier] = useState('');
   const [phoneOtp, setPhoneOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Load stored phone on mount
+  useEffect(() => {
+    const fromQuery = searchParams.get('identifier') || '';
+    const fromSession = fromQuery ? '' : consumeSignupPhoneLocal11();
+    const user = getCurrentUser();
+    const fromUser = user?.contactPhone || user?.contact_phone || '';
+    const raw = fromQuery || fromSession || fromUser;
+    const local11 = toLocal11Digits(clipPhoneInput(raw));
+    if (local11 && isValidBdMobileLocal11(local11)) {
+      setIdentifier(local11);
+    }
+  }, [searchParams]);
 
   const handleResend = async () => {
     setLoading(true);
     setError('');
     setSuccess('');
     try {
-      const local11 = toLocal11Digits(clipPhoneInput(identifier));
-      if (!isValidBdMobileLocal11(local11)) {
-        throw new Error(PHONE_HINT);
+      if (!identifier) {
+        throw new Error('Phone number not available. Please log in again.');
       }
-      const forApi = normalizeBdPhoneForApi(local11);
-      if (!forApi) throw new Error(PHONE_HINT);
+      const forApi = normalizeBdPhoneForApi(identifier);
+      if (!forApi) throw new Error('Invalid phone number');
 
       const res = await apiFetch('/auth/resend-verification', {
         method: 'POST',
@@ -117,58 +126,45 @@ export default function AuthVerificationPage() {
         <div className="w-full max-w-md">
           <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">Verify mobile</h1>
           <p className="text-gray-500 text-center mb-8">
-            Enter the mobile you used at sign-up, resend the OTP if needed, then submit the 6-digit code.
+            Enter the 6-digit OTP sent to your mobile number.
           </p>
 
           {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
           {success && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{success}</div>}
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-            <div className="space-y-5">
+            <form onSubmit={handleVerify} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mobile number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">SMS OTP (6 digits)</label>
                 <input
-                  type="tel"
+                  type="text"
                   inputMode="numeric"
-                  autoComplete="tel"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(clipPhoneInput(e.target.value))}
-                  placeholder="01XXXXXXXXX"
+                  value={phoneOtp}
+                  onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="Enter 6-digit OTP"
+                  maxLength={6}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                  required
                 />
-                <p className="mt-1 text-xs text-gray-500">{PHONE_HINT}</p>
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={loading || !identifier.trim()}
-                  className="mt-2 text-sm text-teal-700 hover:text-teal-800 font-semibold disabled:opacity-50"
-                >
-                  Resend OTP
-                </button>
               </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
+              >
+                {loading ? 'Verifying...' : 'Verify now'}
+              </button>
+            </form>
 
-              <form onSubmit={handleVerify} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">SMS OTP (6 digits)</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={phoneOtp}
-                    onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="Enter 6-digit OTP"
-                    maxLength={6}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
-                >
-                  {loading ? 'Verifying...' : 'Verify now'}
-                </button>
-              </form>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={loading || !identifier}
+                className="w-full text-sm text-teal-700 hover:text-teal-800 font-semibold py-2 disabled:opacity-50"
+              >
+                Didn't get the code? Resend
+              </button>
             </div>
           </div>
         </div>
