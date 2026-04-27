@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { apiFetch, getCurrentUser } from '../lib/api';
 import { addLocalNotification } from '../lib/notifications';
@@ -80,7 +80,7 @@ function UploadCard({
         onDragOver={onDragOver}
         onDrop={onDrop}
         className={`mt-4 rounded-xl border-2 border-dashed p-4 sm:p-5 transition ${
-          isDragging ? 'border-emerald-500 bg-emerald-50' : 'border-emerald-200 bg-[#fbfefc]'
+          isDragging ? 'border-gray-400 bg-gray-100' : 'border-gray-300 bg-gray-50/70'
         }`}
       >
         {file ? (
@@ -100,8 +100,8 @@ function UploadCard({
           </div>
         ) : (
           <label className="block cursor-pointer">
-            <div className="rounded-xl border-2 border-dashed border-emerald-200 bg-white p-6 text-center">
-              <div className="mx-auto mb-3 h-11 w-11 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <div className="rounded-xl border-2 border-dashed border-gray-300 bg-white p-6 text-center">
+              <div className="mx-auto mb-3 h-11 w-11 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 13v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6h2v6h10v-6zm-7-2V3l-4 4h3v4h2V7h3l-4-4z" />
                 </svg>
@@ -120,6 +120,7 @@ function UploadCard({
 
 export default function VerificationPage() {
   const [searchParams] = useSearchParams();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [role, setRole] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -269,21 +270,21 @@ export default function VerificationPage() {
   return (
     <div className="min-h-screen bg-[#f4f7f5]">
       {/* Unified registration header */}
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2.5">
             <img src="/logo.jpg" alt="Rent Nao" className="h-10 w-10 rounded-md object-cover border border-emerald-100" />
-            <span className="text-3xl font-extrabold text-emerald-800 tracking-tight">Rent Nao</span>
+            <span className="text-xl sm:text-3xl font-extrabold text-emerald-800 tracking-tight leading-none">Rent Nao</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
+          <nav className="hidden lg:flex items-center gap-8 text-sm font-medium">
             <Link to="/" className="text-gray-700 hover:text-emerald-700 transition">Home</Link>
             <Link to="/listings" className="text-gray-700 hover:text-emerald-700 transition">Find Property</Link>
             <Link to="/owner-dashboard/create-listing" className="text-gray-700 hover:text-emerald-700 transition">List Property</Link>
             <Link to="/services" className="text-gray-700 hover:text-emerald-700 transition">Services</Link>
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2">
             <Link
               to="/login"
               className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
@@ -297,8 +298,109 @@ export default function VerificationPage() {
               Sign Up
             </Link>
           </div>
+
+          <button
+            type="button"
+            className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-800 shadow-sm hover:bg-emerald-50 transition"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="verification-mobile-nav"
+          >
+            {mobileMenuOpen ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </header>
+
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
+            aria-label="Close menu"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <aside
+            id="verification-mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="verification-mobile-nav-title"
+            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+          >
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <img src="/logo.jpg" alt="" className="h-9 w-9 rounded-lg object-cover border border-green-100 shrink-0" />
+                <p id="verification-mobile-nav-title" className="font-semibold text-[#1e4732] text-sm tracking-tight truncate">
+                  Rent Nao
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
+                aria-label="Close menu"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
+              <Link
+                to="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-[#2f8444] bg-[#eef7ef]"
+              >
+                Home
+              </Link>
+              <Link
+                to="/listings"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                Find Property
+              </Link>
+              <Link
+                to="/owner-dashboard/create-listing"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                List Property
+              </Link>
+              <Link
+                to="/services"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                Services
+              </Link>
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
+              >
+                Sign Up
+              </Link>
+            </nav>
+          </aside>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="rounded-2xl border border-emerald-100 bg-white p-5 sm:p-6 shadow-sm">
@@ -416,11 +518,13 @@ export default function VerificationPage() {
                   </div>
                 )}
 
-                <p className="mt-4 text-sm sm:text-base text-emerald-800 flex items-center gap-2">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <p className="mt-4 text-sm sm:text-base text-emerald-800 flex items-start sm:items-center gap-2 leading-relaxed">
+                  <svg className="w-5 h-5 shrink-0 mt-0.5 sm:mt-0" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2l7 3v6c0 5-3.4 9.7-7 11-3.6-1.3-7-6-7-11V5l7-3zm-1 13l5-5-1.4-1.4L11 12.2l-1.6-1.6L8 12l3 3z" />
                   </svg>
-                  Your documents are <span className="font-semibold">secure &amp; verified only once.</span>
+                  <span>
+                    Your documents are <span className="font-semibold">secure &amp; verified only once.</span>
+                  </span>
                 </p>
 
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -428,39 +532,28 @@ export default function VerificationPage() {
                     to={isTenant ? '/tenant-registration' : '/owner-registration'}
                     className="h-11 rounded-xl border border-emerald-200 bg-white text-emerald-700 font-semibold text-base flex items-center justify-center hover:bg-emerald-50 transition"
                   >
-                    ← Back
+                    Back
                   </Link>
                   <button
                     type="submit"
                     disabled={loading}
                     className="h-11 rounded-xl bg-emerald-700 text-white font-semibold text-base hover:bg-emerald-800 transition disabled:opacity-50"
                   >
-                    {loading ? 'Uploading...' : 'Finish →'}
+                    {loading ? 'Uploading...' : 'Finish'}
                   </button>
                 </div>
 
-                <p className="mt-4 text-center text-sm text-gray-600 flex items-center justify-center gap-2">
-                  <svg className="w-4 h-4 text-emerald-700" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 1 1 6 0v3H9z" />
-                  </svg>
-                  Your information is safe &amp; secure with us
-                </p>
               </div>
 
-              <div className="hidden lg:block rounded-xl overflow-hidden border border-emerald-100 bg-white">
+              <div className="block rounded-2xl sm:rounded-3xl lg:rounded-xl overflow-hidden border border-emerald-100 bg-white max-w-[360px] sm:max-w-[420px] lg:max-w-none mx-auto lg:mx-0">
                 <VerificationIllustration />
               </div>
             </div>
           </form>
         </div>
 
-        <div className="mt-5 rounded-xl border border-emerald-100 bg-white px-4 py-3 text-emerald-800 text-sm flex items-center justify-center gap-2">
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2l7 3v6c0 5-3.4 9.7-7 11-3.6-1.3-7-6-7-11V5l7-3zm-1 13l5-5-1.4-1.4L11 12.2l-1.6-1.6L8 12l3 3z" />
-          </svg>
-          Your documents are secure &amp; verified only once.
-        </div>
       </main>
     </div>
   );
 }
+

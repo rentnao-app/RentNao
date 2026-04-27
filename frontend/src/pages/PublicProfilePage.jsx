@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch, getCurrentUser, getUserId, getUserRole, isLoggedIn } from '../lib/api';
 import { getPublicProfileData, savePublicProfileSnapshot } from '../lib/publicProfiles';
@@ -9,6 +9,7 @@ export default function PublicProfilePage() {
   const [remoteLoaded, setRemoteLoaded] = useState(false);
   const [error, setError] = useState('');
   const [profileData, setProfileData] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const localUser = getCurrentUser();
   const localUserId = getUserId(localUser);
@@ -90,78 +91,164 @@ export default function PublicProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-2xl font-bold text-teal-800 tracking-tight">
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
+          <Link to="/" className="text-xl sm:text-2xl font-bold text-teal-800 tracking-tight leading-none">
             RentNao
           </Link>
-          <Link to="/listings" className="text-sm font-medium text-teal-700 hover:text-teal-800">
+
+          <Link to="/listings" className="hidden lg:inline text-sm font-medium text-teal-700 hover:text-teal-800">
             Browse Listings
           </Link>
+
+          <button
+            type="button"
+            className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="public-profile-mobile-nav"
+          >
+            {mobileMenuOpen ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
+            aria-label="Close menu"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <aside
+            id="public-profile-mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="public-profile-mobile-nav-title"
+            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+          >
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
+              <p id="public-profile-mobile-nav-title" className="font-semibold text-[#1e4732] text-sm tracking-tight truncate">
+                RentNao
+              </p>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
+                aria-label="Close menu"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
+              <Link
+                to="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-[#2f8444] bg-[#eef7ef]"
+              >
+                Home
+              </Link>
+              <Link
+                to="/listings"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                Browse Listings
+              </Link>
+            </nav>
+          </aside>
+        </div>
+      )}
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         {error && (
           <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm">
             {error}
           </div>
         )}
 
-        <section className="bg-white border border-gray-100 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-3">
-            <h1 className="text-2xl font-bold text-gray-900">{display?.name || 'User'}</h1>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+        <section className="bg-white border border-gray-100 rounded-xl p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{display?.name || 'User'}</h1>
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
               {display?.role || 'USER'}
             </span>
           </div>
-          <p className="text-sm text-gray-600">
-            Verification: <span className="font-semibold">{display?.verificationStatus || 'N/A'}</span>
+          <p className="text-sm text-gray-700">
+            Verification:{' '}
+            <span className="inline-flex items-center rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-amber-800 font-semibold">
+              {display?.verificationStatus || 'N/A'}
+            </span>
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-sm">
-            <p><span className="text-gray-500">Email:</span> {display?.emailMasked || 'N/A'}</p>
-            <p><span className="text-gray-500">Phone:</span> {display?.phoneMasked || 'N/A'}</p>
-            <p><span className="text-gray-500">Area:</span> {display?.area || 'N/A'}</p>
-            <p><span className="text-gray-500">Profession:</span> {display?.profession || 'N/A'}</p>
+            <p className="rounded-lg bg-sky-50 border border-sky-100 px-3 py-2">
+              <span className="text-sky-700 font-medium">Email:</span> {display?.emailMasked || 'N/A'}
+            </p>
+            <p className="rounded-lg bg-violet-50 border border-violet-100 px-3 py-2">
+              <span className="text-violet-700 font-medium">Phone:</span> {display?.phoneMasked || 'N/A'}
+            </p>
+            <p className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2">
+              <span className="text-emerald-700 font-medium">Area:</span> {display?.area || 'N/A'}
+            </p>
+            <p className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
+              <span className="text-amber-700 font-medium">Profession:</span> {display?.profession || 'N/A'}
+            </p>
           </div>
           <p className="text-xs text-gray-400 mt-4">
             Data source: {remoteLoaded ? 'Verified backend profile data' : 'Interaction-based public summary'}
           </p>
         </section>
 
-        <section className="bg-white border border-gray-100 rounded-xl p-6">
+        <section className="bg-white border border-gray-100 rounded-xl p-4 sm:p-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">Interaction Stats</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-gray-500 text-xs">As Tenant</p>
+            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+              <p className="text-emerald-700 text-xs font-medium">As Tenant</p>
               <p className="text-xl font-bold text-gray-900">{stats?.totalAsTenant || 0}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-gray-500 text-xs">Accepted (Tenant)</p>
+            <div className="bg-teal-50 border border-teal-100 rounded-lg p-3">
+              <p className="text-teal-700 text-xs font-medium">Accepted (Tenant)</p>
               <p className="text-xl font-bold text-gray-900">{stats?.acceptedAsTenant || 0}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-gray-500 text-xs">As Owner</p>
+            <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+              <p className="text-indigo-700 text-xs font-medium">As Owner</p>
               <p className="text-xl font-bold text-gray-900">{stats?.totalAsOwner || 0}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-gray-500 text-xs">Accepted (Owner)</p>
+            <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
+              <p className="text-amber-700 text-xs font-medium">Accepted (Owner)</p>
               <p className="text-xl font-bold text-gray-900">{stats?.acceptedAsOwner || 0}</p>
             </div>
           </div>
         </section>
 
-        <section className="bg-white border border-gray-100 rounded-xl p-6">
+        <section className="bg-white border border-gray-100 rounded-xl p-4 sm:p-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Interactions</h2>
           {recentInteractions?.length ? (
             <div className="space-y-2">
               {recentInteractions.map((item) => (
-                <div key={item.requestId} className="border border-gray-100 rounded-lg px-4 py-3">
+                <div key={item.requestId} className="border border-gray-100 rounded-lg px-4 py-3 bg-gray-50/50">
                   <p className="text-sm font-semibold text-gray-900">
-                    Request #{item.requestId} • Listing #{item.listingId}
+                    Request #{item.requestId} - Listing #{item.listingId}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Status: {item.status} • {new Date(item.timestamp).toLocaleString()}
+                  <p className="text-xs text-gray-600 mt-1">
+                    Status:{' '}
+                    <span className="inline-flex items-center rounded-md bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-emerald-700 font-semibold">
+                      {item.status}
+                    </span>{' '}
+                    - {new Date(item.timestamp).toLocaleString()}
                   </p>
                 </div>
               ))}
@@ -174,3 +261,4 @@ export default function PublicProfilePage() {
     </div>
   );
 }
+

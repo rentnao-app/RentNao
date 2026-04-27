@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch, isLoggedIn } from '../lib/api';
 import MapPicker from '../components/MapPicker';
@@ -87,6 +87,7 @@ export default function CreateListingPage() {
       }
       const propertyId = createPropertyBody?.data?.propertyId;
       if (!propertyId) throw new Error('Property created but property ID missing.');
+      setCreatedPropertyId(propertyId);
 
       const now = new Date();
       const listingStartDate = new Date(now.getTime() + 60 * 1000).toISOString();
@@ -112,7 +113,6 @@ export default function CreateListingPage() {
         url: '/owner-dashboard/my-properties',
         type: 'LISTING',
       });
-      setCreatedPropertyId(propertyId);
     } catch (err) {
       setError(err.message || 'An unexpected error occurred');
     } finally {
@@ -126,7 +126,7 @@ export default function CreateListingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-7xl mx-auto px-6 py-4 pr-14 sm:pr-16 flex items-center justify-between">
           <Link to="/owner-dashboard" className="text-2xl font-bold text-teal-800 tracking-tight">
             RentNao
@@ -140,7 +140,7 @@ export default function CreateListingPage() {
         </div>
       </header>
 
-      <main className="max-w-xl mx-auto px-6 py-10">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Create New Listing</h1>
         <p className="text-gray-500 mb-8">Create a property first, then publish its listing.</p>
 
@@ -161,7 +161,7 @@ export default function CreateListingPage() {
             <textarea name="description" value={form.description} onChange={handleChange} className={`${inputClass} min-h-24`} placeholder="Describe the property..." required />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Size (sqft)</label>
               <input type="number" name="property_size" value={form.property_size} onChange={handleChange} className={inputClass} placeholder="e.g. 1450" min="0" required />
@@ -194,7 +194,7 @@ export default function CreateListingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Rooms / Beds</label>
               <input type="number" name="room_count" value={form.room_count} onChange={handleChange} className={inputClass} placeholder="e.g. 3" min="0" required />
@@ -230,7 +230,7 @@ export default function CreateListingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" name="has_lift" checked={form.has_lift} onChange={(e) => setForm((prev) => ({ ...prev, has_lift: e.target.checked }))} />
               Lift
@@ -266,7 +266,7 @@ export default function CreateListingPage() {
         {createdPropertyId && (
           <div className="mt-10 p-6 bg-white rounded-xl border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Listing created</h2>
-            <p className="text-sm text-gray-500 mb-4">Add photos/videos below, then go to My Properties.</p>
+            <p className="text-sm text-gray-500 mb-4">You can add more photos/videos below, then go to My Properties.</p>
             <ImageUploader
               propertyId={createdPropertyId}
               initialImages={[]}
@@ -276,7 +276,7 @@ export default function CreateListingPage() {
               to="/owner-dashboard/my-properties"
               className="inline-block mt-4 text-teal-700 font-semibold text-sm hover:text-teal-800"
             >
-              Done — My Properties &rarr;
+              Done - My Properties &rarr;
             </Link>
           </div>
         )}
@@ -284,4 +284,5 @@ export default function CreateListingPage() {
     </div>
   );
 }
+
 

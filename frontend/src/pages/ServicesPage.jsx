@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { isLoggedIn } from '../lib/api';
 
@@ -56,7 +56,7 @@ export default function ServicesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between gap-3 py-3 sm:py-4">
             <Link
@@ -67,7 +67,7 @@ export default function ServicesPage() {
               Rent Nao
             </Link>
 
-            <nav className="hidden sm:flex items-center justify-end gap-4 md:gap-6 text-sm shrink-0" aria-label="Main">
+            <nav className="hidden lg:flex items-center justify-end gap-4 md:gap-6 text-sm shrink-0" aria-label="Main">
               {headerNav.map(({ to, label, emphasize }) => (
                 <Link key={to} to={to} className={navLinkClass(emphasize)}>
                   {label}
@@ -77,7 +77,7 @@ export default function ServicesPage() {
 
             <button
               type="button"
-              className="sm:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 dark:hover:bg-zinc-800 shrink-0"
+              className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 shrink-0"
               aria-expanded={menuOpen}
               aria-controls="services-mobile-nav"
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
@@ -95,33 +95,65 @@ export default function ServicesPage() {
             </button>
           </div>
 
-          {menuOpen && (
-            <div
-              id="services-mobile-nav"
-              className="sm:hidden border-t border-gray-100"
-            >
-              <nav className="flex flex-col py-2 pb-4 text-sm" aria-label="Main mobile">
-                {headerNav.map(({ to, label, emphasize }) => (
-                  <Link
-                    key={to}
-                    to={to}
-                    className={`${navLinkClass(emphasize)} px-1`}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-          )}
         </div>
       </header>
+
+      {menuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+          />
+          <aside
+            id="services-mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="services-mobile-nav-title"
+            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+          >
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
+              <p id="services-mobile-nav-title" className="font-semibold text-[#1e4732] text-sm tracking-tight truncate">
+                Rent Nao
+              </p>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
+                aria-label="Close menu"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Main mobile">
+              {headerNav.map(({ to, label, emphasize }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className={
+                    emphasize
+                      ? 'mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition'
+                      : 'rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition'
+                  }
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      )}
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
         <p className="text-sm font-semibold uppercase tracking-wide text-teal-700 mb-2">What we offer</p>
         <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-4">Services</h1>
         <p className="text-base sm:text-lg text-gray-600 max-w-2xl mb-10 sm:mb-12">
-          Rent Nao helps you rent and let property with less friction—from discovery and requests to photos, listings, and
+          Rent Nao helps you rent and let property with less friction - from discovery and requests to photos, listings, and
           wallet-based fees.
         </p>
 
@@ -167,4 +199,5 @@ export default function ServicesPage() {
     </div>
   );
 }
+
 

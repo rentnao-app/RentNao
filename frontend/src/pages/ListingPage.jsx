@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
 import SearchFilterPanel from '../components/SearchFilterPanel';
@@ -9,8 +9,8 @@ function ListingCard({ item, canWishlist, isWishlisted, onToggleWishlist }) {
   const firstImage = item?.primaryImageUrl || null;
   const area = item.areaName ? String(item.areaName).replaceAll('_', ' ') : 'Unknown area';
   const title = item.title
-    ? `${item.title.slice(0, 56)}${item.title.length > 56 ? '…' : ''}`
-    : `Apartment · ${item.roomCount ?? '?'} beds`;
+    ? `${item.title.slice(0, 56)}${item.title.length > 56 ? '...' : ''}`
+    : `Apartment - ${item.roomCount ?? '?'} beds`;
   const rent = Number(item.rent || 0).toLocaleString();
 
   return (
@@ -231,22 +231,6 @@ export default function ListingsPage() {
     <div className="min-h-screen bg-[#f2f7f3] text-slate-800">
       <header className="sticky top-0 z-30 border-b border-emerald-100/90 bg-white/95 shadow-sm backdrop-blur-sm">
         <div className="mx-auto flex max-w-[1500px] items-center gap-2 px-3 py-3 sm:gap-3 sm:px-5 lg:px-6">
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
-            aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
-            onClick={() => setMobileNavOpen((v) => !v)}
-          >
-            {mobileNavOpen ? (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
           <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2" onClick={() => setMobileNavOpen(false)}>
             <img src="/logo.jpg" alt="" className="h-9 w-9 rounded-lg border border-emerald-100 object-cover" />
             <span className="truncate text-lg font-semibold tracking-tight text-[#2f8444] sm:text-xl">Rent Nao</span>
@@ -262,7 +246,7 @@ export default function ListingsPage() {
               </Link>
             ))}
           </nav>
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="ml-auto hidden lg:flex shrink-0 items-center gap-1.5 sm:gap-2">
             {loggedIn ? (
               <Link
                 to={dashboardPath}
@@ -284,24 +268,101 @@ export default function ListingsPage() {
               </>
             )}
           </div>
+          <button
+            type="button"
+            className="ml-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+            aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMobileNavOpen((v) => !v)}
+          >
+            {mobileNavOpen ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
-        {mobileNavOpen ? (
-          <div className="border-t border-emerald-100 bg-white px-3 py-3 lg:hidden">
-            <nav className="flex flex-col gap-1">
+      </header>
+
+      {mobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
+            aria-label="Close menu"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <aside
+            id="listing-mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="listing-mobile-nav-title"
+            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+          >
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <img src="/logo.jpg" alt="" className="h-9 w-9 rounded-lg object-cover border border-green-100 shrink-0" />
+                <p id="listing-mobile-nav-title" className="font-semibold text-[#1e4732] text-sm tracking-tight truncate">
+                  Rent Nao
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
+                aria-label="Close menu"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
               {topNavItems.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-emerald-50"
+                  className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   {item.label}
                 </Link>
               ))}
+
+              {loggedIn ? (
+                <Link
+                  to={dashboardPath}
+                  onClick={() => setMobileNavOpen(false)}
+                  className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
+                  >
+                    Sign up
+                  </Link>
+                </>
+              )}
             </nav>
-          </div>
-        ) : null}
-      </header>
+          </aside>
+        </div>
+      )}
 
       <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-5 sm:py-6 lg:px-6 lg:py-8">
         <section className="mb-5 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
@@ -342,3 +403,4 @@ export default function ListingsPage() {
     </div>
   );
 }
+

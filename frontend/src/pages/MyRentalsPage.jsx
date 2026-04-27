@@ -1,4 +1,4 @@
-import FeatureUnavailablePage from '../components/FeatureUnavailablePage';
+﻿import FeatureUnavailablePage from '../components/FeatureUnavailablePage';
 
 export default function MyRentalsPage() {
   return (
@@ -10,3 +10,4 @@ export default function MyRentalsPage() {
     />
   );
 }
+
