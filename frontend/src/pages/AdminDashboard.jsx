@@ -193,11 +193,6 @@ export default function AdminDashboard() {
     return 'bg-slate-100 text-slate-700';
   };
 
-  const formatAmount = (value) => {
-    const n = Number(value);
-    return Number.isFinite(n) ? n.toLocaleString() : value || '0';
-  };
-
   const formatRelativeTime = (iso) => {
     if (!iso) return '';
     const t = new Date(iso).getTime();
@@ -754,7 +749,7 @@ export default function AdminDashboard() {
                 }}
                 className="inline-flex shrink-0 items-center text-xs font-semibold leading-none text-emerald-700 hover:text-emerald-900 sm:text-sm"
               >
-                View All ->
+                View All {'->'}
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col">
@@ -826,7 +821,7 @@ export default function AdminDashboard() {
                 }}
                 className="inline-flex shrink-0 items-center text-xs font-semibold leading-none text-emerald-700 hover:text-emerald-900 sm:text-sm"
               >
-                View All ->
+                View All {'->'}
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col">
@@ -885,7 +880,7 @@ export default function AdminDashboard() {
                 }}
                 className="inline-flex shrink-0 items-center text-xs font-semibold leading-none text-emerald-700 hover:text-emerald-900 sm:text-sm"
               >
-                View All ->
+                View All {'->'}
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col">

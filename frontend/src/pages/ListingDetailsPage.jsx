@@ -656,7 +656,7 @@ export default function ListingDetailsPage() {
                     <div className="rounded-xl bg-amber-50 px-3 py-3 text-sm text-amber-950 ring-1 ring-amber-100">
                       <p className="font-medium">Request pending</p>
                       <Link to="/tenant-dashboard/applications" className="mt-2 inline-block text-xs font-semibold text-emerald-800 hover:underline">
-                        View my requests ->
+                        View my requests {'->'}
                       </Link>
                       <button
                         type="button"

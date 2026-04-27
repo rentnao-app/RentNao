@@ -257,7 +257,7 @@ export default function VerificationHoldingPage() {
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/10 hover:bg-emerald-800 transition text-center w-full sm:w-auto"
                 >
                   Go to dashboard
-                  <span aria-hidden>-></span>
+                  <span aria-hidden>{'->'}</span>
                 </Link>
               )}
               {phase === 'idle' && (
