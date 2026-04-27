@@ -465,26 +465,15 @@ export default function TenantRegistrationPage() {
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Full Name
                   </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={form.fullName}
-                      onChange={handleChange}
-                      className={inputClass}
-                      placeholder="Enter your full name"
-                      required
-                    />
-                    <Icon>
-                      <svg
-                        className="w-5 h-5"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.42 0-8 2.01-8 4.5V21h16v-2.5C20 16.01 16.42 14 12 14z" />
-                      </svg>
-                    </Icon>
-                  </div>
+                  <input
+                    type="text"
+                    name="fullName"
+                    value={form.fullName}
+                    onChange={handleChange}
+                    className={inputClass}
+                    placeholder="Enter your full name"
+                    required
+                  />
                 </div>
 
                 {/* Date of Birth */}
@@ -492,24 +481,13 @@ export default function TenantRegistrationPage() {
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Date of Birth
                   </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="dateOfBirth"
-                      value={form.dateOfBirth}
-                      onChange={handleChange}
-                      className={`${inputClass} pr-11 [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-0`}
-                    />
-                    <Icon>
-                      <svg
-                        className="w-5 h-5"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M7 2h2v2h6V2h2v2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3V2zm13 8H4v10h16V10z" />
-                      </svg>
-                    </Icon>
-                  </div>
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={form.dateOfBirth}
+                    onChange={handleChange}
+                    className={`${inputClass} [color-scheme:light]`}
+                  />
                 </div>
 
                 {/* Gender */}
@@ -650,30 +628,19 @@ export default function TenantRegistrationPage() {
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Current Location
                   </label>
-                  <div className="relative">
-                    <select
-                      name="currentLocation"
-                      value={form.currentLocation}
-                      onChange={handleChange}
-                      className={inputClass}
-                    >
-                      <option value="">City, Area, Flat No.</option>
-                      {LOCATION_OPTIONS.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                    <Icon>
-                      <svg
-                        className="w-5 h-5"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z" />
-                      </svg>
-                    </Icon>
-                  </div>
+                  <select
+                    name="currentLocation"
+                    value={form.currentLocation}
+                    onChange={handleChange}
+                    className={inputClass}
+                  >
+                    <option value="">City, Area, Flat No.</option>
+                    {LOCATION_OPTIONS.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Tenant category */}
