@@ -82,8 +82,8 @@ export const propertyImageUploadUrlRequestSchema = z.object({
   mimeType: z
     .enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'])
     .openapi({
-    example: 'image/jpeg',
-  }),
+      example: 'image/jpeg',
+    }),
 });
 
 export const propertyImageUploadUrlResponseSchema = z.object({

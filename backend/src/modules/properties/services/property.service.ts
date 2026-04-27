@@ -1262,9 +1262,17 @@ export async function createPropertyImage(
     throw new AppError(400, `Invalid file path. File must be uploaded under ${expectedPrefix}`);
   }
 
-  const exists = await storage.exists(input.filePath);
+  // Retry mechanism for MinIO/S3 eventual consistency
+  let exists = false;
+  for (let i = 0; i < 3; i++) {
+    exists = await storage.exists(input.filePath);
+    if (exists) break;
+    // Wait 200ms before retrying
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
   if (!exists) {
-    throw new AppError(400, 'Uploaded file not found in storage');
+    throw new AppError(400, 'Uploaded file not found in storage. Please try again in a moment.');
   }
 
   const countResult = await db.query(

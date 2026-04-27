@@ -29,9 +29,14 @@ export default function ImageUploader({ propertyId, initialImages = [], onUpdate
     setError('');
     const startImageCount = images.filter((img) => String(img?.mimeType || img?.mime_type || '').startsWith('image/')).length;
     let uploadedImageCount = 0;
-    try {
-      for (const file of files) {
-        if (!['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'].includes(file.type)) continue;
+
+    for (const file of files) {
+      try {
+        if (!['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'].includes(file.type)) {
+          setError(`File type ${file.type} is not supported.`);
+          continue;
+        }
+
         const isImage = file.type.startsWith('image/');
         const uploadUrlRes = await apiFetch(`/properties/${propertyId}/images/upload-url`, {
           method: 'POST',
@@ -72,13 +77,14 @@ export default function ImageUploader({ propertyId, initialImages = [], onUpdate
         if (createdImage && showPreview) {
           setImages((prev) => [...prev, createdImage]);
         }
+      } catch (err) {
+        console.error(`Upload failed for ${file.name}:`, err);
+        setError(`Failed to upload ${file.name}: ${err.message}`);
+        // Continue to the next file even if this one failed
       }
-      onUpdate?.();
-    } catch (err) {
-      setError(err.message || 'Upload failed');
-    } finally {
-      setUploading(false);
     }
+    setUploading(false);
+    onUpdate?.();
   };
 
   const handleRemove = async (imageId) => {
