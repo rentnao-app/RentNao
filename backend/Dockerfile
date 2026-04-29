@@ -1,23 +1,27 @@
-FROM oven/bun:latest AS deps
+FROM oven/bun:1 AS deps
 WORKDIR /app
 
-COPY package.json package-lock.json* bun.lockb* tsconfig.json ./
-COPY prisma ./prisma
 
-RUN --mount=type=cache,target=/root/.bun \
-	bun install
+COPY package.json bun.lockb* bun.lock* ./
+
+COPY prisma ./prisma 
+
+RUN bun install --frozen-lockfile
 
 FROM deps AS builder
 COPY . .
+
 RUN bun build src/index.ts --outdir ./dist --target bun
 
 FROM deps AS deps-prod
-RUN --mount=type=cache,target=/root/.bun \
-	bun install --production
+RUN bun install --production --frozen-lockfile
 
-FROM oven/bun:latest AS runtime
+# 4. Final lightweight runtime
+FROM oven/bun:1-slim AS runtime
 WORKDIR /app
-ENV NODE_ENV=development
+
+ENV NODE_ENV=production
+USER bun
 
 COPY --from=builder /app/dist ./dist
 COPY --from=deps-prod /app/node_modules ./node_modules
