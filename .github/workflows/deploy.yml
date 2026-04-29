@@ -75,6 +75,7 @@ jobs:
             ${{ steps.vars.outputs.frontend_image }}:${{ github.sha }}
 
       - name: Deploy on VPS
+        if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}

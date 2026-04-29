@@ -551,10 +551,7 @@ export async function getAdminTopupRequests(
   const offset = (page - 1) * limit;
 
   // Get topup requests
-  const offset_param = status ? 2 : 1;
-  const limit_param = status ? 3 : 2;
-
-  dataQuery += ` ORDER BY created_at DESC LIMIT $${limit_param} OFFSET $${offset_param}`;
+  dataQuery += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
 
   const result = await db.query(dataQuery, [...params, limit, offset]);
 
