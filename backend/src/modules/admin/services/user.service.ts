@@ -310,7 +310,6 @@ export async function hardDeleteUser(userId: string, currentUserId: string) {
 
     if (walletAccountId) {
       await client.query(`DELETE FROM "WalletTransaction" WHERE wallet_account_id = $1`, [walletAccountId]);
-      await client.query(`DELETE FROM "WalletTopupRequest" WHERE wallet_account_id = $1`, [walletAccountId]);
       await client.query(`DELETE FROM "TopupRequest" WHERE wallet_account_id = $1`, [walletAccountId]);
       await client.query(`DELETE FROM "WalletAccount" WHERE id = $1`, [walletAccountId]);
     }
