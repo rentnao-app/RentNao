@@ -1,7 +1,8 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* yarn.lock* ./
-RUN npm ci --silent
+RUN --mount=type=cache,target=/root/.npm \
+	npm ci --silent
 COPY . .
 RUN npm run build
 

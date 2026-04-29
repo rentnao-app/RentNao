@@ -6,11 +6,13 @@ COPY prisma ./prisma
 
 COPY . .
 
-RUN bun install
+RUN --mount=type=cache,target=/root/.bun \
+	bun install
 
 RUN bun build src/index.ts --outdir ./dist --target bun
 
-RUN bun install --production
+RUN --mount=type=cache,target=/root/.bun \
+	bun install --production
 
 
 FROM oven/bun:latest AS runtime
