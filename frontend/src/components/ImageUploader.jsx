@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../lib/api';
+import { getAcceptValue, isAllowedFileByMimeAndExtension, PROPERTY_MEDIA_MIMES } from '../lib/fileValidation';
 
 /**
  * @param {object} props
@@ -32,8 +33,8 @@ export default function ImageUploader({ propertyId, initialImages = [], onUpdate
 
     for (const file of files) {
       try {
-        if (!['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'].includes(file.type)) {
-          setError(`File type ${file.type} is not supported.`);
+        if (!isAllowedFileByMimeAndExtension(file, PROPERTY_MEDIA_MIMES)) {
+          setError(`File type ${file.type} is not supported, or the extension does not match.`);
           continue;
         }
 
@@ -132,7 +133,7 @@ export default function ImageUploader({ propertyId, initialImages = [], onUpdate
       )}
       {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
       <label className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 border border-teal-200 rounded-lg cursor-pointer hover:bg-teal-100 transition text-sm font-medium text-teal-800">
-        <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,video/x-m4v,.m4v" multiple className="hidden" onChange={handleFileSelect} disabled={!propertyId || uploading} />
+        <input type="file" accept={getAcceptValue(PROPERTY_MEDIA_MIMES)} multiple className="hidden" onChange={handleFileSelect} disabled={!propertyId || uploading} />
         {uploading ? 'Uploading...' : 'Add photos/videos'}
       </label>
     </div>

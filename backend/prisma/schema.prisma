@@ -14,6 +14,7 @@ enum OnboardingStatus {
   PHONE_REQUIRED
   PHONE_VERIFICATION_PENDING
   PROFILE_PENDING
+  UNDER_REVIEW
   COMPLETED
 }
 
@@ -237,7 +238,7 @@ model Credentials {
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)
 
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
   @@unique([identifier_type, identifier])
   @@index([user_id])
@@ -266,7 +267,7 @@ model OAuthAccount {
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)
 
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
   @@unique([provider, provider_user_id])
   @@index([user_id])
@@ -296,7 +297,7 @@ model BaseUserProfile {
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)
 
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model OwnerProfile {
@@ -309,7 +310,7 @@ model OwnerProfile {
 
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  user       User       @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user       User       @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   properties Property[]
 }
 
@@ -326,7 +327,7 @@ model TenantProfile {
 
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  user            User            @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user            User            @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   wishlist_items  Wishlist[]
 }
 
@@ -359,7 +360,7 @@ model Property {
 
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  owner    OwnerProfile    @relation(fields: [owner_id], references: [owner_id], onDelete: Restrict)
+  owner    OwnerProfile    @relation(fields: [owner_id], references: [owner_id], onDelete: Cascade)
   listings Listing[]
   images   PropertyImage[]
 
@@ -375,7 +376,7 @@ model WalletAccount {
   created_at        DateTime      @default(now()) @db.Timestamptz(6)
   updated_at        DateTime?     @updatedAt @db.Timestamptz(6)
 
-  user              User              @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user              User              @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   transactions      WalletTransaction[]
   topup_requests    TopupRequest[]
 
@@ -396,7 +397,7 @@ model WalletTransaction {
   created_at        DateTime          @default(now()) @db.Timestamptz(6)
   posted_at         DateTime?         @db.Timestamptz(6)
 
-  wallet_account    WalletAccount     @relation(fields: [wallet_account_id], references: [id], onDelete: Restrict)
+  wallet_account    WalletAccount     @relation(fields: [wallet_account_id], references: [id], onDelete: Cascade)
 
   @@index([wallet_account_id, created_at])
   @@index([reference_type, reference_id])
@@ -447,7 +448,7 @@ model Charge {
   settled_at        DateTime?    @db.Timestamptz(6)
   updated_at        DateTime?    @updatedAt @db.Timestamptz(6)
 
-  user              User         @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user              User         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   fee_policy        FeePolicy    @relation(fields: [fee_policy_id], references: [id], onDelete: Restrict)
 
   @@index([user_id, created_at])
@@ -469,7 +470,7 @@ model TopupRequest {
   created_at          DateTime              @default(now()) @db.Timestamptz(6)
   updated_at          DateTime?             @updatedAt @db.Timestamptz(6)
 
-  user                User                  @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user                User                  @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   wallet_account      WalletAccount         @relation(fields: [wallet_account_id], references: [id], onDelete: Restrict)
   approved_by_admin   User?                 @relation("TopupApprovals", fields: [approved_by_admin_id], references: [user_id], onDelete: SetNull)
 
@@ -490,7 +491,7 @@ model Listing {
   created_at         DateTime      @default(now()) @db.Timestamptz(6)
   updated_at         DateTime?      @updatedAt @db.Timestamptz(6)
 
-  property        Property        @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
+  property        Property        @relation(fields: [property_id], references: [property_id], onDelete: Cascade)
   listing_unlocks ListingUnlock[]
   wishlist_items  Wishlist[]
   rental_requests RentalRequest[]
@@ -507,8 +508,8 @@ model ListingUnlock {
   unlocked_at    DateTime @default(now()) @db.Timestamptz(6)
   created_at     DateTime @default(now()) @db.Timestamptz(6)
 
-  listing         Listing  @relation(fields: [listing_id], references: [listing_id], onDelete: Restrict)
-  tenant_user     User     @relation(fields: [tenant_user_id], references: [user_id], onDelete: Restrict)
+  listing         Listing  @relation(fields: [listing_id], references: [listing_id], onDelete: Cascade)
+  tenant_user     User     @relation(fields: [tenant_user_id], references: [user_id], onDelete: Cascade)
 
   @@unique([listing_id, tenant_user_id])
   @@index([listing_id])
@@ -520,8 +521,8 @@ model Wishlist {
   listing_id String
   added_at   DateTime @default(now()) @db.Timestamptz(6)
 
-  tenant  TenantProfile @relation(fields: [tenant_id], references: [tenant_id], onDelete: Restrict)
-  listing Listing       @relation(fields: [listing_id], references: [listing_id], onDelete: Restrict)
+  tenant  TenantProfile @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  listing Listing       @relation(fields: [listing_id], references: [listing_id], onDelete: Cascade)
 
   @@id([tenant_id, listing_id])
 }
@@ -536,7 +537,7 @@ model RentalRequest {
   updated_at         DateTime?           @updatedAt @db.Timestamptz(6)
 
   listing Listing @relation(fields: [listing_id], references: [listing_id], onDelete: Cascade)
-  tenant  User    @relation("RentalRequestsTenant", fields: [tenant_user_id], references: [user_id], onDelete: Restrict)
+  tenant  User    @relation("RentalRequestsTenant", fields: [tenant_user_id], references: [user_id], onDelete: Cascade)
 
   @@index([listing_id])
   @@index([tenant_user_id])
@@ -621,7 +622,7 @@ model PropertyImage {
 
   uploaded_at DateTime @default(now()) @db.Timestamptz(6)
 
-  property Property @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
+  property Property @relation(fields: [property_id], references: [property_id], onDelete: Cascade)
 
   @@index([property_id])
   @@index([property_id, display_order])

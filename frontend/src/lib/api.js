@@ -82,6 +82,7 @@ export function splitName(fullName) {
 export function resolveOnboardingRoute(profileStatus, role, kycStatus) {
   if (profileStatus === 'PHONE_REQUIRED') return '/auth/phone-setup';
   if (profileStatus === 'PHONE_VERIFICATION_PENDING') return '/auth-verification?type=PHONE';
+  if (profileStatus === 'UNDER_REVIEW') return '/verification-holding';
   if (profileStatus === 'PROFILE_PENDING') {
     return role === 'OWNER' ? '/owner-registration' : '/tenant-registration';
   }

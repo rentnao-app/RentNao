@@ -84,6 +84,30 @@ users.openapi(routes.createProfileRoute, async (c) => {
   const body = c.req.valid('json');
 
   if (authUser.userId !== userId) {
+
+/**
+ * POST /users/{userId}/profile-photo/upload-url
+ * Get presigned upload URL for profile photo
+ */
+users.openapi(routes.getProfilePhotoUploadUrlRoute, async (c) => {
+  const { userId } = c.req.valid('param');
+  const authUser = c.get('user');
+  const body = c.req.valid('json');
+
+  if (authUser.userId !== userId) {
+    throw new AppError(403, 'You can only upload a profile photo for your own account');
+  }
+
+  const presigned = await profileService.getProfilePhotoUploadUrl(userId, body);
+
+  return c.json(
+    {
+      success: true,
+      data: presigned,
+    },
+    200
+  );
+});
     throw new AppError(403, 'You can only create your own profile');
   }
 

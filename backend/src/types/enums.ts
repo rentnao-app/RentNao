@@ -16,6 +16,7 @@ export const OnboardingStatus = z.enum([
   'PHONE_REQUIRED',
   'PHONE_VERIFICATION_PENDING',
   'PROFILE_PENDING',
+  'UNDER_REVIEW',
   'COMPLETED',
 ]);
 export type OnboardingStatusType = z.infer<typeof OnboardingStatus>;

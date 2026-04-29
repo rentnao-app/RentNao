@@ -35,7 +35,7 @@ export const createTenantProfileSchema = z.object({
     example: 'TECHNOLOGY',
     description: 'Job category',
   }),
-  profilePhotoUrl: z.string().url().openapi({
+  profilePhotoUrl: z.string().min(1).openapi({
     example: 'https://example.com/photo.jpg',
     description: 'URL to profile photo',
   }),
@@ -103,7 +103,7 @@ export const createOwnerProfileSchema = z.object({
     example: 'SELF_EMPLOYED',
     description: 'Job category',
   }),
-  profilePhotoUrl: z.string().url().openapi({
+  profilePhotoUrl: z.string().min(1).openapi({
     example: 'https://example.com/photo.jpg',
     description: 'URL to profile photo',
   }),
@@ -267,6 +267,18 @@ export const uploadUrlResponseSchema = z.object({
     }),
   }),
 });
+
+export const profilePhotoUploadUrlRequestSchema = z.object({
+  fileName: z.string().regex(/\.(jpg|jpeg|png|webp)$/i).openapi({
+    example: 'profile-photo.jpg',
+    description: 'File name with extension (.jpg, .jpeg, .png, .webp)',
+  }),
+  mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']).openapi({
+    example: 'image/jpeg',
+  }),
+});
+
+export type ProfilePhotoUploadUrlRequest = z.infer<typeof profilePhotoUploadUrlRequestSchema>;
 
 export const submitVerificationSchema = z.object({
   documents: z

@@ -211,7 +211,7 @@ export async function submitVerification(
     // Update User KYC status to PENDING (awaiting admin review)
     await client.query(
       `UPDATE "User" 
-       SET kyc_verification_status = 'PENDING', updated_at = NOW()
+       SET kyc_verification_status = 'PENDING', onboarding_status = 'UNDER_REVIEW', updated_at = NOW()
        WHERE user_id = $1`,
       [userId]
     );

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { apiFetch, isLoggedIn, logout } from '../lib/api';
 import NotificationBell from '../components/NotificationBell';
 
-const ONBOARDING_OPTIONS = ['AUTH_PENDING', 'PROFILE_PENDING', 'COMPLETED'];
+const ONBOARDING_OPTIONS = ['AUTH_PENDING', 'PROFILE_PENDING', 'UNDER_REVIEW', 'COMPLETED'];
 const ROLE_OPTIONS = ['TENANT', 'OWNER', 'ADMIN'];
 const KYC_OVERRIDE_OPTIONS = ['PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'];
 
@@ -419,6 +419,27 @@ export default function AdminDashboard() {
       setSelectedUserDetails(null);
     } catch (e) {
       toast.error(e.message || 'Delete failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleHardDeleteUser = async (user) => {
+    const label = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || user?.contact_email || user?.user_id;
+    const confirmText = prompt(`Type DELETE to permanently remove ${label}`) || '';
+    if (confirmText !== 'DELETE') return;
+
+    setBusy(true);
+    try {
+      const res = await apiFetch(`/admin/users/${user.user_id}/hard-delete`, { method: 'DELETE' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || 'Hard delete failed');
+      toast.success('User permanently deleted');
+      await loadDashboard();
+      setSelectedUser(null);
+      setSelectedUserDetails(null);
+    } catch (e) {
+      toast.error(e.message || 'Hard delete failed');
     } finally {
       setBusy(false);
     }
@@ -1267,6 +1288,14 @@ export default function AdminDashboard() {
                 className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
                 Soft Delete User
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => handleHardDeleteUser(selectedUser)}
+                className="rounded-xl bg-rose-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                Hard Delete User
               </button>
               <button
                 type="button"

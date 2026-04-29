@@ -2,6 +2,7 @@
 import { useSearchParams, Link } from 'react-router-dom';
 import { apiFetch, getCurrentUser } from '../lib/api';
 import { addLocalNotification } from '../lib/notifications';
+import { getAcceptValue, isAllowedFileByMimeAndExtension, KYC_UPLOAD_MIMES } from '../lib/fileValidation';
 
 function VerificationIllustration() {
   return (
@@ -52,31 +53,6 @@ function getDashboardPath(role) {
   if (role === 'OWNER') return '/owner-dashboard';
   if (role === 'ADMIN') return '/admin-dashboard';
   return '/tenant-dashboard';
-}
-
-const ALLOWED_DOCUMENT_MIMES = ['image/jpeg', 'image/png', 'application/pdf'];
-const MIME_TO_EXTENSIONS = {
-  'image/jpeg': ['jpg', 'jpeg'],
-  'image/png': ['png'],
-  'application/pdf': ['pdf'],
-};
-
-function getFileExtension(fileName) {
-  const parts = String(fileName || '').toLowerCase().split('.');
-  return parts.length > 1 ? parts.pop() : '';
-}
-
-function isSupportedDocumentFile(file) {
-  if (!file) return false;
-
-  const mimeType = String(file.type || '').toLowerCase();
-  const extension = getFileExtension(file.name);
-
-  if (!ALLOWED_DOCUMENT_MIMES.includes(mimeType)) {
-    return false;
-  }
-
-  return (MIME_TO_EXTENSIONS[mimeType] || []).includes(extension);
 }
 
 function UploadCard({
@@ -135,7 +111,7 @@ function UploadCard({
               <p className="mt-2 text-sm sm:text-base text-gray-600">Upload clear photo of required document</p>
               <p className="mt-1 text-sm text-gray-500">JPEG, PNG or PDF, Max size: 5MB</p>
             </div>
-            <input type="file" accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf" onChange={onFileChange} className="hidden" />
+            <input type="file" accept={getAcceptValue(KYC_UPLOAD_MIMES)} onChange={onFileChange} className="hidden" />
           </label>
         )}
       </div>
@@ -170,7 +146,7 @@ export default function VerificationPage() {
       return;
     }
 
-    if (!isSupportedDocumentFile(file)) {
+    if (!isAllowedFileByMimeAndExtension(file, KYC_UPLOAD_MIMES)) {
       setError('Only JPG, JPEG, PNG, or PDF files are allowed, and the file extension must match the file type');
       return;
     }
@@ -443,14 +419,14 @@ export default function VerificationPage() {
             </div>
 
             <div className="w-full md:w-56">
-              <p className="text-emerald-800 font-semibold text-sm mb-2 text-right">Step 2 of 2</p>
+              <p className="text-emerald-800 font-semibold text-sm mb-2 text-right">Document upload</p>
               <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
-                <div className="h-full w-[75%] bg-emerald-600 rounded-full" />
+                <div className={`h-full rounded-full bg-emerald-600 ${documents.nidBack ? 'w-full' : documents.nidFront ? 'w-2/3' : 'w-1/3'}`} />
               </div>
               <div className="mt-2 flex justify-between">
-                <StepPill number={1} label="Details" />
-                <StepPill number={2} label="Preferences" />
-                <StepPill number={3} label="Finish" active />
+                <StepPill number={1} label="Front" active={!documents.nidFront} />
+                <StepPill number={2} label="Back" active={Boolean(documents.nidFront) && !documents.nidBack} />
+                <StepPill number={3} label="Submit" active={Boolean(documents.nidFront) && Boolean(documents.nidBack)} />
               </div>
             </div>
           </div>

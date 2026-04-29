@@ -309,6 +309,51 @@ export const getUploadUrlRoute = createRoute({
   security: [{ bearerAuth: [] }],
 });
 
+export const getProfilePhotoUploadUrlRoute = createRoute({
+  method: 'post',
+  path: '/{userId}/profile-photo/upload-url',
+  tags: ['Users - Profile'],
+  summary: 'Get presigned upload URL for profile photo',
+  description: 'Generate presigned S3 URL for uploading a profile photo',
+  request: {
+    params: userIdParamSchema,
+    body: {
+      content: {
+        'application/json': {
+          schema: schemas.profilePhotoUploadUrlRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Presigned URL generated',
+      content: {
+        'application/json': {
+          schema: schemas.uploadUrlResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: 'Invalid file type',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+  security: [{ bearerAuth: [] }],
+});
+
 export const submitVerificationRoute = createRoute({
   method: 'post',
   path: '/{userId}/verification/submit',

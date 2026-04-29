@@ -52,6 +52,7 @@ export async function getStatsOverview() {
     PHONE_REQUIRED: 0,
     PHONE_VERIFICATION_PENDING: 0,
     PROFILE_PENDING: 0,
+    UNDER_REVIEW: 0,
     COMPLETED: 0,
   };
 

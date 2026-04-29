@@ -1,9 +1,40 @@
 import { db } from '@/db/client';
+import { storage } from '@/db/s3';
+import { AppError } from '@/errors/base';
 import { REQUIRED_DOCUMENTS_BY_ROLE, DOCUMENT_DESCRIPTIONS } from '../utils/constants';
 import type { UserRoleType, IdentityDocumentTypeType } from '@/types/enums';
+import type { ProfilePhotoUploadUrlRequest } from '../schemas';
 
 function createId() {
   return crypto.randomUUID();
+}
+
+export async function getProfilePhotoUploadUrl(
+  userId: string,
+  request: ProfilePhotoUploadUrlRequest
+): Promise<{ uploadUrl: string; expiresIn: number; fileKey: string }> {
+  const { fileName, mimeType } = request;
+
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
+    throw new AppError(400, 'Invalid profile photo type. Allowed: image/jpeg, image/png, image/webp');
+  }
+
+  const timestamp = Date.now();
+  const extension = fileName.split('.').pop();
+  const fileKey = `profiles/${userId}/avatar-${timestamp}.${extension}`;
+
+  const presigned = await storage.presignUpload(fileKey, {
+    fileName,
+    mimeType,
+    maxSizeBytes: 5 * 1024 * 1024,
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  });
+
+  return {
+    uploadUrl: presigned.uploadUrl,
+    expiresIn: presigned.expiresIn,
+    fileKey,
+  };
 }
 
 async function ensureWalletAccount(client: any, userId: string) {

@@ -55,8 +55,8 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
           tags: |
             ${{ steps.vars.outputs.backend_image }}:latest
             ${{ steps.vars.outputs.backend_image }}:${{ github.sha }}
@@ -68,8 +68,8 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
           tags: |
             ${{ steps.vars.outputs.frontend_image }}:latest
             ${{ steps.vars.outputs.frontend_image }}:${{ github.sha }}

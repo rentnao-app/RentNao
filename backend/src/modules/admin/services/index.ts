@@ -5,6 +5,7 @@ export {
   updateUserRole,
   updateUserActiveStatus,
   softDeleteUser,
+  hardDeleteUser,
   restoreUser,
   forceKycStatus,
 } from './user.service';

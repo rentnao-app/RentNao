@@ -5,6 +5,7 @@ export {
   updateRoleRoute,
   updateActiveStatusRoute,
   softDeleteUserRoute,
+  hardDeleteUserRoute,
   restoreUserRoute,
   forceKycStatusRoute,
 } from './user.routes';
