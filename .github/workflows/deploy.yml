@@ -36,7 +36,20 @@ jobs:
           echo "backend_image=ghcr.io/${repo_lower}-backend" >> $GITHUB_OUTPUT
           echo "frontend_image=ghcr.io/${repo_lower}-frontend" >> $GITHUB_OUTPUT
 
+      - name: Detect changed paths
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'backend/Dockerfile'
+            frontend:
+              - 'frontend/**'
+              - 'frontend/Dockerfile'
+
       - name: Build and push backend
+        if: steps.changes.outputs.backend == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./backend
@@ -49,6 +62,7 @@ jobs:
             ${{ steps.vars.outputs.backend_image }}:${{ github.sha }}
 
       - name: Build and push frontend
+        if: steps.changes.outputs.frontend == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./frontend

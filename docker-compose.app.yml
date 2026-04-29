@@ -8,7 +8,6 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
-    command: ["sh", "-c", "bunx prisma migrate deploy && bun ./dist/index.js"]
     expose:
       - "3000"
     networks:
