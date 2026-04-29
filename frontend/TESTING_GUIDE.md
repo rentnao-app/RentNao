@@ -32,7 +32,7 @@ Use this guide to test every frontend implementation in the browser.
 | 3.1 | Open any listing e.g. `/listings/1` | ImageGallery (or placeholder if no images), stats row, property info, sidebar |
 | 3.2 | Not logged in | “Log In to Apply” in sidebar; no wishlist heart in stats row |
 | 3.3 | Logged in, no access | “Unlock address & map for X BDT” block; “Unlock contact (X BDT)” in Contact Owner; owner name may link to profile |
-| 3.4 | Click **Unlock** (opens BkashPaymentModal) | Modal shows bKash number, amount, transaction ID input, Submit (calls `POST /api/payments/listing-access`) |
+| 3.4 | Click **Unlock** | Payment modal or flow appears (calls `POST /api/payments/listing-access`) |
 | 3.5 | After access (or if backend says hasAccess) | MapView (if lat/lng), address in Property Information, full contact, “Message Owner” button |
 | 3.6 | Logged-in tenant: click **Apply for this Listing** | POST `/api/requests`; toast success/error |
 | 3.7 | Logged in: click heart in stats row | Add/remove wishlist (POST/DELETE `/api/wishlists`); toast; heart fills/unfills |
@@ -211,7 +211,6 @@ Use this guide to test every frontend implementation in the browser.
 | **StarRating** | ReviewForm, ReviewCard, ListingDetailsPage (owner rating) | Stars render; clickable in form |
 | **ReviewForm** | MyRentalsPage (Leave Review) | Modal opens; submit sends review |
 | **ReviewCard** | MyRentalsPage, PublicProfilePage | Review text, stars, reviewer, date |
-| **BkashPaymentModal** | ListingDetailsPage (Unlock) | Opens from “Unlock”; transaction ID + submit |
 | **MapPicker** | CreateListingPage | Map loads; click sets pin |
 | **MapView** | ListingDetailsPage (with access) | Read-only map with one pin |
 | **ImageUploader** | CreateListingPage (after create) | Upload/delete images for property |

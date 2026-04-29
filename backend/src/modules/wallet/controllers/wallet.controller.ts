@@ -35,33 +35,6 @@ export function registerWalletRoutes(app: OpenAPIHono) {
     });
   });
 
-  // POST /wallet/topup
-  app.openapi(routes.createTopupRoute, async (c) => {
-    const user = c.get('user');
-    const body = c.req.valid('json');
-
-    const topup = await services.createTopupRequest(user.userId, body);
-    return c.json(
-      {
-        success: true,
-        data: topup,
-        message: 'Topup request initiated',
-      },
-      201
-    );
-  });
-
-  // GET /wallet/topup/:topupId
-  app.openapi(routes.getTopupRoute, async (c) => {
-    const user = c.get('user');
-    const { topupId } = c.req.valid('param');
-
-    const topup = await services.getTopupRequest(user.userId, topupId);
-    return c.json({
-      success: true,
-      data: topup,
-    });
-  });
 
   // GET /wallet/charges
   app.openapi(routes.getChargesRoute, async (c) => {
@@ -77,15 +50,39 @@ export function registerWalletRoutes(app: OpenAPIHono) {
     });
   });
 
-  // GET /wallet/webhooks/bkash (callback params from bKash)
-  app.openapi(routes.bkashWebhookRoute, async (c) => {
-    const params = c.req.valid('query') as Record<string, any>;
+  // POST /wallet/topup
+  app.openapi(routes.createTopupRoute, async (c) => {
+    const user = c.get('user');
+    const body = c.req.valid('json');
 
-    await services.handleBKashCallback(params);
+    const topupRequest = await services.createTopupRequest(
+      user.userId,
+      body.amount,
+      body.bkashNumber,
+      body.transactionId
+    );
 
+    return c.json(
+      {
+        success: true,
+        data: topupRequest,
+      },
+      201
+    );
+  });
+
+  // GET /wallet/topup
+  app.openapi(routes.getUserTopupRequestsRoute, async (c) => {
+    const user = c.get('user');
+    const query = c.req.valid('query');
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+
+    const result = await services.getUserTopupRequests(user.userId, page, limit);
     return c.json({
       success: true,
-      message: 'Webhook processed',
+      data: result,
     });
   });
+
 }

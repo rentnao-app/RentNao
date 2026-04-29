@@ -651,6 +651,12 @@ export default function AdminDashboard() {
       icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
     },
     {
+      key: 'topup-approvals',
+      label: 'Topup Approvals',
+      to: '/admin-dashboard/topup-approvals',
+      icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    },
+    {
       key: 'reports',
       label: 'Reports',
       icon: 'M9 17v-6a1 1 0 011-1h8m-6 6h6m-6-3h4M4 7h4M4 11h2M4 15h1M4 5h16',

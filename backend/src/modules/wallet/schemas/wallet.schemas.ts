@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi';
-import { WalletStatus, WalletTxnDirection, WalletTxnType, WalletTxnStatus, TopupProvider, TopupStatus, ChargeStatus } from '@/types/enums';
+import { WalletStatus, WalletTxnDirection, WalletTxnType, WalletTxnStatus, ChargeStatus, TopupRequestStatus } from '@/types/enums';
 
 // ============================================================================
 // Wallet Account Schemas
@@ -52,7 +52,7 @@ export const walletTransactionSchema = z.object({
     description: 'Transaction direction (CREDIT/DEBIT)',
   }),
   type: WalletTxnType.openapi({
-    example: 'TOPUP',
+    example: 'LISTING_FEE',
     description: 'Transaction type',
   }),
   status: WalletTxnStatus.openapi({
@@ -68,15 +68,15 @@ export const walletTransactionSchema = z.object({
     description: 'Currency code',
   }),
   description: z.string().nullable().openapi({
-    example: 'bKash topup',
+    example: 'Listing fee debit',
     description: 'Transaction description',
   }),
   referenceType: z.string().nullable().openapi({
-    example: 'TOPUP_REQUEST',
-    description: 'Type of referenced record (e.g., TOPUP_REQUEST, LISTING, CHARGE)',
+    example: 'LISTING',
+    description: 'Type of referenced record (e.g., LISTING, CHARGE)',
   }),
   referenceId: z.string().nullable().openapi({
-    example: 'cm4topup123xyz',
+    example: 'cm4listing123xyz',
     description: 'ID of the referenced record',
   }),
   createdAt: z.string().datetime().openapi({
@@ -102,116 +102,6 @@ export const walletTransactionsResponseSchema = z.object({
 });
 
 export type WalletTransactionsResponseType = z.infer<typeof walletTransactionsResponseSchema>;
-
-// ============================================================================
-// Topup Request Schemas
-// ============================================================================
-
-export const createTopupRequestSchema = z.object({
-  amount: z
-    .string()
-    .or(z.number())
-    .transform((val) => {
-      if (typeof val === 'string') {
-        const parsed = parseFloat(val);
-        if (isNaN(parsed) || parsed <= 0) throw new Error('Invalid amount');
-        return parsed;
-      }
-      if (val <= 0) throw new Error('Amount must be positive');
-      return val;
-    })
-    .openapi({
-      example: 500,
-      description: 'Topup amount (minimum as per policy)',
-    }),
-  provider: TopupProvider.default('BKASH').openapi({
-    example: 'BKASH',
-    description: 'Payment provider',
-  }),
-});
-
-export type CreateTopupRequestInput = z.infer<typeof createTopupRequestSchema>;
-
-export const walletTopupRequestSchema = z.object({
-  topupId: z.string().openapi({
-    example: 'cm4topup123xyz',
-    description: 'Topup request ID',
-  }),
-  status: TopupStatus.openapi({
-    example: 'PENDING',
-    description: 'Topup request status',
-  }),
-  requestedAmount: z.string().openapi({
-    example: '500.00',
-    description: 'Requested amount as decimal string',
-  }),
-  currency: z.string().openapi({
-    example: 'BDT',
-    description: 'Currency code',
-  }),
-  provider: TopupProvider.openapi({
-    example: 'BKASH',
-    description: 'Payment provider',
-  }),
-  externalRequestId: z.string().openapi({
-    example: 'bkash_req_12345',
-    description: 'Provider request ID (for reconciliation)',
-  }),
-  externalPaymentId: z.string().nullable().openapi({
-    example: 'bkash_pay_67890',
-    description: 'Provider payment ID (after user pays)',
-  }),
-  externalTrxId: z.string().nullable().openapi({
-    example: 'bkash_trx_abcde',
-    description: 'Provider transaction ID (after settlement)',
-  }),
-  failureReason: z.string().nullable().openapi({
-    example: 'User cancelled payment',
-    description: 'Reason for failure if status is FAILED',
-  }),
-  expiresAt: z.string().datetime().nullable().openapi({
-    example: '2026-04-03T13:30:00Z',
-    description: 'Payment expiry timestamp',
-  }),
-  createdAt: z.string().datetime().openapi({
-    example: '2026-04-03T12:30:00Z',
-    description: 'Request creation timestamp',
-  }),
-  completedAt: z.string().datetime().nullable().openapi({
-    example: '2026-04-03T12:35:00Z',
-    description: 'Request completion timestamp',
-  }),
-});
-
-export type WalletTopupRequestType = z.infer<typeof walletTopupRequestSchema>;
-
-export const createTopupResponseSchema = z.object({
-  success: z.boolean().openapi({ example: true }),
-  data: walletTopupRequestSchema,
-  message: z.string().openapi({ example: 'Topup request initiated' }),
-});
-
-export type CreateTopupResponseType = z.infer<typeof createTopupResponseSchema>;
-
-export const bkashCallbackQuerySchema = z.object({
-  paymentID: z.string().min(1).openapi({
-    example: 'TR0011ABCDEF',
-    description: 'bKash payment ID used for execute verification',
-  }),
-  status: z.string().optional().openapi({
-    example: 'success',
-    description: 'Optional callback status from bKash',
-  }),
-});
-
-export type BKashCallbackQueryType = z.infer<typeof bkashCallbackQuerySchema>;
-
-export const bkashCallbackResponseSchema = z.object({
-  success: z.boolean().openapi({ example: true }),
-  message: z.string().openapi({ example: 'Webhook processed' }),
-});
-
-export type BKashCallbackResponseType = z.infer<typeof bkashCallbackResponseSchema>;
 
 // ============================================================================
 // Charge Schemas
@@ -281,6 +171,102 @@ export const chargesResponseSchema = z.object({
 });
 
 export type ChargesResponseType = z.infer<typeof chargesResponseSchema>;
+
+// ============================================================================
+// Topup Request Schemas
+// ============================================================================
+
+export const createTopupRequestSchema = z.object({
+  amount: z.number().positive().openapi({
+    example: 5000,
+    description: 'Topup amount in major units (BDT)',
+  }),
+  bkashNumber: z.string().length(11).openapi({
+    example: '01712345678',
+    description: 'bKash number (11 digits)',
+  }),
+  transactionId: z.string().min(1).openapi({
+    example: 'txn_abc123def456',
+    description: 'bKash transaction ID from payment receipt',
+  }),
+});
+
+export type CreateTopupRequestType = z.infer<typeof createTopupRequestSchema>;
+
+export const topupRequestSchema = z.object({
+  topupRequestId: z.string().openapi({
+    example: 'cm4topup123xyz',
+    description: 'Topup request ID',
+  }),
+  userId: z.string().openapi({
+    example: 'cm4user123xyz',
+    description: 'User ID',
+  }),
+  amount: z.string().openapi({
+    example: '5000.00',
+    description: 'Topup amount as decimal string',
+  }),
+  bkashNumber: z.string().openapi({
+    example: '01712345678',
+    description: 'bKash number',
+  }),
+  transactionId: z.string().openapi({
+    example: 'txn_abc123def456',
+    description: 'bKash transaction ID',
+  }),
+  status: TopupRequestStatus.openapi({
+    example: 'PENDING',
+    description: 'Topup request status',
+  }),
+  rejectionReason: z.string().nullable().openapi({
+    example: 'Transaction ID not found on bKash',
+    description: 'Reason for rejection if status is REJECTED',
+  }),
+  approvedAt: z.string().datetime().nullable().openapi({
+    example: '2026-04-03T14:00:00Z',
+    description: 'Approval timestamp',
+  }),
+  createdAt: z.string().datetime().openapi({
+    example: '2026-04-03T12:00:00Z',
+    description: 'Request creation timestamp',
+  }),
+});
+
+export type TopupRequestType = z.infer<typeof topupRequestSchema>;
+
+export const topupRequestsListResponseSchema = z.object({
+  topupRequests: z.array(topupRequestSchema),
+  pagination: z.object({
+    page: z.number().openapi({ example: 1 }),
+    limit: z.number().openapi({ example: 20 }),
+    total: z.number().openapi({ example: 15 }),
+    totalPages: z.number().openapi({ example: 1 }),
+  }),
+});
+
+export type TopupRequestsListResponseType = z.infer<typeof topupRequestsListResponseSchema>;
+
+export const approveTopupRequestSchema = z.object({
+  topupRequestId: z.string().openapi({
+    example: 'cm4topup123xyz',
+    description: 'Topup request ID to approve',
+  }),
+});
+
+export type ApproveTopupRequestType = z.infer<typeof approveTopupRequestSchema>;
+
+export const rejectTopupRequestSchema = z.object({
+  topupRequestId: z.string().openapi({
+    example: 'cm4topup123xyz',
+    description: 'Topup request ID to reject',
+  }),
+  rejectionReason: z.string().min(1).openapi({
+    example: 'Transaction ID not verified',
+    description: 'Reason for rejection',
+  }),
+});
+
+export type RejectTopupRequestType = z.infer<typeof rejectTopupRequestSchema>;
 
 // ============================================================================
 // Error Response Schema

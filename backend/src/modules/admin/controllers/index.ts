@@ -5,6 +5,7 @@ import { registerStatsRoutes } from './stats.controller';
 import { registerKycRoutes } from './kyc.controller';
 import { registerFeePolicyRoutes } from './fee-policy.controller';
 import { registerListingRoutes } from './listing.controller';
+import { registerAdminTopupRoutes } from './topup.controller';
 
 const admin = new OpenAPIHono();
 
@@ -15,5 +16,6 @@ registerStatsRoutes(admin);
 registerKycRoutes(admin);
 registerFeePolicyRoutes(admin);
 registerListingRoutes(admin);
+registerAdminTopupRoutes(admin);
 
 export default admin;

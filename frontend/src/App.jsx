@@ -33,6 +33,7 @@ import AccountSettingsPage from './pages/AccountSettingsPage';
 import ListingPage from './pages/ListingPage';
 import ListingDetailsPage from './pages/ListingDetailsPage';
 import WalletPage from './pages/WalletPage';
+import AdminTopupApprovalsPage from './pages/AdminTopupApprovalsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SiteFooter from './components/SiteFooter';
 
@@ -97,6 +98,7 @@ function App() {
             <Route path="/dashboard/rentals" element={<ProtectedRoute component={MyRentalsPage} requiredRole={null} />} />
             <Route path="/notifications" element={<ProtectedRoute component={NotificationsPage} requiredRole={null} />} />
             <Route path="/admin-dashboard" element={<ProtectedRoute component={AdminDashboard} requiredRole="ADMIN" />} />
+            <Route path="/admin-dashboard/topup-approvals" element={<ProtectedRoute component={AdminTopupApprovalsPage} requiredRole="ADMIN" />} />
             <Route path="/account" element={<ProtectedRoute component={AccountSettingsPage} requiredRole={null} />} />
             <Route path="/wallet" element={<ProtectedRoute component={WalletPage} requiredRole={null} />} />
             <Route path="*" element={<NotFoundPage />} />

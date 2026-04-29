@@ -5,7 +5,6 @@ RentNao is a role-based rental platform designed for the Bangladesh market, conn
 This repository contains the full business application stack:
 - Customer-facing web app (tenant/owner/admin experiences)
 - Backend API and business logic
-- Local payment simulation service for bKash integration testing
 
 ## Business Context
 
@@ -13,7 +12,6 @@ RentNao is structured as a trust-first rental marketplace. The product emphasize
 - **Verified onboarding** for both tenants and owners
 - **Role-based journeys** from sign-up to dashboard access
 - **Operational readiness** with audit-friendly modules (auth, wallet, requests, notifications)
-- **Local market compatibility** including bKash-style payment flow testing
 
 Core onboarding flow:
 1. User signs up (email/password or Google) and selects role.
@@ -27,8 +25,7 @@ Core onboarding flow:
 RentNao/
 ├── README.md                # This document (business + technical entry point)
 ├── backend/                 # Hono/Bun API, DB access, auth, wallet, modules
-├── frontend/                # React/Vite application (tenant/owner/admin UX)
-└── bKash/                   # Local sandbox payment simulator
+└── frontend/                # React/Vite application (tenant/owner/admin UX)
 ```
 
 ## Platform Architecture
@@ -45,11 +42,6 @@ RentNao/
 - PostgreSQL via Prisma, with Redis and MinIO in local Docker stack
 - JWT-based auth and refresh-token flows
 - Google OAuth support with secure code exchange
-
-### Payment Sandbox (`bKash`)
-- Express-based local API simulator
-- Supports token/create/execute/query/void flows
-- Intended for deterministic local integration testing
 
 ## Quick Start (Local Development)
 
@@ -90,17 +82,6 @@ npm run dev
 
 Frontend default URL: `http://localhost:5173`
 
-### bKash sandbox setup
-
-```bash
-cd ../bKash
-npm install
-cp .env.example .env
-npm run dev
-```
-
-bKash sandbox URL: `http://localhost:8080`
-
 ## Environment Configuration
 
 At minimum, verify these areas before running:
@@ -115,20 +96,16 @@ At minimum, verify these areas before running:
   - Google OAuth credentials
   - Redis/MinIO configuration for local services
 
-- **bKash sandbox**
-  - Sandbox API credentials and token TTL values
-
 Use each service’s own README for complete variable definitions:
 - `backend/README.md`
 - `frontend/README.md`
-- `bKash/README.md`
 
 ## Operational Notes
 
 - Role routing is central to business logic:
   - Signup -> role registration -> verification -> role dashboard
 - Admin workflows depend on submitted verification artifacts.
-- Payment behavior in local development is simulator-based; validate production adapters separately.
+- Payment behavior in local development should be validated against the backend adapters.
 - Keep environment files out of version control.
 
 ## Quality and Governance
@@ -144,7 +121,6 @@ Recommended checks before merging:
 - Backend technical details: `backend/README.md`
 - Frontend routes and UX notes: `frontend/README.md`
 - Frontend testing guidance: `frontend/TESTING_GUIDE.md`
-- bKash sandbox behavior: `bKash/README.md`
 
 ## License
 

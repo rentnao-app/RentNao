@@ -175,22 +175,17 @@ enum WalletTxnStatus {
   REVERSED
 }
 
-enum TopupProvider {
-  BKASH
-}
-
-enum TopupStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  EXPIRED
-}
-
 enum ChargeStatus {
   PENDING
   SETTLED
   FAILED
   VOID
+}
+
+enum TopupRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model User {
@@ -220,11 +215,13 @@ model User {
   tenant_profile           TenantProfile?
   wallet_account           WalletAccount?
   charges                  Charge[]
+  topup_requests           TopupRequest[]
   listing_unlocks          ListingUnlock[]
   identity_documents       UserIdentityDocument[]
   verification_submissions VerificationSubmission?
   rental_requests_as_tenant RentalRequest[] @relation("RentalRequestsTenant")
-  notifications            Notification[]
+  topup_approvals      TopupRequest[] @relation("TopupApprovals")
+  notifications        Notification[]
 }
 
 model Credentials {
@@ -380,7 +377,7 @@ model WalletAccount {
 
   user              User              @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
   transactions      WalletTransaction[]
-  topup_requests    WalletTopupRequest[]
+  topup_requests    TopupRequest[]
 
   @@index([status])
 }
@@ -458,27 +455,28 @@ model Charge {
   @@index([status, created_at])
 }
 
-model WalletTopupRequest {
-  id                 String        @id @default(cuid())
-  wallet_account_id  String
-  provider           TopupProvider @default(BKASH)
-  status             TopupStatus   @default(PENDING)
-  requested_amount   Decimal
-  currency           String        @default("BDT")
-  external_request_id String        @unique
-  external_payment_id String?
-  external_trx_id    String?
-  provider_payload   Json?
-  failure_reason     String?
-  expires_at         DateTime?     @db.Timestamptz(6)
-  completed_at       DateTime?     @db.Timestamptz(6)
-  created_at         DateTime      @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?     @updatedAt @db.Timestamptz(6)
+model TopupRequest {
+  id                  String                @id @default(cuid())
+  user_id             String
+  wallet_account_id   String
+  amount              Decimal
+  bkash_number        String
+  transaction_id      String                @unique
+  status              TopupRequestStatus    @default(PENDING)
+  rejection_reason    String?
+  approved_at         DateTime?             @db.Timestamptz(6)
+  approved_by_admin_id String?
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?             @updatedAt @db.Timestamptz(6)
 
-  wallet_account     WalletAccount  @relation(fields: [wallet_account_id], references: [id], onDelete: Restrict)
+  user                User                  @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  wallet_account      WalletAccount         @relation(fields: [wallet_account_id], references: [id], onDelete: Restrict)
+  approved_by_admin   User?                 @relation("TopupApprovals", fields: [approved_by_admin_id], references: [user_id], onDelete: SetNull)
 
-  @@index([wallet_account_id, created_at])
+  @@unique([user_id, transaction_id])
+  @@index([user_id, created_at])
   @@index([status, created_at])
+  @@index([wallet_account_id, status])
 }
 
 model Listing {

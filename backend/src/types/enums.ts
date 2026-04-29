@@ -147,11 +147,8 @@ export type WalletTxnTypeType = z.infer<typeof WalletTxnType>;
 export const WalletTxnStatus = z.enum(['PENDING', 'POSTED', 'FAILED', 'REVERSED']);
 export type WalletTxnStatusType = z.infer<typeof WalletTxnStatus>;
 
-export const TopupProvider = z.enum(['BKASH']);
-export type TopupProviderType = z.infer<typeof TopupProvider>;
-
-export const TopupStatus = z.enum(['PENDING', 'SUCCESS', 'FAILED', 'EXPIRED']);
-export type TopupStatusType = z.infer<typeof TopupStatus>;
-
 export const ChargeStatus = z.enum(['PENDING', 'SETTLED', 'FAILED', 'VOID']);
 export type ChargeStatusType = z.infer<typeof ChargeStatus>;
+
+export const TopupRequestStatus = z.enum(['PENDING', 'APPROVED', 'REJECTED']);
+export type TopupRequestStatusType = z.infer<typeof TopupRequestStatus>;

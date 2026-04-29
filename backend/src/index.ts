@@ -106,7 +106,7 @@ app.doc('/openapi.json', {
     },
     {
       name: 'Wallet',
-      description: 'Wallet management, topups, and transaction history',
+      description: 'Wallet management, charges, and transaction history',
     },
     {
       name: 'Wishlist',

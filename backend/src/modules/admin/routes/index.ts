@@ -27,3 +27,9 @@ export {
 } from './kyc.routes';
 
 export { listAdminListingsRoute, getAdminListingDetailRoute } from './listing.routes';
+
+export {
+  listTopupRequestsRoute,
+  approveTopupRequestRoute,
+  rejectTopupRequestRoute,
+} from './topup.routes';

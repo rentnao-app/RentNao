@@ -1,6 +1,6 @@
 /**
  * Wallet module
- * Handles all wallet operations: account, transactions, topups, charges
+ * Handles all wallet operations: account, transactions, charges, topup
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
@@ -12,12 +12,11 @@ const wallet = new OpenAPIHono({
   defaultHook: defaultValidationHook,
 });
 
-// Protect user-facing wallet APIs; keep provider callback endpoint public.
+// Protect user-facing wallet APIs
 wallet.use('/', requireAuth);
 wallet.use('/transactions', requireAuth);
-wallet.use('/topup', requireAuth);
-wallet.use('/topup/*', requireAuth);
 wallet.use('/charges', requireAuth);
+wallet.use('/topup', requireAuth);
 
 registerWalletRoutes(wallet);
 

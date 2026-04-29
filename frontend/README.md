@@ -22,7 +22,6 @@ npm run dev             # starts at http://localhost:5173
 |----------|----------|-------------|
 | `VITE_API_URL` | Yes | Backend API base URL (e.g. `http://localhost:3000`) |
 | `VITE_LISTING_ACCESS_FEE` | No | BDT amount for listing access unlock (default: 50) |
-| `VITE_BKASH_NUMBER` | No | bKash number shown in payment modal |
 
 ## Tech Stack
 
@@ -44,7 +43,6 @@ src/
 │   └── api.js               # API client, auth token management
 ├── components/
 │   ├── ProtectedRoute.jsx   # Auth guard for protected routes
-│   ├── BkashPaymentModal.jsx
 │   ├── ChatBubble.jsx
 │   ├── ImageGallery.jsx
 │   ├── ImageUploader.jsx
@@ -175,7 +173,7 @@ These endpoints are called by the frontend but do not exist in the backend yet. 
 - `GET /users/owner/properties` — Owner's properties
 - `GET/POST/DELETE /wishlists` — Wishlist management
 - `GET /payments/check-access/:listingId` — Check listing access
-- `POST /payments/listing-access` — Submit bKash payment
+- `POST /payments/listing-access` — Submit listing access payment
 - `GET/POST /admin/payments/pending` — Admin payment management
 - `POST /admin/payments/:id/confirm|reject` — Admin payment actions
 - `GET/POST /conversations` — Chat conversations
@@ -206,7 +204,6 @@ These endpoints are called by the frontend but do not exist in the backend yet. 
 | `ImageUploader` | Upload/delete property images (used after creating a listing) |
 | `MapPicker` | Interactive Leaflet map for selecting coordinates |
 | `MapView` | Read-only Leaflet map showing a single marker |
-| `BkashPaymentModal` | Modal for bKash payment flow (listing access) |
 | `NotificationBell` | Header bell icon with dropdown, polls every 30s |
 | `ChatBubble` | Single message bubble (left/right based on sender) |
 | `ReviewForm` | Star rating + text form for submitting reviews |
