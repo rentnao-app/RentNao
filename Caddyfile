@@ -3,7 +3,7 @@ www.rentnao.co, rentnao.co {
 }
 
 api.rentnao.co {
-    reverse_proxy api:3000
+    reverse_proxy backend:3000
 }
 
 cdn.rentnao.co {
