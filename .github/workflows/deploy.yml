@@ -66,5 +66,5 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.VPS_APP_DIR }}
-            docker compose -f docker-compose.app.yml pull
-            docker compose -f docker-compose.app.yml up -d
+            docker compose --env-file .env.app -f docker-compose.app.yml pull
+            docker compose --env-file .env.app -f docker-compose.app.yml up -d
