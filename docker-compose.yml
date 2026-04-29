@@ -4,9 +4,9 @@ services:
     container_name: rentnao-postgres
     restart: always
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: rentnao
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     ports:
       - "5433:5432"
@@ -17,6 +17,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - rentnao
 
   redis:
     image: redis:7-alpine
@@ -32,14 +34,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - rentnao
 
   minio:
     image: minio/minio:latest
     container_name: rentnao-minio
     restart: always
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -51,6 +55,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - rentnao
 
 volumes:
   postgres_data:
@@ -59,3 +65,7 @@ volumes:
     driver: local
   minio_data:
     driver: local
+
+networks:
+  rentnao:
+    name: rentnao

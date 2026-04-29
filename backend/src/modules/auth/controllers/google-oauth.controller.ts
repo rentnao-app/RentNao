@@ -407,6 +407,10 @@ export function registerGoogleOAuthRoutes(app: OpenAPIHono) {
       }
     }
 
+    if (!userRow) {
+      throw new AppError(500, 'Failed to resolve or create user for Google OAuth');
+    }
+
     if (!userRow.is_active) {
       return c.redirect(
         buildRedirect(state.redirectUri, {
