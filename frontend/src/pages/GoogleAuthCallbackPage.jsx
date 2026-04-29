@@ -49,12 +49,12 @@ export default function GoogleAuthCallbackPage() {
             throw new Error('Google login succeeded but user payload is incomplete');
           }
 
-          const { res: statusRes, profileStatus, role } = await fetchProfileStatus(userId);
+          const { res: statusRes, profileStatus, role, body: statusBody } = await fetchProfileStatus(userId);
           if (!statusRes.ok) {
             throw new Error('Failed to load profile status');
           }
 
-          window.location.href = resolveOnboardingRoute(profileStatus, role || localRole);
+          window.location.href = resolveOnboardingRoute(profileStatus, role || localRole, statusBody?.data?.kycVerificationStatus || null);
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Exchange failed';
           console.error('Code exchange failed:', err);

@@ -249,12 +249,12 @@ export default function VerificationPage() {
       addLocalNotification({
         title: 'Verification Submitted',
         message: 'Your KYC documents were submitted for admin review.',
-        url: getDashboardPath(role),
+        url: '/verification-holding',
         type: 'KYC',
       });
       setSuccess('Documents uploaded successfully!');
       setTimeout(() => {
-        window.location.href = getDashboardPath(role);
+        window.location.href = '/verification-holding';
       }, 1800);
     } catch (err) {
       setError(err.message || 'Failed to upload documents');

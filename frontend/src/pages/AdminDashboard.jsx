@@ -1363,7 +1363,13 @@ export default function AdminDashboard() {
 
             <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
               <p>
-                <span className="font-semibold">User:</span> {selectedSubmissionDetails.userEmail}
+                <span className="font-semibold">Name:</span> {selectedSubmissionDetails.displayName || selectedSubmissionDetails.userEmail}
+              </p>
+              <p>
+                <span className="font-semibold">Email:</span> {selectedSubmissionDetails.userEmail || 'N/A'}
+              </p>
+              <p>
+                <span className="font-semibold">Phone:</span> {selectedSubmissionDetails.userPhone || 'N/A'}
               </p>
               <p>
                 <span className="font-semibold">Role:</span> {toLabel(selectedSubmissionDetails.userRole)}

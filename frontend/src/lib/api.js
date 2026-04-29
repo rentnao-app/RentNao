@@ -79,7 +79,7 @@ export function splitName(fullName) {
   };
 }
 
-export function resolveOnboardingRoute(profileStatus, role) {
+export function resolveOnboardingRoute(profileStatus, role, kycStatus) {
   if (profileStatus === 'PHONE_REQUIRED') return '/auth/phone-setup';
   if (profileStatus === 'PHONE_VERIFICATION_PENDING') return '/auth-verification?type=PHONE';
   if (profileStatus === 'PROFILE_PENDING') {
@@ -87,6 +87,7 @@ export function resolveOnboardingRoute(profileStatus, role) {
   }
   if (profileStatus === 'COMPLETED') {
     if (role === 'ADMIN') return '/admin-dashboard';
+    if (kycStatus !== 'APPROVED') return '/verification-holding';
     if (role === 'OWNER') return '/owner-dashboard';
     return '/tenant-dashboard';
   }

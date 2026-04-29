@@ -25,7 +25,7 @@ export default function ProtectedRoute({ component, requiredRole }) {
           return;
         }
 
-        const { res, profileStatus, role } = await fetchProfileStatus(localUserId);
+        const { res, profileStatus, role, body } = await fetchProfileStatus(localUserId);
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) {
             clearAuthSession();
@@ -35,9 +35,15 @@ export default function ProtectedRoute({ component, requiredRole }) {
         }
 
         const effectiveRole = role || localRole;
+        const kycStatus = body?.data?.kycVerificationStatus || null;
 
         if (profileStatus !== 'COMPLETED') {
-          setRedirectTo(resolveOnboardingRoute(profileStatus, effectiveRole));
+          setRedirectTo(resolveOnboardingRoute(profileStatus, effectiveRole, kycStatus));
+          return;
+        }
+
+        if (effectiveRole !== 'ADMIN' && kycStatus !== 'APPROVED') {
+          setRedirectTo(resolveOnboardingRoute(profileStatus, effectiveRole, kycStatus));
           return;
         }
 

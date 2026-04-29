@@ -37,7 +37,7 @@ export default function OAuthPhoneSetupPage() {
       }
 
       try {
-        const { res, profileStatus, role } = await fetchProfileStatus(userId);
+        const { res, profileStatus, role, body: statusBody } = await fetchProfileStatus(userId);
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) {
             window.location.href = '/login';
@@ -45,7 +45,7 @@ export default function OAuthPhoneSetupPage() {
           return;
         }
         if (profileStatus !== 'PHONE_REQUIRED') {
-          window.location.href = resolveOnboardingRoute(profileStatus, role || localRole);
+          window.location.href = resolveOnboardingRoute(profileStatus, role || localRole, statusBody?.data?.kycVerificationStatus || null);
         }
       } catch {
         // Ignore bootstrap errors to keep the form available.

@@ -85,13 +85,13 @@ export default function LogIn() {
         return;
       }
 
-      const { res: statusRes, profileStatus, role } = await fetchProfileStatus(userId);
+      const { res: statusRes, profileStatus, role, body: statusBody } = await fetchProfileStatus(userId);
       if (!statusRes.ok) {
         setError('Login succeeded but profile status could not be loaded.');
         return;
       }
 
-      const target = resolveOnboardingRoute(profileStatus, role || localRole);
+      const target = resolveOnboardingRoute(profileStatus, role || localRole, statusBody?.data?.kycVerificationStatus || null);
       setTimeout(() => {
         window.location.href = target;
       }, 1000);

@@ -96,12 +96,12 @@ export default function AuthVerificationPage() {
         return;
       }
 
-      const { res: statusRes, profileStatus, role } = await fetchProfileStatus(userId);
+      const { res: statusRes, profileStatus, role, body: statusBody } = await fetchProfileStatus(userId);
       if (!statusRes.ok) {
         throw new Error('Verification succeeded but profile status could not be loaded');
       }
 
-      window.location.href = resolveOnboardingRoute(profileStatus, role || localRole);
+      window.location.href = resolveOnboardingRoute(profileStatus, role || localRole, statusBody?.data?.kycVerificationStatus || null);
     } catch (err) {
       setError(err.message || 'Verification failed');
     } finally {
