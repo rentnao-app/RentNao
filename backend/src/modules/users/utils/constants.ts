@@ -2,8 +2,8 @@ import type { UserRoleType, IdentityDocumentTypeType } from '@/types/enums';
 
 /**
  * Hardcoded document requirements per role
- * Tenant: 1 document (NATIONAL_ID)
- * Owner: 2 documents (NATIONAL_ID + PROOF_OF_OWNERSHIP)
+ * Tenant: 1-2 NID images
+ * Owner: 1-2 NID images + 1 proof of ownership document
  */
 export const REQUIRED_DOCUMENTS_BY_ROLE: Record<UserRoleType, IdentityDocumentTypeType[]> = {
   TENANT: ['NATIONAL_ID'],

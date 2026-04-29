@@ -83,15 +83,37 @@ export async function submitVerification(
   // Verify all required documents are present
   const requiredDocs = REQUIRED_DOCUMENTS_BY_ROLE[userRole] || [];
   const submittedDocTypes = input.documents.map((d) => d.documentType);
+  const nidDocs = input.documents.filter((d) => d.documentType === 'NATIONAL_ID');
+  const ownershipDocs = input.documents.filter((d) => d.documentType === 'PROOF_OF_OWNERSHIP');
 
   const missingDocs = requiredDocs.filter((req) => !submittedDocTypes.includes(req));
   if (missingDocs.length > 0) {
     throw new AppError(400, `Missing required documents: ${missingDocs.join(', ')}`);
   }
 
-  // Check for duplicate document types
-  if (new Set(submittedDocTypes).size !== submittedDocTypes.length) {
-    throw new AppError(400, 'Duplicate document types in submission');
+  // Allow one optional extra NID image, but keep the ownership document single-use.
+  if (nidDocs.length < 1) {
+    throw new AppError(400, 'At least one NID image is required');
+  }
+
+  if (nidDocs.length > 2) {
+    throw new AppError(400, 'You can upload at most two NID images');
+  }
+
+  if (userRole === 'TENANT' && ownershipDocs.length > 0) {
+    throw new AppError(400, 'Tenants should only upload NID images');
+  }
+
+  if (userRole === 'OWNER') {
+    if (ownershipDocs.length !== 1) {
+      throw new AppError(400, 'Owners must upload one proof of ownership document');
+    }
+
+    if (input.documents.length < 2 || input.documents.length > 3) {
+      throw new AppError(400, 'Owners can upload two or three documents total');
+    }
+  } else if (input.documents.length < 1 || input.documents.length > 2) {
+    throw new AppError(400, 'Tenants can upload one or two documents total');
   }
 
   // Validate each uploaded object belongs to this user and exists in storage

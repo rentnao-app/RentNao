@@ -54,6 +54,31 @@ function getDashboardPath(role) {
   return '/tenant-dashboard';
 }
 
+const ALLOWED_DOCUMENT_MIMES = ['image/jpeg', 'image/png', 'application/pdf'];
+const MIME_TO_EXTENSIONS = {
+  'image/jpeg': ['jpg', 'jpeg'],
+  'image/png': ['png'],
+  'application/pdf': ['pdf'],
+};
+
+function getFileExtension(fileName) {
+  const parts = String(fileName || '').toLowerCase().split('.');
+  return parts.length > 1 ? parts.pop() : '';
+}
+
+function isSupportedDocumentFile(file) {
+  if (!file) return false;
+
+  const mimeType = String(file.type || '').toLowerCase();
+  const extension = getFileExtension(file.name);
+
+  if (!ALLOWED_DOCUMENT_MIMES.includes(mimeType)) {
+    return false;
+  }
+
+  return (MIME_TO_EXTENSIONS[mimeType] || []).includes(extension);
+}
+
 function UploadCard({
   title,
   description,
@@ -110,7 +135,7 @@ function UploadCard({
               <p className="mt-2 text-sm sm:text-base text-gray-600">Upload clear photo of required document</p>
               <p className="mt-1 text-sm text-gray-500">JPEG, PNG or PDF, Max size: 5MB</p>
             </div>
-            <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={onFileChange} className="hidden" />
+            <input type="file" accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf" onChange={onFileChange} className="hidden" />
           </label>
         )}
       </div>
@@ -125,8 +150,9 @@ export default function VerificationPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [documents, setDocuments] = useState({ idCard: null, propertyCertificate: null });
-  const [previews, setPreviews] = useState({ idCard: null, propertyCertificate: null });
+  const [documents, setDocuments] = useState({ nidFront: null, nidBack: null, propertyCertificate: null });
+  const [previews, setPreviews] = useState({ nidFront: null, nidBack: null, propertyCertificate: null });
+  const [showNidBackUpload, setShowNidBackUpload] = useState(false);
   const [draggingDoc, setDraggingDoc] = useState('');
 
   useEffect(() => {
@@ -139,13 +165,13 @@ export default function VerificationPage() {
   const setFileForType = (file, documentType) => {
     if (!file) return;
 
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     if (file.size > 5 * 1024 * 1024) {
       setError('File must be less than 5MB');
       return;
     }
-    if (!allowed.includes(file.type)) {
-      setError('Only JPG, PNG, WebP or PDF files are allowed');
+
+    if (!isSupportedDocumentFile(file)) {
+      setError('Only JPG, JPEG, PNG, or PDF files are allowed, and the file extension must match the file type');
       return;
     }
 
@@ -171,7 +197,7 @@ export default function VerificationPage() {
 
   const handleUpload = async (user, documentType, file) => {
     if (!file) return null;
-    const docType = documentType === 'idCard' ? 'NATIONAL_ID' : 'PROOF_OF_OWNERSHIP';
+    const docType = documentType === 'propertyCertificate' ? 'PROOF_OF_OWNERSHIP' : 'NATIONAL_ID';
 
     const uploadRes = await apiFetch(`/users/${user.userId}/verification/upload-url`, {
       method: 'POST',
@@ -215,21 +241,25 @@ export default function VerificationPage() {
       const user = getCurrentUser();
       if (!user?.userId) throw new Error('Please login first');
 
-      if (isOwner) {
-        if (!documents.idCard || !documents.propertyCertificate) {
-          setError('Please upload both ID and property ownership document');
-          setLoading(false);
-          return;
-        }
-      } else if (!documents.idCard) {
-        setError('Please upload your ID card');
+      if (!documents.nidFront) {
+        setError('Please upload the front side of your NID');
+        setLoading(false);
+        return;
+      }
+
+      if (isOwner && !documents.propertyCertificate) {
+        setError('Please upload your property ownership document');
         setLoading(false);
         return;
       }
 
       const payload = [];
-      if (documents.idCard) {
-        const d = await handleUpload(user, 'idCard', documents.idCard);
+      if (documents.nidFront) {
+        const d = await handleUpload(user, 'nidFront', documents.nidFront);
+        if (d) payload.push(d);
+      }
+      if (documents.nidBack) {
+        const d = await handleUpload(user, 'nidBack', documents.nidBack);
         if (d) payload.push(d);
       }
       if (isOwner && documents.propertyCertificate) {
@@ -264,8 +294,8 @@ export default function VerificationPage() {
   };
 
   const headerSubtitle = isOwner
-    ? 'Upload your identity and ownership proof documents.'
-    : 'Upload a valid ID document to get started.';
+    ? 'Upload your NID and proof of ownership. A second NID image is optional if the back side is separate.'
+    : 'Upload your NID. Add a second image only if the back side is separate.';
 
   return (
     <div className="min-h-screen bg-[#f4f7f5]">
@@ -451,21 +481,21 @@ export default function VerificationPage() {
                       Upload NID / Passport / Driving License
                     </h2>
                     <p className="mt-1 text-sm sm:text-base text-gray-600 leading-relaxed">
-                      For proof of identity, upload a clear photo of your NID, passport, or driving license (front and back).
+                      For proof of identity, upload a clear NID photo. If the back side is separate, add a second upload. A single photocopy showing both sides is also acceptable.
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-4">
                   <UploadCard
-                    title="Identity Document"
-                    description="Required for all users."
-                    file={documents.idCard}
-                    preview={previews.idCard}
-                    isDragging={draggingDoc === 'idCard'}
+                    title="NID front side"
+                    description="Required for all users. If both sides are on one page, upload that here."
+                    file={documents.nidFront}
+                    preview={previews.nidFront}
+                    isDragging={draggingDoc === 'nidFront'}
                     onDragEnter={(e) => {
                       e.preventDefault();
-                      setDraggingDoc('idCard');
+                      setDraggingDoc('nidFront');
                     }}
                     onDragLeave={(e) => {
                       e.preventDefault();
@@ -476,15 +506,57 @@ export default function VerificationPage() {
                       e.preventDefault();
                       setDraggingDoc('');
                       const file = e.dataTransfer.files?.[0];
-                      setFileForType(file, 'idCard');
+                      setFileForType(file, 'nidFront');
                     }}
-                    onFileChange={(e) => handleFileChange(e, 'idCard')}
+                    onFileChange={(e) => handleFileChange(e, 'nidFront')}
                     onRemove={() => {
-                      setDocuments((p) => ({ ...p, idCard: null }));
-                      setPreviews((p) => ({ ...p, idCard: null }));
+                      setDocuments((p) => ({ ...p, nidFront: null }));
+                      setPreviews((p) => ({ ...p, nidFront: null }));
                     }}
                   />
                 </div>
+
+                {showNidBackUpload || documents.nidBack ? (
+                  <div className="mt-4">
+                    <UploadCard
+                      title="NID backside (optional)"
+                      description="Use this only if the back side is in a separate image."
+                      file={documents.nidBack}
+                      preview={previews.nidBack}
+                      isDragging={draggingDoc === 'nidBack'}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        setDraggingDoc('nidBack');
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        setDraggingDoc('');
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDraggingDoc('');
+                        const file = e.dataTransfer.files?.[0];
+                        setFileForType(file, 'nidBack');
+                      }}
+                      onFileChange={(e) => handleFileChange(e, 'nidBack')}
+                      onRemove={() => {
+                        setDocuments((p) => ({ ...p, nidBack: null }));
+                        setPreviews((p) => ({ ...p, nidBack: null }));
+                      }}
+                    />
+                  </div>
+                ) : null}
+
+                {documents.nidFront && !showNidBackUpload && !documents.nidBack ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowNidBackUpload(true)}
+                    className="mt-4 inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition"
+                  >
+                    Add backside upload
+                  </button>
+                ) : null}
 
                 {isOwner && (
                   <div className="mt-4">
