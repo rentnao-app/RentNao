@@ -302,8 +302,8 @@ export async function hardDeleteUser(userId: string, currentUserId: string) {
       await client.query(`DELETE FROM "ListingUnlock" WHERE listing_id = ANY($1::text[])`, [listingIds]);
       await client.query(`DELETE FROM "Wishlist" WHERE listing_id = ANY($1::text[])`, [listingIds]);
       await client.query(`DELETE FROM "RentalRequest" WHERE listing_id = ANY($1::text[])`, [listingIds]);
-      await client.query(`DELETE FROM "TenantRequest" WHERE listing_id = ANY($1::text[])`, [listingIds]);
-      await client.query(`DELETE FROM "Payment" WHERE listing_id = ANY($1::text[])`, [listingIds]);
+      //await client.query(`DELETE FROM "TenantRequest" WHERE listing_id = ANY($1::text[])`, [listingIds]);
+      //await client.query(`DELETE FROM "Payment" WHERE listing_id = ANY($1::text[])`, [listingIds]);
       await client.query(`DELETE FROM "PropertyImage" WHERE property_id = ANY($1::text[])`, [propertyIds]);
       await client.query(`DELETE FROM "Listing" WHERE listing_id = ANY($1::text[])`, [listingIds]);
     }
@@ -314,8 +314,8 @@ export async function hardDeleteUser(userId: string, currentUserId: string) {
       await client.query(`DELETE FROM "WalletAccount" WHERE id = $1`, [walletAccountId]);
     }
 
-    await client.query(`DELETE FROM "Session" WHERE user_id = $1`, [userId]);
-    await client.query(`DELETE FROM "LoginAttempt" WHERE user_id = $1`, [userId]);
+    //await client.query(`DELETE FROM "Session" WHERE user_id = $1`, [userId]);
+    //await client.query(`DELETE FROM "LoginAttempt" WHERE user_id = $1`, [userId]);
     await client.query(`DELETE FROM "Credentials" WHERE user_id = $1`, [userId]);
     await client.query(`DELETE FROM "OAuthAccount" WHERE user_id = $1`, [userId]);
     await client.query(`DELETE FROM "Notification" WHERE user_id = $1`, [userId]);
@@ -324,12 +324,12 @@ export async function hardDeleteUser(userId: string, currentUserId: string) {
     await client.query(`DELETE FROM "Charge" WHERE user_id = $1`, [userId]);
     await client.query(`DELETE FROM "RentalRequest" WHERE tenant_user_id = $1`, [userId]);
     await client.query(`DELETE FROM "ListingUnlock" WHERE tenant_user_id = $1`, [userId]);
-    await client.query(`DELETE FROM "Payment" WHERE user_id = $1`, [userId]);
-    await client.query(`DELETE FROM "Penalty" WHERE user_id = $1`, [userId]);
+    //await client.query(`DELETE FROM "Payment" WHERE user_id = $1`, [userId]);
+    //await client.query(`DELETE FROM "Penalty" WHERE user_id = $1`, [userId]);
 
     if (tenantId) {
       await client.query(`DELETE FROM "Wishlist" WHERE tenant_id = $1`, [tenantId]);
-      await client.query(`DELETE FROM "TenantRequest" WHERE tenant_id = $1`, [tenantId]);
+      //await client.query(`DELETE FROM "TenantRequest" WHERE tenant_id = $1`, [tenantId]);
       await client.query(`DELETE FROM "RentalRequest" WHERE tenant_user_id = $1`, [userId]);
       await client.query(`DELETE FROM "TenantProfile" WHERE tenant_id = $1`, [tenantId]);
     }

@@ -34,7 +34,7 @@ export async function invalidateUserSessions(userId: string) {
     throw new UserNotFoundError();
   }
 
-  await db.query(`DELETE FROM "Session" WHERE user_id = $1`, [userId]);
+  //await db.query(`DELETE FROM "Session" WHERE user_id = $1`, [userId]);
 
   return { success: true, message: 'All user sessions invalidated successfully' };
 }
