@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { apiFetch, isLoggedIn, logout } from '../lib/api';
+import { apiFetch, getCurrentUser, isLoggedIn, logout } from '../lib/api';
 import NotificationBell from '../components/NotificationBell';
 
 const ONBOARDING_OPTIONS = ['AUTH_PENDING', 'PROFILE_PENDING', 'UNDER_REVIEW', 'COMPLETED'];
@@ -119,6 +119,16 @@ export default function AdminDashboard() {
     effectiveFrom: '',
     isActive: true,
   });
+
+  const dashboardUser = getCurrentUser();
+  const dashboardWelcomeName =
+    dashboardUser?.profile?.firstName ||
+    dashboardUser?.username ||
+    dashboardUser?.contactEmail?.split('@')?.[0] ||
+    dashboardUser?.contact_email?.split('@')?.[0] ||
+    'Admin';
+  const dashboardAvatarInitial =
+    String(dashboardWelcomeName).trim().slice(0, 1).toUpperCase() || 'A';
 
   const normalizeUser = (u) => ({
     user_id: u?.user_id || u?.userId,
@@ -512,6 +522,30 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDownloadDocument = async (doc) => {
+    if (!doc?.signedUrl) {
+      toast.error('Document URL unavailable');
+      return;
+    }
+    try {
+      const response = await fetch(doc.signedUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = doc.fileName || `${String(doc.documentType || 'document').toLowerCase()}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      toast.error(e?.message || 'Failed to download document');
+    }
+  };
+
   const handleCreateFeePolicy = async (event) => {
     event.preventDefault();
     setFeeBusy(true);
@@ -718,13 +752,6 @@ export default function AdminDashboard() {
 
     return (
       <>
-        <section className="mb-4 rounded-xl border border-gray-200/90 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-3.5">
-          <h1 className="text-lg font-semibold tracking-tight text-[#1e4732] sm:text-xl">Welcome, Admin!</h1>
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-gray-600 sm:text-sm">
-            Manage listings, users, and keep track of platform activity.
-          </p>
-        </section>
-
         <section className="mb-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
           <StatCard
             title="Total Listings"
@@ -1419,24 +1446,37 @@ export default function AdminDashboard() {
                     {doc.mimeType ? ` - ${doc.mimeType}` : ''}
                   </p>
                   {doc.signedUrl ? (
-                    <div className="mt-2">
-                      <a
-                        href={doc.signedUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
-                      >
-                        Open document
-                      </a>
+                    <div className="mt-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <a
+                          href={doc.signedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                        >
+                          View document
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadDocument(doc)}
+                          className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          Download
+                        </button>
+                      </div>
                       {String(doc.mimeType || '').startsWith('image/') ? (
                         <img
                           src={doc.signedUrl}
                           alt={doc.fileName || doc.documentType}
                           className="mt-3 max-h-72 w-full max-w-md rounded-lg border border-slate-200 object-contain"
                         />
-                      ) : null}
+                      ) : (
+                        <p className="mt-2 text-xs text-slate-500">Preview not available for this file type. Use View or Download.</p>
+                      )}
                     </div>
-                  ) : null}
+                  ) : (
+                    <p className="mt-2 text-xs text-rose-600">Document URL unavailable.</p>
+                  )}
                 </div>
               ))}
             </div>
@@ -1924,7 +1964,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f2f7f3] text-gray-800">
-      <div className="mx-auto w-full max-w-[1440px] lg:pl-[270px]">
+      {/* Full-width offset so fixed sidebar (viewport-left) lines up with main; avoid mx-auto + pl gap on wide screens */}
+      <div className="min-w-0 w-full lg:pl-[270px]">
         {mobileDrawerOpen ? (
           <div
             className="fixed inset-0 z-30 bg-black/30 lg:hidden"
@@ -1934,35 +1975,36 @@ export default function AdminDashboard() {
         ) : null}
 
         <aside
-          className={`fixed inset-y-0 right-0 z-40 flex h-screen w-[min(270px,88vw)] max-w-[270px] flex-col overflow-y-auto overscroll-contain border-l border-[#dceadf] bg-[#f7fbf8] transition-transform duration-200 ease-out lg:left-0 lg:right-auto lg:border-l-0 lg:border-r lg:translate-x-0 ${
+          className={`fixed inset-y-0 right-0 z-40 flex h-screen w-[min(270px,88vw)] max-w-[270px] min-h-0 flex-col overflow-hidden border-l border-slate-200 bg-[#f7fbf8] transition-transform duration-200 ease-out lg:left-0 lg:right-auto lg:border-l-0 lg:bg-[#f4f8f5] lg:translate-x-0 ${
             mobileDrawerOpen ? 'translate-x-0 shadow-[-4px_0_24px_rgba(30,71,50,0.08)]' : 'translate-x-full lg:shadow-none'
           }`}
         >
-          <div className="border-b border-[#dceadf]/80 bg-white/90 px-4 pb-4 pt-4 sm:px-5 sm:pt-5">
+          <div className="box-border shrink-0 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5 lg:flex lg:h-16 lg:min-h-16 lg:max-h-16 lg:items-center lg:overflow-hidden lg:border-b lg:border-slate-200 lg:bg-white lg:py-0 lg:backdrop-blur-none">
             <Link
               to="/"
-              className="flex items-center gap-3 rounded-xl p-1.5 -m-1.5 transition hover:bg-emerald-50/60"
+              className="flex min-h-0 min-w-0 items-center gap-3 rounded-xl p-1.5 -m-1.5 transition hover:bg-emerald-50/60 lg:-m-0 lg:gap-2.5 lg:p-0 lg:hover:bg-transparent"
               onClick={() => setMobileDrawerOpen(false)}
             >
               <img
                 src="/logo.jpg"
                 alt="Rent Nao"
-                className="h-10 w-10 shrink-0 rounded-xl border border-emerald-100/80 object-cover shadow-sm"
+                className="h-9 w-9 shrink-0 rounded-lg border border-emerald-100/80 object-cover shadow-sm lg:h-9 lg:w-9 lg:rounded-lg"
               />
-              <div className="min-w-0">
-                <p className="truncate text-base font-semibold leading-tight tracking-tight text-[#2f8444] sm:text-[1.05rem]">
+              <div className="min-w-0 leading-tight lg:leading-snug">
+                <p className="truncate text-[15px] font-semibold tracking-tight text-[#2f8444] sm:text-base lg:text-[15px]">
                   Rent Nao
                 </p>
-                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-600/80">
+                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-600/90 lg:mt-0 lg:text-[9px]">
                   Admin
                 </p>
               </div>
             </Link>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col px-3 pb-4 pt-3 sm:px-4 sm:pt-4">
-            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">Menu</p>
-            <nav className="space-y-1" aria-label="Admin sidebar">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:border-r lg:border-slate-200">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4">
+            <p className="mb-2 shrink-0 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">Menu</p>
+            <nav className="min-h-0 space-y-1 pb-2" aria-label="Admin sidebar">
               {sideMenuItems.map((item) => {
                 const isActive = item.to
                   ? typeof window !== 'undefined' && window.location.pathname.startsWith(item.to)
@@ -2010,9 +2052,9 @@ export default function AdminDashboard() {
                 );
               })}
             </nav>
-          </div>
+            </div>
 
-          <div className="mt-auto border-t border-[#dceadf] bg-white/40 px-3 py-4 sm:px-4">
+            <div className="shrink-0 border-t border-slate-200 bg-white/40 px-3 py-4 sm:px-4">
             <button
               type="button"
               onClick={() => {
@@ -2023,44 +2065,49 @@ export default function AdminDashboard() {
             >
               Logout
             </button>
+            </div>
           </div>
         </aside>
 
         <div className="min-w-0">
-          <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-            <div className="mx-auto max-w-[1500px] px-3 sm:px-5 lg:px-6">
-              <div className="flex items-center gap-2 py-2.5 sm:gap-3 sm:py-3">
-                <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5" onClick={() => setMobileDrawerOpen(false)}>
-                  <img
-                    src="/logo.jpg"
-                    alt="Rent Nao"
-                    className="h-8 w-8 shrink-0 rounded-md border border-green-100 object-cover sm:h-9 sm:w-9"
-                  />
-                  <span className="truncate text-base font-semibold text-[#2f8444] sm:text-xl sm:tracking-tight">Rent Nao</span>
-                </Link>
+          <header className="sticky top-0 z-20 bg-white/95 shadow-[0_4px_18px_-4px_rgba(15,23,42,0.06)] backdrop-blur-sm lg:bg-white lg:shadow-[0_4px_18px_-4px_rgba(15,23,42,0.05)] lg:backdrop-blur-none">
+            <div className="mx-auto box-border flex min-h-[3.25rem] max-w-[1500px] items-center gap-2 border-b border-slate-200 px-3 py-2.5 sm:min-h-14 sm:gap-3 sm:px-5 sm:py-3 lg:h-16 lg:min-h-16 lg:max-h-16 lg:overflow-hidden lg:px-5 lg:py-0">
+              <Link
+                to="/"
+                className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5 lg:hidden"
+                onClick={() => setMobileDrawerOpen(false)}
+              >
+                <img
+                  src="/logo.jpg"
+                  alt="Rent Nao"
+                  className="h-8 w-8 shrink-0 rounded-md border border-green-100 object-cover sm:h-9 sm:w-9"
+                />
+                <span className="truncate text-base font-semibold text-[#2f8444] sm:text-xl sm:tracking-tight">Rent Nao</span>
+              </Link>
 
-                <div className="ml-auto flex shrink-0 items-center gap-2.5 sm:gap-2 md:gap-3.5">
-                  <NotificationBell />
-                  <div
-                    className="grid h-8 w-8 place-items-center rounded-full bg-emerald-700 text-xs font-semibold text-white shadow-sm sm:h-9 sm:w-9 sm:text-sm"
-                    title="Admin"
-                  >
-                    A
-                  </div>
-                  <button
-                    type="button"
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-gray-200 text-gray-600 transition hover:bg-gray-50 lg:hidden"
-                    aria-label="Open menu"
-                    onClick={() => setMobileDrawerOpen((v) => !v)}
-                  >
-                    <Icon className="h-4 w-4" path="M4 7h16M4 12h16M4 17h16" />
-                  </button>
-                </div>
+              <div className="ml-auto flex shrink-0 items-center gap-2.5 sm:gap-2 md:gap-3 lg:ml-0 lg:w-full lg:justify-end lg:gap-3">
+                <NotificationBell />
+                <Link
+                  to="/account"
+                  className="grid h-9 w-9 place-items-center rounded-full bg-emerald-700 text-xs font-semibold text-white shadow-sm ring-1 ring-emerald-800/10 transition hover:bg-emerald-800 sm:text-sm"
+                  title={dashboardWelcomeName || 'Account'}
+                  aria-label="Go to account"
+                >
+                  {dashboardAvatarInitial}
+                </Link>
+                <button
+                  type="button"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-gray-200 text-gray-600 transition hover:bg-gray-50 lg:hidden"
+                  aria-label="Open menu"
+                  onClick={() => setMobileDrawerOpen((v) => !v)}
+                >
+                  <Icon className="h-4 w-4" path="M4 7h16M4 12h16M4 17h16" />
+                </button>
               </div>
             </div>
           </header>
 
-          <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+          <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-5 sm:py-5 lg:px-5 lg:py-6">
             {error ? (
               <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
                 <span className="text-sm font-medium">{error}</span>

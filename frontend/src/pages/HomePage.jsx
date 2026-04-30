@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
@@ -65,13 +65,13 @@ function FeaturedCard({ listing, canWishlist, isWishlisted, onToggleWishlist }) 
 
 function StatCard({ icon, title, subtitle }) {
   return (
-    <div className="bg-white rounded-2xl border border-emerald-100 shadow-[0_8px_24px_rgba(22,101,52,0.10)] px-4 py-4 flex items-center gap-5 hover:shadow-[0_10px_30px_rgba(22,101,52,0.14)] transition">
-      <div className="w-14 h-14 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+    <div className="h-full bg-white rounded-2xl border border-emerald-100 shadow-[0_8px_24px_rgba(22,101,52,0.10)] px-3 py-3 flex flex-col items-start gap-2.5 sm:px-4 sm:py-4 sm:flex-row sm:items-center sm:gap-4 hover:shadow-[0_10px_30px_rgba(22,101,52,0.14)] transition">
+      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
         {icon}
       </div>
-      <div>
-        <p className="font-semibold mb-1 text-gray-800 text-sm">{title}</p>
-        <p className="text-xs text-gray-500">{subtitle}</p>
+      <div className="min-w-0">
+        <p className="font-semibold mb-0.5 text-gray-800 text-[13px] sm:text-sm leading-snug">{title}</p>
+        <p className="text-[11px] sm:text-xs text-gray-500 leading-snug">{subtitle}</p>
       </div>
     </div>
   );
@@ -101,6 +101,32 @@ export default function HomePage() {
       : userRole === 'OWNER'
         ? '/owner-dashboard'
         : '/tenant-dashboard';
+
+  const welcomeName = useMemo(() => {
+    if (!loggedIn || !currentUser) return '';
+    return (
+      currentUser?.profile?.firstName ||
+      currentUser?.username ||
+      currentUser?.contactEmail?.split('@')?.[0] ||
+      currentUser?.contact_email?.split('@')?.[0] ||
+      (userRole === 'ADMIN' ? 'Admin' : userRole === 'OWNER' ? 'Owner' : 'Tenant')
+    );
+  }, [loggedIn, currentUser, userRole]);
+
+  const avatarInitial =
+    welcomeName?.trim()?.slice(0, 1)?.toUpperCase() ||
+    (userRole === 'ADMIN' ? 'A' : userRole === 'OWNER' ? 'O' : 'T');
+
+  const accountAvatar = loggedIn ? (
+    <Link
+      to="/account"
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-700 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800 sm:h-9 sm:w-9 sm:text-sm"
+      aria-label="Go to account"
+      title={welcomeName || 'Account'}
+    >
+      {avatarInitial}
+    </Link>
+  ) : null;
 
   useEffect(() => {
     const loadListings = async () => {
@@ -152,7 +178,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#f5faf5] text-gray-800">
-      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-[#dceadf] shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+      <header className="sticky top-0 z-20 border-b border-[#dceadf] bg-white/95 shadow-[0_4px_18px_-4px_rgba(15,23,42,0.07)] backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
           <div className="flex items-center justify-between gap-4">
             <Link to="/" className="flex items-center gap-2.5">
@@ -164,27 +190,30 @@ export default function HomePage() {
               <span className="text-2xl font-bold text-[#2f8444] leading-none">Rent Nao</span>
             </Link>
 
-            <button
-              type="button"
-              className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#dceadf] bg-white text-gray-700 shadow-sm hover:bg-[#f4faf4] hover:border-[#c5ddc9] transition"
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={mobileMenuOpen}
-              aria-controls="home-mobile-nav"
-            >
-              {mobileMenuOpen ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
+            <div className="lg:hidden flex items-center gap-2">
+              {loggedIn && <div className="hidden md:flex">{accountAvatar}</div>}
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#dceadf] bg-white text-gray-700 shadow-sm hover:bg-[#f4faf4] hover:border-[#c5ddc9] transition"
+                onClick={() => setMobileMenuOpen((prev) => !prev)}
+                aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="home-mobile-nav"
+              >
+                {mobileMenuOpen ? (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
 
             <nav className="hidden lg:flex items-center gap-7 text-[15px] font-medium">
-              <Link to="/" className="text-[#2f8444] border-b-2 border-[#2f8444] pb-1">
+              <Link to="/" className="font-semibold text-[#2f8444]">
                 Home
               </Link>
               {showFindProperty && (
@@ -214,6 +243,7 @@ export default function HomePage() {
                   Sign Up
                 </Link>
               )}
+              {loggedIn && accountAvatar}
             </nav>
           </div>
 
@@ -400,8 +430,8 @@ export default function HomePage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10 md:mt-2 lg:mt-2 relative z-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="-mt-8 sm:mt-0">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+          <div className="h-full">
             <StatCard
               title="Verified Listings"
               subtitle="Safe & Trusted Properties"
@@ -470,55 +500,18 @@ export default function HomePage() {
       </section>
 
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 sm:pb-14 lg:pb-16">
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-[#2f8444] via-[#2a7a3f] to-[#1f5f31] text-white shadow-[0_20px_50px_rgba(31,95,49,0.28)] px-5 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-9">
-          <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
-          <div className="pointer-events-none absolute -left-12 -bottom-12 h-48 w-48 rounded-full bg-[#9bd5a8]/20 blur-3xl" />
-          <div className="pointer-events-none absolute inset-0 opacity-20">
-            <svg className="absolute left-4 top-5 h-12 w-12 text-emerald-100/70" viewBox="0 0 64 64" fill="none" aria-hidden>
-              <path d="M10 30L32 14L54 30V53H38V39H26V53H10V30Z" fill="currentColor" />
-              <path d="M6 31L32 10L58 31" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <svg className="absolute right-24 top-6 h-10 w-10 text-emerald-100/60" viewBox="0 0 64 64" fill="none" aria-hidden>
-              <path d="M12 31L32 17L52 31V52H39V41H25V52H12V31Z" fill="currentColor" />
-              <path d="M8 32L32 13L56 32" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <svg className="absolute left-20 bottom-6 h-11 w-11 text-emerald-100/55" viewBox="0 0 64 64" fill="none" aria-hidden>
-              <path d="M11 32L32 16L53 32V53H40V43H24V53H11V32Z" fill="currentColor" />
-              <path d="M8 33L32 13L56 33" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <div className="pointer-events-none absolute right-3 bottom-3 sm:right-5 sm:bottom-5 lg:right-7 lg:bottom-6 opacity-30 sm:opacity-35">
-            <svg className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 text-white" viewBox="0 0 120 120" fill="none" aria-hidden>
-              <path d="M18 58L60 26L102 58V98C102 101.314 99.3137 104 96 104H74V74H46V104H24C20.6863 104 18 101.314 18 98V58Z" fill="currentColor" fillOpacity="0.9" />
-              <path d="M10 60L60 18L110 60" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="86" cy="52" r="8" fill="#C7EBD0" fillOpacity="0.9" />
-            </svg>
-          </div>
-
-          <div className={`relative z-10 flex flex-col gap-5 sm:gap-6 ${loggedIn ? 'items-center text-center' : 'lg:flex-row lg:items-center lg:justify-between'}`}>
-            <div className={`${loggedIn ? 'max-w-2xl' : 'max-w-2xl'}`}>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-2">
-                <svg className="h-5 w-5 text-emerald-100" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" fill="currentColor" />
-                  <path d="M2.5 11.5L12 3L21.5 11.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span className="text-xs sm:text-sm font-semibold text-emerald-50">Verified homes, trusted people</span>
-              </div>
-              <h3 className="mt-3 text-xl sm:text-2xl lg:text-[1.8rem] font-bold leading-tight">
-                Rent smarter with trusted listings and verified users across Rent Nao.
-              </h3>
-              <p className="mt-2 text-sm sm:text-base text-emerald-100/90 max-w-xl">
-                Whether you are finding a home or listing one, manage everything in one place from discovery to request and agreement.
-              </p>
-            </div>
-
+        <div className="rounded-2xl border border-emerald-200 bg-[#1f7f3f] text-white shadow-[0_10px_24px_rgba(31,95,49,0.2)] px-4 py-3 sm:px-6 sm:py-3.5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-center sm:text-left text-sm sm:text-lg font-semibold tracking-tight">
+              List Your Property for Free & Reach More Tenants!
+            </p>
             {!loggedIn && (
               <button
                 type="button"
                 onClick={() => navigate('/signup')}
-                className="inline-flex items-center justify-center rounded-xl bg-white text-[#1f5f31] font-semibold px-5 py-3 text-sm sm:text-base shadow-lg shadow-[#153f23]/25 hover:bg-[#f3fff5] transition w-full sm:w-auto"
+                className="inline-flex items-center justify-center rounded-lg bg-white text-[#1f5f31] font-semibold px-4 py-2 text-sm shadow-sm hover:bg-[#f3fff5] transition w-full sm:w-auto"
               >
-                Get Started Free
+                Get Started
               </button>
             )}
           </div>
