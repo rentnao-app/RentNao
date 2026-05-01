@@ -108,6 +108,33 @@ Use each service’s own README for complete variable definitions:
 - Payment behavior in local development should be validated against the backend adapters.
 - Keep environment files out of version control.
 
+## Database Backups (Option A)
+
+This repo includes a host-based backup script for the Docker Postgres container.
+
+**Script:** `scripts/db-backup.sh`
+
+**Defaults:**
+- Reads `POSTGRES_*` from `.env.service`
+- Stores backups in `./backups/`
+- Retains backups for 30 days
+
+**Run manually:**
+```bash
+bash scripts/db-backup.sh
+```
+
+**Cron example (daily at 2:00 AM):**
+```cron
+0 2 * * * cd /home/dreamboat/RentNao && bash scripts/db-backup.sh >> backups/backup.log 2>&1
+```
+
+**Restore example:**
+```bash
+# Pick a backup file from ./backups
+docker exec -i rentnao-postgres pg_restore -U user -d rentnao --clean --if-exists < backups/rentnao_YYYYMMDD_HHMMSS.dump
+```
+
 ## Quality and Governance
 
 Recommended checks before merging:
