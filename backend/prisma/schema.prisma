@@ -434,7 +434,6 @@ model FeePolicy {
   created_at          DateTime @default(now()) @db.Timestamptz(6)
 
   charges             Charge[]
-  discount_policies   DiscountPolicy[]
 
   @@unique([code, version])
   @@index([code])
@@ -486,6 +485,7 @@ model Charge {
   user              User         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   fee_policy        FeePolicy    @relation(fields: [fee_policy_id], references: [id], onDelete: Restrict)
   discount_policy   DiscountPolicy? @relation(fields: [discount_policy_id], references: [id], onDelete: SetNull)
+  discount_redemptions DiscountRedemption[]
 
   @@index([user_id, created_at])
   @@index([reference_type, reference_id])
