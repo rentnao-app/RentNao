@@ -34,3 +34,15 @@ export {
   approveTopupRequestRoute,
   rejectTopupRequestRoute,
 } from './topup.routes';
+
+export {
+  listDiscountPoliciesRoute,
+  getDiscountPolicyByIdRoute,
+  createDiscountPolicyRoute,
+  updateDiscountPolicyRoute,
+  activateDiscountPolicyRoute,
+  deactivateDiscountPolicyRoute,
+  listDiscountEligibleUsersRoute,
+  addDiscountEligibleUsersRoute,
+  removeDiscountEligibleUsersRoute,
+} from './discount.routes';

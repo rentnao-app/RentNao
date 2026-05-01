@@ -153,3 +153,6 @@ export type ChargeStatusType = z.infer<typeof ChargeStatus>;
 
 export const TopupRequestStatus = z.enum(['PENDING', 'APPROVED', 'REJECTED']);
 export type TopupRequestStatusType = z.infer<typeof TopupRequestStatus>;
+
+export const DiscountType = z.enum(['FIXED', 'PERCENTAGE']);
+export type DiscountTypeType = z.infer<typeof DiscountType>;

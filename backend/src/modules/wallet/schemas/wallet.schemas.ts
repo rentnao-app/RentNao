@@ -136,6 +136,14 @@ export const chargeSchema = z.object({
     example: '500.00',
     description: 'Final charge amount (after adjustments) as decimal string',
   }),
+  discountPolicyId: z.string().nullable().openapi({
+    example: 'cm4discount123xyz',
+    description: 'Applied discount policy ID (if any)',
+  }),
+  discountAmount: z.string().nullable().openapi({
+    example: '50.00',
+    description: 'Applied discount amount as decimal string',
+  }),
   currency: z.string().openapi({
     example: 'BDT',
     description: 'Currency code',

@@ -66,6 +66,31 @@ function calculateFeeAmount(
   return amount;
 }
 
+function calculateDiscountAmount(discountPolicy: any, baseAmount: number): number {
+  let amount = 0;
+
+  if (discountPolicy.discount_type === 'FIXED') {
+    amount = discountPolicy.fixed_amount ? Number(discountPolicy.fixed_amount) : 0;
+  } else if (discountPolicy.discount_type === 'PERCENTAGE') {
+    amount = discountPolicy.percentage
+      ? (baseAmount * Number(discountPolicy.percentage)) / 100
+      : 0;
+  }
+
+  if (discountPolicy.min_amount && amount < Number(discountPolicy.min_amount)) {
+    amount = Number(discountPolicy.min_amount);
+  }
+  if (discountPolicy.max_amount && amount > Number(discountPolicy.max_amount)) {
+    amount = Number(discountPolicy.max_amount);
+  }
+
+  if (amount > baseAmount) {
+    amount = baseAmount;
+  }
+
+  return amount;
+}
+
 /**
  * Assert payment requirement and debit wallet in a transaction-safe way.
  * Caller must provide the same DB client/transaction context used by the business write.
@@ -74,6 +99,17 @@ export async function assertPaidActionAndDebit(
   client: Queryable,
   input: PaidActionInput
 ): Promise<PaidActionResult> {
+  const userRoleResult = await client.query(
+    `SELECT role FROM "User" WHERE user_id = $1`,
+    [input.userId]
+  );
+
+  if (userRoleResult.rows.length === 0) {
+    throw new AppError(404, 'User not found');
+  }
+
+  const userRole = userRoleResult.rows[0].role as string;
+
   const feePolicyResult = await client.query(
     `SELECT id, code, currency, fixed_amount, percentage, percent_base_field, min_amount, max_amount
      FROM "FeePolicy"
@@ -93,9 +129,76 @@ export async function assertPaidActionAndDebit(
   const feePolicy = feePolicyResult.rows[0];
   const requiredAmount = calculateFeeAmount(feePolicy, input.referenceData);
 
-  if (requiredAmount <= 0) {
+  if (requiredAmount < 0) {
     throw new AppError(400, `Fee policy ${input.feeCode} does not calculate a valid amount`);
   }
+
+  const discountCandidatesResult = await client.query(
+    `SELECT
+        dp.id,
+        dp.code,
+        dp.discount_type,
+        dp.fixed_amount,
+        dp.percentage,
+        dp.min_amount,
+        dp.max_amount,
+        dp.max_redemptions_total,
+        dp.max_redemptions_per_user,
+        dp.eligible_role,
+        dp.effective_from,
+        dp.effective_to,
+        dp.is_active,
+        (SELECT COUNT(*) FROM "DiscountRedemption" dr WHERE dr.discount_policy_id = dp.id) AS total_redemptions,
+        (SELECT COUNT(*) FROM "DiscountRedemption" dr WHERE dr.discount_policy_id = dp.id AND dr.user_id = $2) AS user_redemptions,
+        (SELECT COUNT(*) FROM "DiscountEligibleUser" eu WHERE eu.discount_policy_id = dp.id) AS eligible_user_count,
+        (SELECT COUNT(*) FROM "DiscountEligibleUser" eu WHERE eu.discount_policy_id = dp.id AND eu.user_id = $2) AS is_user_eligible
+     FROM "DiscountPolicy" dp
+     WHERE dp.fee_policy_code = $1
+       AND dp.is_active = true
+       AND dp.effective_from <= NOW()
+       AND (dp.effective_to IS NULL OR dp.effective_to > NOW())
+       AND (dp.eligible_role IS NULL OR dp.eligible_role = $3)
+     ORDER BY dp.effective_from DESC`,
+    [feePolicy.code, input.userId, userRole]
+  );
+
+  let selectedDiscount: any = null;
+  let selectedDiscountAmount = 0;
+
+  for (const candidate of discountCandidatesResult.rows) {
+    const eligibleUserCount = Number(candidate.eligible_user_count || 0);
+    const isUserEligible = Number(candidate.is_user_eligible || 0) > 0;
+    const totalRedemptions = Number(candidate.total_redemptions || 0);
+    const userRedemptions = Number(candidate.user_redemptions || 0);
+
+    if (eligibleUserCount > 0 && !isUserEligible) {
+      continue;
+    }
+    if (
+      candidate.max_redemptions_total !== null &&
+      totalRedemptions >= Number(candidate.max_redemptions_total)
+    ) {
+      continue;
+    }
+    if (
+      candidate.max_redemptions_per_user !== null &&
+      userRedemptions >= Number(candidate.max_redemptions_per_user)
+    ) {
+      continue;
+    }
+
+    const discountAmount = calculateDiscountAmount(candidate, requiredAmount);
+    if (discountAmount <= 0) {
+      continue;
+    }
+
+    if (discountAmount > selectedDiscountAmount) {
+      selectedDiscount = candidate;
+      selectedDiscountAmount = discountAmount;
+    }
+  }
+
+  const finalAmount = Math.max(0, requiredAmount - selectedDiscountAmount);
 
   const walletResult = await client.query(
     `SELECT id, status, currency, available_balance
@@ -119,7 +222,7 @@ export async function assertPaidActionAndDebit(
   }
 
   const availableBalance = Number(wallet.available_balance);
-  if (availableBalance < requiredAmount) {
+  if (availableBalance < finalAmount) {
     throw new AppError(
       402,
       `Payment required for ${input.feeCode}`,
@@ -127,7 +230,7 @@ export async function assertPaidActionAndDebit(
       {
         code: 'PAYMENT_REQUIRED',
         feeCode: input.feeCode,
-        requiredAmount: requiredAmount.toFixed(2),
+        requiredAmount: finalAmount.toFixed(2),
         availableBalance: availableBalance.toFixed(2),
         currency: feePolicy.currency,
       }
@@ -138,8 +241,9 @@ export async function assertPaidActionAndDebit(
   await client.query(
     `INSERT INTO "Charge" (
       id, user_id, fee_policy_id, reference_type, reference_id,
-      currency, base_amount, final_amount, status, created_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING', NOW())`,
+      currency, base_amount, final_amount, discount_policy_id, discount_amount,
+      status, created_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING', NOW())`,
     [
       chargeId,
       input.userId,
@@ -148,16 +252,27 @@ export async function assertPaidActionAndDebit(
       input.referenceId,
       feePolicy.currency,
       requiredAmount,
-      requiredAmount,
+      finalAmount,
+      selectedDiscount ? selectedDiscount.id : null,
+      selectedDiscount ? selectedDiscountAmount : null,
     ]
   );
+
+  if (selectedDiscount) {
+    await client.query(
+      `INSERT INTO "DiscountRedemption" (
+        discount_policy_id, user_id, charge_id, discount_amount, redeemed_at
+      ) VALUES ($1, $2, $3, $4, NOW())`,
+      [selectedDiscount.id, input.userId, chargeId, selectedDiscountAmount]
+    );
+  }
 
   await client.query(
     `UPDATE "WalletAccount"
      SET available_balance = available_balance - $1,
          updated_at = NOW()
      WHERE id = $2`,
-    [requiredAmount, wallet.id]
+    [finalAmount, wallet.id]
   );
 
   const walletTransactionId = createId();
@@ -175,7 +290,7 @@ export async function assertPaidActionAndDebit(
       walletTransactionId,
       wallet.id,
       input.walletTxnType,
-      requiredAmount,
+      finalAmount,
       feePolicy.currency,
       input.description || `Charge applied for ${input.feeCode}`,
       input.referenceType,
@@ -193,7 +308,7 @@ export async function assertPaidActionAndDebit(
   return {
     chargeId,
     walletTransactionId,
-    debitedAmount: requiredAmount.toFixed(2),
+    debitedAmount: finalAmount.toFixed(2),
     currency: feePolicy.currency,
   };
 }
@@ -341,6 +456,8 @@ export async function getUserCharges(
       reference_id,
       base_amount,
       final_amount,
+        discount_policy_id,
+        discount_amount,
       currency,
       status,
       failure_reason,
@@ -361,6 +478,8 @@ export async function getUserCharges(
     referenceId: row.reference_id,
     baseAmount: row.base_amount.toString(),
     finalAmount: row.final_amount.toString(),
+    discountPolicyId: row.discount_policy_id,
+    discountAmount: row.discount_amount != null ? row.discount_amount.toString() : null,
     currency: row.currency,
     status: row.status,
     failureReason: row.failure_reason,

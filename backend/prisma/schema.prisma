@@ -189,6 +189,11 @@ enum TopupRequestStatus {
   REJECTED
 }
 
+enum DiscountType {
+  FIXED
+  PERCENTAGE
+}
+
 model User {
   user_id           String           @id @default(cuid())
   role              UserRole         @default(TENANT)
@@ -223,6 +228,8 @@ model User {
   rental_requests_as_tenant RentalRequest[] @relation("RentalRequestsTenant")
   topup_approvals      TopupRequest[] @relation("TopupApprovals")
   notifications        Notification[]
+  discount_redemptions DiscountRedemption[]
+  discount_eligibilities DiscountEligibleUser[]
 }
 
 model Credentials {
@@ -427,9 +434,35 @@ model FeePolicy {
   created_at          DateTime @default(now()) @db.Timestamptz(6)
 
   charges             Charge[]
+  discount_policies   DiscountPolicy[]
 
   @@unique([code, version])
   @@index([code])
+  @@index([is_active, effective_from])
+}
+
+model DiscountPolicy {
+  id                     String       @id @default(cuid())
+  code                   String       @unique
+  fee_policy_code        String
+  discount_type          DiscountType
+  fixed_amount           Decimal?
+  percentage             Decimal?
+  min_amount             Decimal?
+  max_amount             Decimal?
+  max_redemptions_total  Int?
+  max_redemptions_per_user Int?
+  eligible_role          UserRole?
+  effective_from         DateTime     @db.Timestamptz(6)
+  effective_to           DateTime?    @db.Timestamptz(6)
+  is_active              Boolean      @default(true)
+  created_at             DateTime     @default(now()) @db.Timestamptz(6)
+
+  eligible_users         DiscountEligibleUser[]
+  redemptions            DiscountRedemption[]
+  charges                Charge[]
+
+  @@index([fee_policy_code])
   @@index([is_active, effective_from])
 }
 
@@ -442,6 +475,8 @@ model Charge {
   currency          String       @default("BDT")
   base_amount       Decimal
   final_amount      Decimal
+  discount_policy_id String?
+  discount_amount    Decimal?
   status            ChargeStatus @default(PENDING)
   failure_reason    String?
   created_at        DateTime     @default(now()) @db.Timestamptz(6)
@@ -450,10 +485,40 @@ model Charge {
 
   user              User         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   fee_policy        FeePolicy    @relation(fields: [fee_policy_id], references: [id], onDelete: Restrict)
+  discount_policy   DiscountPolicy? @relation(fields: [discount_policy_id], references: [id], onDelete: SetNull)
 
   @@index([user_id, created_at])
   @@index([reference_type, reference_id])
   @@index([status, created_at])
+}
+
+model DiscountEligibleUser {
+  discount_policy_id String
+  user_id            String
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  discount_policy    DiscountPolicy @relation(fields: [discount_policy_id], references: [id], onDelete: Cascade)
+  user               User           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@id([discount_policy_id, user_id])
+  @@index([user_id])
+}
+
+model DiscountRedemption {
+  id                 String   @id @default(cuid())
+  discount_policy_id String
+  user_id            String
+  charge_id          String?
+  discount_amount    Decimal
+  redeemed_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  discount_policy    DiscountPolicy @relation(fields: [discount_policy_id], references: [id], onDelete: Cascade)
+  user               User           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  charge             Charge?        @relation(fields: [charge_id], references: [id], onDelete: SetNull)
+
+  @@index([discount_policy_id, redeemed_at])
+  @@index([user_id, redeemed_at])
+  @@index([charge_id])
 }
 
 model TopupRequest {

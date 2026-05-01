@@ -28,3 +28,15 @@ export {
   activateFeePolicy,
   deactivateFeePolicy,
 } from './fee-policy.service';
+
+export {
+  listDiscountPolicies,
+  getDiscountPolicyById,
+  createDiscountPolicy,
+  updateDiscountPolicy,
+  activateDiscountPolicy,
+  deactivateDiscountPolicy,
+  listDiscountEligibleUsers,
+  addDiscountEligibleUsers,
+  removeDiscountEligibleUsers,
+} from './discount.service';
