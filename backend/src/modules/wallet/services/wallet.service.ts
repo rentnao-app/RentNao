@@ -259,11 +259,18 @@ export async function assertPaidActionAndDebit(
   );
 
   if (selectedDiscount) {
+    const discountRedemptionId = createId();
     await client.query(
       `INSERT INTO "DiscountRedemption" (
-        discount_policy_id, user_id, charge_id, discount_amount, redeemed_at
-      ) VALUES ($1, $2, $3, $4, NOW())`,
-      [selectedDiscount.id, input.userId, chargeId, selectedDiscountAmount]
+        id, discount_policy_id, user_id, charge_id, discount_amount, redeemed_at
+      ) VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [
+        discountRedemptionId,
+        selectedDiscount.id,
+        input.userId,
+        chargeId,
+        selectedDiscountAmount,
+      ]
     );
   }
 
