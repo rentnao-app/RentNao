@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch, getCurrentUser, splitName } from '../lib/api';
 import {
@@ -25,33 +25,54 @@ const LOCATION_OPTIONS = [
 
 const RELIGION_OPTIONS = ['Islam', 'Hinduism', 'Christianity', 'Buddhism', 'Other'];
 
-const PROFESSION_OPTIONS = [
-  'Property Owner',
-  'Real Estate / Broker',
-  'Business',
-  'Engineer',
-  'Doctor',
-  'Lawyer',
-  'Government Service',
-  'Teacher',
-  'Finance / Banking',
-  'Retired',
-  'Other',
+const BLOOD_GROUP_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+/** Backend `EmploymentStatus` (same enum family as tenant profiles) — drives profession choices. */
+const EMPLOYMENT_STATUS_OPTIONS = [
+  { value: 'EMPLOYED', label: 'Employed' },
+  { value: 'SELF_EMPLOYED', label: 'Self-employed' },
+  { value: 'UNEMPLOYED', label: 'Unemployed' },
+  { value: 'STUDENT', label: 'Student' },
+  { value: 'RETIRED', label: 'Retired' },
 ];
 
-/** Backend `JobCategory` enum */
-const JOB_CATEGORY_OPTIONS = [
-  { value: 'TECHNOLOGY', label: 'Technology' },
-  { value: 'HEALTHCARE', label: 'Healthcare' },
-  { value: 'EDUCATION', label: 'Education' },
-  { value: 'FINANCE', label: 'Finance' },
-  { value: 'CONSTRUCTION', label: 'Construction' },
-  { value: 'HOSPITALITY', label: 'Hospitality' },
-  { value: 'RETAIL', label: 'Retail' },
-  { value: 'GOVERNMENT', label: 'Government' },
-  { value: 'SELF_EMPLOYED', label: 'Self-employed' },
-  { value: 'OTHER', label: 'Other' },
-];
+/**
+ * Profession lines per employment; each maps to backend `JobCategory` + a short `profession` string for the API.
+ * Owner create profile only accepts `profession` (string) + `jobCategory` (enum) — we derive both from these rows.
+ */
+const PROFESSION_ROWS_BY_EMPLOYMENT = {
+  EMPLOYED: [
+    { label: 'Engineer / technologist', jobCategory: 'TECHNOLOGY' },
+    { label: 'Doctor / healthcare worker', jobCategory: 'HEALTHCARE' },
+    { label: 'Teacher / academic', jobCategory: 'EDUCATION' },
+    { label: 'Finance / banking', jobCategory: 'FINANCE' },
+    { label: 'Construction / development', jobCategory: 'CONSTRUCTION' },
+    { label: 'Hospitality / tourism', jobCategory: 'HOSPITALITY' },
+    { label: 'Retail / sales', jobCategory: 'RETAIL' },
+    { label: 'Government service', jobCategory: 'GOVERNMENT' },
+    { label: 'Property / facilities manager (employed)', jobCategory: 'OTHER' },
+    { label: 'Other employed role', jobCategory: 'OTHER' },
+  ],
+  SELF_EMPLOYED: [
+    { label: 'Property owner / landlord', jobCategory: 'SELF_EMPLOYED' },
+    { label: 'Real estate broker / agent', jobCategory: 'SELF_EMPLOYED' },
+    { label: 'Business owner (general)', jobCategory: 'OTHER' },
+    { label: 'Consultant / freelancer', jobCategory: 'OTHER' },
+    { label: 'Other self-employed', jobCategory: 'OTHER' },
+  ],
+  UNEMPLOYED: [
+    { label: 'Not currently working', jobCategory: 'OTHER' },
+    { label: 'Looking for work', jobCategory: 'OTHER' },
+  ],
+  STUDENT: [
+    { label: 'Full-time student', jobCategory: 'OTHER' },
+    { label: 'Student with part-time work', jobCategory: 'RETAIL' },
+  ],
+  RETIRED: [
+    { label: 'Retired', jobCategory: 'OTHER' },
+    { label: 'Retired — previously in property / real estate', jobCategory: 'SELF_EMPLOYED' },
+  ],
+};
 
 const SIDE_IMAGE = '/side-image.jpg';
 
@@ -83,8 +104,10 @@ export default function OwnerRegistrationPage() {
     dateOfBirth: '',
     gender: 'male',
     religion: '',
-    profession: '',
-    jobCategory: '',
+    bloodGroup: '',
+    employmentStatus: '',
+    /** `jobCategory|roleLabel` — roleLabel has no `|` */
+    workSelection: '',
     currentLocation: '',
   });
   const [loading, setLoading] = useState(false);
@@ -101,12 +124,30 @@ export default function OwnerRegistrationPage() {
     const local11 = toLocal11Digits(clipPhoneInput(raw));
     if (!local11 || !isValidBdMobileLocal11(local11)) return;
     const after = local11ToAfter880(local11);
-    setForm((prev) => ({ ...prev, phoneAfter880: after }));
+    startTransition(() => {
+      setForm((prev) => ({ ...prev, phoneAfter880: after }));
+    });
   }, [searchParams]);
 
   const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    if (name === 'employmentStatus') {
+      setForm((prev) => ({ ...prev, employmentStatus: value, workSelection: '' }));
+      return;
+    }
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
+
+  const professionRows =
+    form.employmentStatus && PROFESSION_ROWS_BY_EMPLOYMENT[form.employmentStatus]
+      ? PROFESSION_ROWS_BY_EMPLOYMENT[form.employmentStatus]
+      : [];
+
+  function parseWorkSelection(raw) {
+    const i = raw.indexOf('|');
+    if (i <= 0 || i >= raw.length - 1) return null;
+    return { jobCategory: raw.slice(0, i), roleLabel: raw.slice(i + 1) };
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -132,8 +173,14 @@ export default function OwnerRegistrationPage() {
         setError('Please select your date of birth.');
         return;
       }
-      if (!form.religion || !form.profession || !form.jobCategory || !form.currentLocation) {
+      if (!form.religion || !form.employmentStatus || !form.workSelection || !form.currentLocation) {
         setError('Please complete all required fields.');
+        return;
+      }
+
+      const parsed = parseWorkSelection(form.workSelection);
+      if (!parsed?.jobCategory || !parsed?.roleLabel) {
+        setError('Please select your role or profession for your employment type.');
         return;
       }
 
@@ -142,6 +189,11 @@ export default function OwnerRegistrationPage() {
         setError('Please enter your full name (at least 2 characters for your first name).');
         return;
       }
+
+      const empLabel =
+        EMPLOYMENT_STATUS_OPTIONS.find((o) => o.value === form.employmentStatus)?.label ||
+        form.employmentStatus;
+      const professionPayload = `${empLabel}: ${parsed.roleLabel}`.slice(0, 100);
 
       const ownerCategory = 'RESIDENTIAL';
 
@@ -156,8 +208,8 @@ export default function OwnerRegistrationPage() {
           dateOfBirth: form.dateOfBirth,
           gender: mapGender[form.gender] || 'OTHER',
           religion: form.religion,
-          profession: form.profession,
-          jobCategory: form.jobCategory,
+          profession: professionPayload,
+          jobCategory: parsed.jobCategory,
           profilePhotoUrl: 'https://example.com/profile.jpg',
           currentLat: 23.8103,
           currentLng: 90.4125,
@@ -372,7 +424,7 @@ export default function OwnerRegistrationPage() {
               <h1 className="text-3xl sm:text-4xl font-extrabold text-emerald-800 tracking-tight">Owner information</h1>
               <div className="flex items-center gap-4">
                 <StepItem number={1} label="Details" active />
-                <span className="text-gray-300"></span>
+                <span className="text-gray-300">—</span>
                 <StepItem number={2} label="Verify" />
               </div>
             </div>
@@ -480,28 +532,66 @@ export default function OwnerRegistrationPage() {
                 </div>
 
                 <div>
-                  <label className={labelClass}>Profession</label>
-                  <select name="profession" value={form.profession} onChange={handleChange} className={inputClass} required>
-                    <option value="">Select profession</option>
-                    {PROFESSION_OPTIONS.map((item) => (
+                  <label className={labelClass}>Blood group</label>
+                  <select name="bloodGroup" value={form.bloodGroup} onChange={handleChange} className={inputClass}>
+                    <option value="">Select blood group (optional)</option>
+                    {BLOOD_GROUP_OPTIONS.map((item) => (
                       <option key={item} value={item}>
                         {item}
                       </option>
                     ))}
                   </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Same field as tenant onboarding; owner API does not store it yet.
+                  </p>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Job category</label>
-                  <select name="jobCategory" value={form.jobCategory} onChange={handleChange} className={inputClass} required>
-                    <option value="">Select category</option>
-                    {JOB_CATEGORY_OPTIONS.map((item) => (
+                  <label className={labelClass}>Employment</label>
+                  <select
+                    name="employmentStatus"
+                    value={form.employmentStatus}
+                    onChange={handleChange}
+                    className={inputClass}
+                    required
+                  >
+                    <option value="">Select employment status</option>
+                    {EMPLOYMENT_STATUS_OPTIONS.map((item) => (
                       <option key={item.value} value={item.value}>
                         {item.label}
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1 text-xs text-gray-500">Used for analytics; pick the closest match.</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Uses the same <span className="font-medium text-gray-700">EmploymentStatus</span> idea as tenants;
+                    we then map your answer to <span className="font-medium text-gray-700">profession</span> +{' '}
+                    <span className="font-medium text-gray-700">jobCategory</span> for the owner profile API.
+                  </p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Role / profession</label>
+                  <select
+                    name="workSelection"
+                    value={form.workSelection}
+                    onChange={handleChange}
+                    className={inputClass}
+                    required
+                    disabled={!form.employmentStatus}
+                  >
+                    <option value="">
+                      {form.employmentStatus ? 'Select the option that best describes you' : 'Choose employment first'}
+                    </option>
+                    {professionRows.map((row) => (
+                      <option key={`${row.jobCategory}-${row.label}`} value={`${row.jobCategory}|${row.label}`}>
+                        {row.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Each option sets the backend <span className="font-medium text-gray-700">jobCategory</span> enum and
+                    a clear <span className="font-medium text-gray-700">profession</span> string.
+                  </p>
                 </div>
 
                 <div>

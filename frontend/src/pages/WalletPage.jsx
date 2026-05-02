@@ -186,7 +186,22 @@ export default function WalletPage() {
         </section>
 
         <section className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Request Topup</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Request Topup</h2>
+          <div className="mb-4 rounded-lg border border-teal-100 bg-teal-50/50 px-3 py-3 text-sm text-gray-800">
+            <p className="font-semibold text-gray-900 mb-2">Topup Steps:</p>
+            <ol className="list-decimal list-inside space-y-2 leading-relaxed">
+              <li>
+                Go to <strong>bKash</strong>
+              </li>
+              <li>
+                <strong>Send Money</strong> the topup amount in this number: <strong>01409033956</strong>
+              </li>
+              <li>
+                Fill in the boxes with requested amount, your bKash number you used for Send Money, and the bKash
+                Transaction ID
+              </li>
+            </ol>
+          </div>
           <form onSubmit={handleSubmitTopupRequest} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Amount (BDT)</label>
