@@ -3,6 +3,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
+
 // 1. Added Role Enum
 enum UserRole {
   TENANT
@@ -192,6 +196,14 @@ enum ChargeStatus {
   VOID
 }
 
+enum TestimonialStatus {
+  PENDING
+  FLAGGED
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
 model User {
   user_id           String           @id @default(cuid())
   role              UserRole         @default(TENANT)
@@ -224,6 +236,7 @@ model User {
   verification_submissions VerificationSubmission?
   rental_requests_as_tenant RentalRequest[] @relation("RentalRequestsTenant")
   notifications            Notification[]
+  testimonials             Testimonial[]
 }
 
 model Credentials {
@@ -617,4 +630,19 @@ model PropertyImage {
 
   @@index([property_id])
   @@index([property_id, display_order])
+}
+
+model Testimonial {
+  id         String            @id @default(cuid())
+  userId     String            @map("user_id")
+  content    String            @db.Text
+  rating     Int               @default(5)
+  isFeatured Boolean           @default(false) @map("is_featured")
+  status     TestimonialStatus @default(PENDING)
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime?         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user       User              @relation(fields: [userId], references: [user_id], onDelete: Cascade)
+
+  @@index([status, isFeatured])
 }

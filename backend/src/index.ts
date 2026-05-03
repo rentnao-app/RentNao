@@ -24,6 +24,7 @@ import wallet from '@/modules/wallet';
 import wishlists from '@/modules/wishlist';
 import rentalRequests from '@/modules/rental-requests';
 import notifications from '@/modules/notifications';
+import testimonials from '@/modules/testimonials';
 import { bearerAuth } from 'hono/bearer-auth';
 
 const app = new OpenAPIHono({
@@ -66,6 +67,7 @@ app.route('/wallet', wallet);
 app.route('/wishlists', wishlists);
 app.route('/requests', rentalRequests);
 app.route('/notifications', notifications);
+app.route('/testimonials', testimonials);
 
 app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
   type: 'http',
@@ -119,6 +121,10 @@ app.doc('/openapi.json', {
     {
       name: 'Notifications',
       description: 'In-app user notifications',
+    },
+    {
+      name: 'Testimonials',
+      description: 'User feedback and platform testimonials',
     },
     {
       name: 'Admin - User Management',
