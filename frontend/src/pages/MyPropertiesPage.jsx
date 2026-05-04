@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, getApiErrorMessage, isLoggedIn } from '../lib/api';
 import toast from 'react-hot-toast';
 
@@ -119,9 +120,7 @@ export default function MyPropertiesPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/owner-dashboard" className="text-2xl font-bold text-teal-800 tracking-tight">
-            RentNao
-          </Link>
+          <BrandLogoLink />
           <Link
             to="/owner-dashboard/create-listing"
             className="bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold px-4 sm:px-5 py-2.5 rounded-lg transition whitespace-nowrap"

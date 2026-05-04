@@ -8,6 +8,7 @@ import WishlistHeartButton from '../components/WishlistHeartButton';
 import { getWishlistState } from '../lib/wishlist';
 import { getTenantRequestForListing, withdrawTenantRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
+import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
 
 function formatBdt(n) {
   if (n == null || Number.isNaN(Number(n))) return '-';
@@ -239,10 +240,10 @@ export default function ListingDetailsPage() {
     <div className="min-h-screen bg-[#f2f7f3] text-slate-800">
       <header className="sticky top-0 z-30 border-b border-emerald-100/90 bg-white/95 shadow-sm backdrop-blur-sm">
         <div className="mx-auto flex max-w-[1500px] items-center gap-2 px-3 py-3 sm:gap-3 sm:px-5 lg:px-6">
-          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2" onClick={() => setMobileNavOpen(false)}>
-            <img src="/logo.jpg" alt="" className="h-9 w-9 rounded-lg border border-emerald-100 object-cover" />
-            <span className="truncate text-lg font-semibold tracking-tight text-[#2f8444] sm:text-xl">Rent Nao</span>
-          </Link>
+          <BrandLogoLink
+            className="min-w-0 shrink-0"
+            onClick={() => setMobileNavOpen(false)}
+          />
 
           <nav className="mx-auto hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex">
             {topNavItems.map((item) => (
@@ -316,12 +317,15 @@ export default function ListingDetailsPage() {
             aria-labelledby="listing-details-mobile-nav-title"
             className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
           >
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <img src="/logo.jpg" alt="" className="h-9 w-9 rounded-lg object-cover border border-green-100 shrink-0" />
-                <p id="listing-details-mobile-nav-title" className="font-semibold text-[#1e4732] text-sm tracking-tight truncate">
-                  Rent Nao
-                </p>
+            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <BrandLogoLink
+                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
+                  onClick={() => setMobileNavOpen(false)}
+                />
+                <span id="listing-details-mobile-nav-title" className="sr-only">
+                  Main menu
+                </span>
               </div>
               <button
                 type="button"

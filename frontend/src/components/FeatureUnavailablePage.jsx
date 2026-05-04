@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import BrandLogoLink from './BrandLogoLink';
 
 export default function FeatureUnavailablePage({
   title = 'Feature Unavailable',
@@ -10,9 +11,7 @@ export default function FeatureUnavailablePage({
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-2xl font-bold text-teal-800 tracking-tight">
-            RentNao
-          </Link>
+          <BrandLogoLink />
           <Link to={backTo} className="text-sm font-medium text-teal-700 hover:text-teal-800">
             {backLabel}
           </Link>

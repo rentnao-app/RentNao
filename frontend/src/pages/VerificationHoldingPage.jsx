@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, clearAuthSession, getCurrentUser } from '../lib/api';
 
 function normalizeStatus(status) {
@@ -207,10 +208,7 @@ export default function VerificationHoldingPage() {
     <div className="min-h-screen bg-[#f4f7f5]">
       <header className="bg-white border-b border-emerald-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 flex items-center justify-between gap-3">
-          <Link to="/" className="flex items-center gap-2.5 min-w-0">
-            <img src="/logo.jpg" alt="Rent Nao" className="h-9 w-9 sm:h-10 sm:w-10 rounded-md object-cover border border-emerald-100 shrink-0" />
-            <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-emerald-800 tracking-tight truncate">Rent Nao</span>
-          </Link>
+          <BrandLogoLink className="min-w-0" />
 
           <button
             type="button"

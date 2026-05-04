@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, getApiErrorMessage, getCurrentUser, getUserRole, isLoggedIn } from '../lib/api';
 import toast from 'react-hot-toast';
 
@@ -155,7 +156,7 @@ export default function WalletPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Wallet</h1>
+          <BrandLogoLink />
           <Link to={dashboardPath} className="text-sm font-medium text-teal-700 hover:text-teal-800">
             Back to dashboard
           </Link>
@@ -163,6 +164,7 @@ export default function WalletPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900">Wallet</h1>
         <section className="bg-white rounded-xl border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Balance</h2>
           {wallet ? (

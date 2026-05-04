@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
 import { apiFetch, getCurrentUser, getUserId, getUserRole, isLoggedIn } from '../lib/api';
 import { getPublicProfileData, savePublicProfileSnapshot } from '../lib/publicProfiles';
 
@@ -93,9 +94,7 @@ export default function PublicProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
-          <Link to="/" className="text-xl sm:text-2xl font-bold text-teal-800 tracking-tight leading-none">
-            RentNao
-          </Link>
+          <BrandLogoLink />
 
           <Link to="/listings" className="hidden lg:inline text-sm font-medium text-teal-700 hover:text-teal-800">
             Browse Listings
@@ -137,10 +136,16 @@ export default function PublicProfilePage() {
             aria-labelledby="public-profile-mobile-nav-title"
             className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
           >
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
-              <p id="public-profile-mobile-nav-title" className="font-semibold text-[#1e4732] text-sm tracking-tight truncate">
-                RentNao
-              </p>
+            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <BrandLogoLink
+                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
+                  onClick={() => setMobileMenuOpen(false)}
+                />
+                <span id="public-profile-mobile-nav-title" className="sr-only">
+                  Main menu
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}

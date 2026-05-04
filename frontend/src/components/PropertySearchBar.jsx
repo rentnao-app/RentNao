@@ -101,7 +101,7 @@ function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area', compa
         </svg>
       </summary>
       <div
-        className={`absolute left-0 right-0 z-[80] mt-1 min-w-[12rem] rounded-xl border border-[#deeadf] bg-white py-1 shadow-lg ${panelScrollClass}`}
+        className={`absolute left-0 right-0 z-[100] mt-1 min-w-[12rem] rounded-xl border border-[#deeadf] bg-white py-1 shadow-lg ${panelScrollClass}`}
       >
         {LISTING_AREA_OPTIONS.map((option) => (
           <label

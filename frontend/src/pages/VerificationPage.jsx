@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
 import { apiFetch, getCurrentUser } from '../lib/api';
 import { addLocalNotification } from '../lib/notifications';
 import { getAcceptValue, isAllowedFileByMimeAndExtension, KYC_UPLOAD_MIMES } from '../lib/fileValidation';
@@ -47,12 +48,6 @@ function StepPill({ number, label, active }) {
       <span className={`text-xs ${active ? 'text-emerald-700 font-semibold' : 'text-gray-500'}`}>{label}</span>
     </div>
   );
-}
-
-function getDashboardPath(role) {
-  if (role === 'OWNER') return '/owner-dashboard';
-  if (role === 'ADMIN') return '/admin-dashboard';
-  return '/tenant-dashboard';
 }
 
 function UploadCard({
@@ -278,10 +273,7 @@ export default function VerificationPage() {
       {/* Unified registration header */}
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
-          <Link to="/" className="flex items-center gap-2.5">
-            <img src="/logo.jpg" alt="Rent Nao" className="h-10 w-10 rounded-md object-cover border border-emerald-100" />
-            <span className="text-xl sm:text-3xl font-extrabold text-emerald-800 tracking-tight leading-none">Rent Nao</span>
-          </Link>
+          <BrandLogoLink />
 
           <nav className="hidden lg:flex items-center gap-8 text-sm font-medium">
             <Link to="/" className="text-gray-700 hover:text-emerald-700 transition">Home</Link>
@@ -341,12 +333,15 @@ export default function VerificationPage() {
             aria-labelledby="verification-mobile-nav-title"
             className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
           >
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <img src="/logo.jpg" alt="" className="h-9 w-9 rounded-lg object-cover border border-green-100 shrink-0" />
-                <p id="verification-mobile-nav-title" className="font-semibold text-[#1e4732] text-sm tracking-tight truncate">
-                  Rent Nao
-                </p>
+            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <BrandLogoLink
+                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
+                  onClick={() => setMobileMenuOpen(false)}
+                />
+                <span id="verification-mobile-nav-title" className="sr-only">
+                  Main menu
+                </span>
               </div>
               <button
                 type="button"

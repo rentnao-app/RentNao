@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
 import { getWishlistState, toggleWishlist } from '../lib/wishlist';
 import PropertySearchBar from '../components/PropertySearchBar';
+import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
 const hero = '/hero-image.png';
 const HERO_TEXT_FONT = 'Avenir, "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif';
 
@@ -131,14 +132,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-[#dceadf] shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
           <div className="flex items-center justify-between gap-4">
-            <Link to="/" className="flex items-center gap-2.5">
-              <img
-                src="/logo.jpg"
-                alt="Rent Nao"
-                className="h-10 w-10 rounded-md object-cover border border-green-100"
-              />
-              <span className="text-2xl font-bold text-[#2f8444] leading-none">Rent Nao</span>
-            </Link>
+            <BrandLogoLink />
 
             <button
               type="button"
@@ -212,11 +206,14 @@ export default function HomePage() {
             className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
           >
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <img src="/logo.jpg" alt="" className="h-9 w-9 rounded-lg object-cover border border-green-100 shrink-0" />
-                <p id="home-mobile-nav-title" className="font-semibold text-[#1e4732] text-sm tracking-tight truncate">
-                  Rent Nao
-                </p>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <BrandLogoLink
+                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
+                  onClick={() => setMobileMenuOpen(false)}
+                />
+                <span id="home-mobile-nav-title" className="sr-only">
+                  Main menu
+                </span>
               </div>
               <button
                 type="button"
@@ -295,8 +292,8 @@ export default function HomePage() {
             className="w-full h-[440px] sm:h-[460px] md:h-[500px] lg:h-[400px] object-cover object-[60%_center] sm:object-[58%_center] md:object-center lg:object-center brightness-110 saturate-110"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-white/62 via-white/34 to-transparent sm:from-white/48 sm:via-white/28 md:from-white/40 md:via-white/24 lg:from-white/35 lg:via-white/20" />
-          <div className="absolute inset-0 z-10 flex items-start lg:items-center">
-            <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-12 md:pt-16 lg:pt-0 flex flex-col justify-start lg:justify-center gap-3 sm:gap-4 md:gap-5 lg:block">
+          <div className="pointer-events-none absolute inset-0 z-[19] flex items-start lg:items-center">
+            <div className="pointer-events-auto max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-12 md:pt-16 lg:pt-0 flex flex-col justify-start lg:justify-center gap-3 sm:gap-4 md:gap-5 lg:block">
               <h1
                 className="text-[1.8rem] sm:text-[2.4rem] md:text-5xl lg:text-5xl font-bold leading-[1.15] sm:leading-tight text-[#1e4732] max-w-[19rem] sm:max-w-xl lg:max-w-2xl"
                 style={{ fontFamily: HERO_TEXT_FONT }}
@@ -321,7 +318,7 @@ export default function HomePage() {
         <div className="h-12 sm:h-14 md:h-16 lg:h-8" />
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10 md:mt-2 lg:mt-2 relative z-10">
+      <section className="relative z-[1] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10 md:mt-2 lg:mt-2">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="-mt-8 sm:mt-0">
             <StatCard

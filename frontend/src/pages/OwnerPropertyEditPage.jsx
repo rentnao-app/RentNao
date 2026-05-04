@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, isLoggedIn } from '../lib/api';
 import toast from 'react-hot-toast';
 import ImageUploader from '../components/ImageUploader';
@@ -229,9 +230,7 @@ export default function OwnerPropertyEditPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/owner-dashboard" className="text-2xl font-bold text-teal-800 tracking-tight">
-            RentNao
-          </Link>
+          <BrandLogoLink />
           <Link
             to="/owner-dashboard/my-properties"
             className="text-sm font-medium text-gray-600 hover:text-teal-700 transition"

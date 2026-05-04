@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import BrandLogoLink from '../components/BrandLogoLink';
 import {
   apiFetch,
   fetchProfileStatus,
@@ -113,9 +114,7 @@ export default function AuthVerificationPage() {
     <div className="min-h-screen bg-green-50 flex flex-col">
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-2xl font-bold text-teal-800 tracking-tight">
-            RentNao
-          </Link>
+          <BrandLogoLink />
           <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-teal-700 transition">
             Back to Login
           </Link>

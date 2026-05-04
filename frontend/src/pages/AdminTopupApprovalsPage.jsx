@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiFetch, getApiErrorMessage, getCurrentUser, isLoggedIn } from '../lib/api';
+import BrandLogoLink from '../components/BrandLogoLink';
+import { apiFetch, getApiErrorMessage, isLoggedIn } from '../lib/api';
 import toast from 'react-hot-toast';
 
 function money(value, currency = 'BDT') {
@@ -9,7 +10,6 @@ function money(value, currency = 'BDT') {
 }
 
 export default function AdminTopupApprovalsPage() {
-  const localUser = getCurrentUser();
   const [loading, setLoading] = useState(true);
   const [topupRequests, setTopupRequests] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
@@ -119,7 +119,7 @@ export default function AdminTopupApprovalsPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Topup Approvals</h1>
+          <BrandLogoLink />
           <Link to="/admin-dashboard" className="text-sm font-medium text-teal-700 hover:text-teal-800">
             Back to dashboard
           </Link>
@@ -127,6 +127,7 @@ export default function AdminTopupApprovalsPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
+        <h1 className="mb-6 text-2xl font-bold text-gray-900">Topup Approvals</h1>
         <section className="bg-white rounded-xl border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Topup Requests</h2>

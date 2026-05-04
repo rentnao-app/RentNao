@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../../components/BrandLogoLink';
 import { Icon } from './AdminUi';
 
 export default function AdminSidebar({
@@ -16,25 +17,15 @@ export default function AdminSidebar({
       }`}
     >
       <div className="border-b border-[#dceadf]/80 bg-white/90 px-4 pb-4 pt-4 sm:px-5 sm:pt-5">
-        <Link
-          to="/"
-          className="flex items-center gap-3 rounded-xl p-1.5 -m-1.5 transition hover:bg-emerald-50/60"
-          onClick={() => setMobileDrawerOpen(false)}
-        >
-          <img
-            src="/logo.jpg"
-            alt="Rent Nao"
-            className="h-10 w-10 shrink-0 rounded-xl border border-emerald-100/80 object-cover shadow-sm"
+        <div className="flex items-start gap-3 rounded-xl p-1.5 -m-1.5 transition hover:bg-emerald-50/60">
+          <BrandLogoLink
+            imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
+            onClick={() => setMobileDrawerOpen(false)}
           />
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold leading-tight tracking-tight text-[#2f8444] sm:text-[1.05rem]">
-              Rent Nao
-            </p>
-            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-600/80">
-              Admin
-            </p>
+          <div className="min-w-0 pt-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-600/80">Admin</p>
           </div>
-        </Link>
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col px-3 pb-4 pt-3 sm:px-4 sm:pt-4">

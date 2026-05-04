@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, getApiErrorMessage, setAuthSession } from '../lib/api';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import { addLocalNotification } from '../lib/notifications';
@@ -105,9 +106,7 @@ export default function SignUp() {
       {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-2xl font-bold text-teal-800 tracking-tight">
-            RentNao
-          </Link>
+          <BrandLogoLink />
           <nav className="flex items-center gap-4">
             <Link to="/listings" className="text-sm font-medium text-gray-600 hover:text-teal-700 transition">
               Browse

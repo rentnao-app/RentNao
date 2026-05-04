@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, getApiErrorMessage, getCurrentUser, getUserId, getUserRole, isLoggedIn } from '../lib/api';
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
@@ -308,7 +309,7 @@ export default function AccountSettingsPage() {
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
         <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="lg:text-3xl  md:text-2xl text-xl font-bold text-gray-900">Account Settings</h1>
+          <BrandLogoLink className="min-w-0 shrink-0" />
           <div className="flex items-center gap-4">
             <Link to="/wallet" className="text-teal-700 hover:text-teal-800 text-sm font-semibold">Wallet</Link>
             <Link to={dashboardPath} className="text-blue-600 hover:text-blue-800 text-sm font-semibold">
@@ -319,6 +320,7 @@ export default function AccountSettingsPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <h1 className="mb-6 text-xl font-bold text-gray-900 md:text-2xl lg:text-3xl">Account Settings</h1>
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}

@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import BrandLogoLink from '../components/BrandLogoLink';
 import toast from 'react-hot-toast';
 import { listTenantRequests, withdrawTenantRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
@@ -28,9 +29,7 @@ export default function MyApplicationsPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
-          <Link to="/tenant-dashboard" className="text-xl sm:text-2xl font-bold text-teal-800 tracking-tight leading-none">
-            RentNao
-          </Link>
+          <BrandLogoLink />
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <Link to="/listings" className="text-xs sm:text-sm font-medium text-teal-700 hover:text-teal-800">
               Browse Listings

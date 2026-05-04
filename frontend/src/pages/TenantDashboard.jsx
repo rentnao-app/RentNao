@@ -2,6 +2,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { apiFetch, getCurrentUser, logout } from "../lib/api";
 import NotificationBell from "../components/NotificationBell";
+import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from "../components/BrandLogoLink";
 import { listTenantRequests } from "../lib/requests";
 import { fetchNotifications } from "../lib/notifications";
 
@@ -296,16 +297,7 @@ export default function TenantDashboard() {
       {/* Top header */}
       <header className="bg-white border-b border-emerald-100 sticky top-0 z-20 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-[1500px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
-          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2.5">
-            <img
-              src="/logo.jpg"
-              alt="Rent Nao"
-              className="h-9 w-9 rounded-md object-cover border border-green-100 shrink-0"
-            />
-            <span className="text-xl sm:text-2xl font-semibold text-[#2f8444] tracking-tight truncate">
-              Rent Nao
-            </span>
-          </Link>
+          <BrandLogoLink className="min-w-0 shrink-0" />
 
           <div className="ml-auto flex items-center gap-4 sm:gap-5 shrink-0">
             <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
@@ -361,18 +353,17 @@ export default function TenantDashboard() {
             aria-labelledby="tenant-mobile-nav-title"
             className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
           >
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <img
-                  src="/logo.jpg"
-                  alt=""
-                  className="h-9 w-9 rounded-lg object-cover border border-green-100 shrink-0"
+            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <BrandLogoLink
+                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
+                  onClick={() => setMobileMenuOpen(false)}
                 />
                 <div className="min-w-0">
-                  <p id="tenant-mobile-nav-title" className="font-semibold text-[#1e4732] text-sm tracking-tight truncate">
-                    Rent Nao
-                  </p>
-                  <p className="text-xs text-gray-500 truncate">Tenant</p>
+                  <span id="tenant-mobile-nav-title" className="sr-only">
+                    Main menu
+                  </span>
+                  <p className="truncate text-xs text-gray-500">Tenant</p>
                 </div>
               </div>
               <button
