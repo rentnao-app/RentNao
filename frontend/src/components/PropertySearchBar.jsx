@@ -31,7 +31,7 @@ const PROPERTY_CATEGORY_OPTIONS = [
 ];
 
 const ROOM_OPTIONS = [
-  { value: '', label: 'Rooms / Beds' },
+  { value: '', label: 'Beds' },
   { value: '1', label: '1' },
   { value: '2', label: '2' },
   { value: '3', label: '3' },
@@ -45,16 +45,23 @@ const SORT_OPTIONS = [
   { value: 'price_desc', label: 'Price: High to Low' },
 ];
 
-const selectClass =
-  'w-full border border-[#deeadf] rounded-xl px-4 py-3 text-sm bg-[#fbfefb] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#66aa75] appearance-none bg-[length:1rem_1rem] bg-[right_0.65rem_center] bg-no-repeat pr-9';
 const selectChevronStyle = {
   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
 };
 
-const areaTriggerClass =
-  'w-full cursor-pointer list-none border border-[#deeadf] rounded-xl px-4 py-3 text-sm bg-[#fbfefb] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#66aa75] flex items-center justify-between gap-2 text-left [&::-webkit-details-marker]:hidden';
+function selectClassName(compact) {
+  const pad = compact ? 'px-2.5 py-2.5 sm:px-3 sm:py-2.5' : 'px-4 py-3';
+  const text = compact ? 'text-xs sm:text-sm' : 'text-sm';
+  return `w-full border border-[#deeadf] rounded-xl ${pad} ${text} bg-[#fbfefb] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#66aa75] appearance-none bg-[length:1rem_1rem] bg-[right_0.5rem_center] sm:bg-[right_0.65rem_center] bg-no-repeat pr-8 sm:pr-9`;
+}
 
-function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area' }) {
+function areaTriggerClassName(compact) {
+  const pad = compact ? 'px-2.5 py-2.5 sm:px-3 sm:py-2.5' : 'px-4 py-3';
+  const text = compact ? 'text-xs sm:text-sm' : 'text-sm';
+  return `w-full cursor-pointer list-none border border-[#deeadf] rounded-xl ${pad} ${text} bg-[#fbfefb] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#66aa75] flex items-center justify-between gap-1.5 text-left min-w-0 [&::-webkit-details-marker]:hidden`;
+}
+
+function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area', compact, detailsClassName }) {
   const detailsRef = useRef(null);
   const selectedLabels = LISTING_AREA_OPTIONS.filter((o) => selectedValues.includes(o.value)).map((o) => o.label);
 
@@ -79,8 +86,8 @@ function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area' }) {
   };
 
   return (
-    <details ref={detailsRef} className="group relative min-w-[min(100%,10rem)] flex-1 basis-[8.5rem]">
-      <summary className={areaTriggerClass}>
+    <details ref={detailsRef} className={detailsClassName}>
+      <summary className={areaTriggerClassName(!!compact)}>
         <span className="truncate text-gray-700">
           {selectedLabels.length > 0 ? selectedLabels.join(', ') : placeholder}
         </span>
@@ -138,22 +145,40 @@ export default function PropertySearchBar({
     onSubmit?.(payload);
   };
 
+  const isHero = variant === 'hero';
   const formShell =
-    variant === 'hero'
-      ? 'w-full max-w-2xl md:max-w-xl lg:max-w-[min(100%,42rem)] bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-3.5 sm:p-4 translate-y-[72%] sm:translate-y-[78%] md:translate-y-0 lg:translate-y-0'
+    isHero
+      ? 'w-full max-w-2xl md:max-w-xl lg:max-w-[min(100%,42rem)] bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-2.5 sm:p-3 translate-y-[72%] sm:translate-y-[78%] md:translate-y-0 lg:translate-y-0 overflow-x-auto'
       : 'w-full bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-3.5 sm:p-4';
 
-  return (
-    <form onSubmit={handleSubmit} className={`${formShell} flex flex-wrap items-stretch gap-2.5 sm:gap-3`}>
-      <MultiSelectArea selectedValues={areas} onChange={setAreas} placeholder="Area" />
+  const formRow = isHero
+    ? 'flex flex-nowrap items-stretch gap-1.5 sm:gap-2 min-w-0'
+    : 'flex flex-wrap items-stretch gap-2.5 sm:gap-3';
 
-      <div className="min-w-[min(100%,7.5rem)] flex-1 basis-[6.5rem]">
+  const heroFieldCell = 'min-w-0 flex-1 basis-0';
+  const selectCls = selectClassName(isHero);
+
+  return (
+    <form onSubmit={handleSubmit} className={`${formShell} ${formRow}`}>
+      <MultiSelectArea
+        selectedValues={areas}
+        onChange={setAreas}
+        placeholder="Area"
+        compact={isHero}
+        detailsClassName={
+          isHero
+            ? `group relative ${heroFieldCell}`
+            : 'group relative min-w-[min(100%,10rem)] flex-1 basis-[8.5rem]'
+        }
+      />
+
+      <div className={isHero ? heroFieldCell : 'min-w-[min(100%,7.5rem)] flex-1 basis-[6.5rem]'}>
         <label htmlFor="psb-category" className="sr-only">
           Property type
         </label>
         <select
           id="psb-category"
-          className={selectClass}
+          className={selectCls}
           style={selectChevronStyle}
           value={category}
           onChange={(e) => setCategory(e.target.value)}
@@ -166,13 +191,13 @@ export default function PropertySearchBar({
         </select>
       </div>
 
-      <div className="min-w-[min(100%,7.5rem)] flex-1 basis-[6.5rem]">
+      <div className={isHero ? heroFieldCell : 'min-w-[min(100%,7.5rem)] flex-1 basis-[6.5rem]'}>
         <label htmlFor="psb-maxrent" className="sr-only">
           Max rent
         </label>
         <select
           id="psb-maxrent"
-          className={selectClass}
+          className={selectCls}
           style={selectChevronStyle}
           value={maxRentKey}
           onChange={(e) => setMaxRentKey(e.target.value)}
@@ -185,13 +210,13 @@ export default function PropertySearchBar({
         </select>
       </div>
 
-      <div className="min-w-[min(100%,6.5rem)] flex-1 basis-[5.5rem]">
+      <div className={isHero ? heroFieldCell : 'min-w-[min(100%,6.5rem)] flex-1 basis-[5.5rem]'}>
         <label htmlFor="psb-rooms" className="sr-only">
-          Rooms
+          Beds
         </label>
         <select
           id="psb-rooms"
-          className={selectClass}
+          className={selectCls}
           style={selectChevronStyle}
           value={minRooms}
           onChange={(e) => setMinRooms(e.target.value)}
@@ -205,13 +230,13 @@ export default function PropertySearchBar({
       </div>
 
       {showSort && (
-        <div className="min-w-[min(100%,10rem)] flex-1 basis-[8rem]">
+        <div className={isHero ? heroFieldCell : 'min-w-[min(100%,10rem)] flex-1 basis-[8rem]'}>
           <label htmlFor="psb-sort" className="sr-only">
             Sort
           </label>
           <select
             id="psb-sort"
-            className={selectClass}
+            className={selectCls}
             style={selectChevronStyle}
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
@@ -227,7 +252,11 @@ export default function PropertySearchBar({
 
       <button
         type="submit"
-        className="min-w-[6.5rem] shrink-0 rounded-xl bg-[#2f8444] px-4 py-3 text-sm font-semibold text-white shadow-sm ring-1 ring-[#256c38]/30 transition hover:bg-[#256c38] sm:min-w-[7.5rem]"
+        className={
+          isHero
+            ? 'shrink-0 self-stretch rounded-xl bg-[#2f8444] px-3 py-2.5 text-xs font-semibold text-white shadow-sm ring-1 ring-[#256c38]/30 transition hover:bg-[#256c38] sm:px-4 sm:py-3 sm:text-sm sm:min-w-[5.5rem]'
+            : 'min-w-[6.5rem] shrink-0 rounded-xl bg-[#2f8444] px-4 py-3 text-sm font-semibold text-white shadow-sm ring-1 ring-[#256c38]/30 transition hover:bg-[#256c38] sm:min-w-[7.5rem]'
+        }
       >
         Search
       </button>
