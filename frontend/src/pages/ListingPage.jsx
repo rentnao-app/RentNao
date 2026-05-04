@@ -2,7 +2,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
 import PropertySearchBar from '../components/PropertySearchBar';
-import { buildListingsQuery } from '../lib/listingSearchQuery';
+import { buildListingsQuery, expandAreasForQuery } from '../lib/listingSearchQuery';
 import { toggleWishlist } from '../lib/wishlist';
 import toast from 'react-hot-toast';
 
@@ -157,7 +157,8 @@ export default function ListingsPage() {
       try {
         setLoading(true);
         setError('');
-        const selectedAreas = filters.areas?.length ? filters.areas : [null];
+        const normalizedAreas = expandAreasForQuery(filters.areas);
+        const selectedAreas = normalizedAreas.length ? normalizedAreas : [null];
 
         const sortMap = {
           newest: ['createdAt', 'desc'],

@@ -9,6 +9,7 @@ const LISTING_AREA_OPTIONS = [
   { value: 'UTTARA', label: 'Uttara' },
   { value: 'MIRPUR', label: 'Mirpur' },
   { value: 'MOHAMMADPUR', label: 'Mohammadpur' },
+  { value: 'BARIDHARA', label: 'Baridhara' },
   { value: 'BASHUNDHARA', label: 'Bashundhara' },
   { value: 'BADDA', label: 'Badda' },
 ];
@@ -66,16 +67,18 @@ function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area', compa
   const selectedLabels = LISTING_AREA_OPTIONS.filter((o) => selectedValues.includes(o.value)).map((o) => o.label);
 
   useEffect(() => {
-    const close = (event) => {
-      if (!detailsRef.current?.contains(event.target)) detailsRef.current?.removeAttribute('open');
+    const onDocClick = (event) => {
+      const el = detailsRef.current;
+      if (!el?.open) return;
+      if (!el.contains(event.target)) el.removeAttribute('open');
     };
     const onKey = (event) => {
       if (event.key === 'Escape') detailsRef.current?.removeAttribute('open');
     };
-    document.addEventListener('mousedown', close);
+    document.addEventListener('click', onDocClick);
     document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', close);
+      document.removeEventListener('click', onDocClick);
       document.removeEventListener('keydown', onKey);
     };
   }, []);
@@ -95,7 +98,7 @@ function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area', compa
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </summary>
-      <div className="absolute left-0 right-0 z-30 mt-1 max-h-56 overflow-y-auto rounded-xl border border-[#deeadf] bg-white py-1 shadow-lg">
+      <div className="absolute left-0 right-0 z-[80] mt-1 max-h-56 min-w-[12rem] overflow-y-auto rounded-xl border border-[#deeadf] bg-white py-1 shadow-lg">
         {LISTING_AREA_OPTIONS.map((option) => (
           <label
             key={option.value}
@@ -148,7 +151,7 @@ export default function PropertySearchBar({
   const isHero = variant === 'hero';
   const formShell =
     isHero
-      ? 'w-full max-w-2xl md:max-w-xl lg:max-w-[min(100%,42rem)] bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-2.5 sm:p-3 translate-y-[72%] sm:translate-y-[78%] md:translate-y-0 lg:translate-y-0 overflow-x-auto'
+      ? 'w-full max-w-2xl md:max-w-xl lg:max-w-[min(100%,42rem)] bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-2.5 sm:p-3 translate-y-[72%] sm:translate-y-[78%] md:translate-y-0 lg:translate-y-0 overflow-visible'
       : 'w-full bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-3.5 sm:p-4';
 
   const formRow = isHero
@@ -167,8 +170,8 @@ export default function PropertySearchBar({
         compact={isHero}
         detailsClassName={
           isHero
-            ? `group relative ${heroFieldCell}`
-            : 'group relative min-w-[min(100%,10rem)] flex-1 basis-[8.5rem]'
+            ? `group relative z-[70] ${heroFieldCell}`
+            : 'group relative z-10 min-w-[min(100%,10rem)] flex-1 basis-[8.5rem]'
         }
       />
 
@@ -183,7 +186,13 @@ export default function PropertySearchBar({
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
-          {PROPERTY_CATEGORY_OPTIONS.map((o) => (
+          {(isHero
+            ? [
+                { value: '', label: 'Type' },
+                ...PROPERTY_CATEGORY_OPTIONS.slice(1),
+              ]
+            : PROPERTY_CATEGORY_OPTIONS
+          ).map((o) => (
             <option key={o.value || 'any'} value={o.value}>
               {o.label}
             </option>
@@ -202,7 +211,10 @@ export default function PropertySearchBar({
           value={maxRentKey}
           onChange={(e) => setMaxRentKey(e.target.value)}
         >
-          {MAX_RENT_OPTIONS.map((o) => (
+          {(isHero
+            ? MAX_RENT_OPTIONS.map((o, i) => (i === 0 ? { ...o, label: 'Rent' } : o))
+            : MAX_RENT_OPTIONS
+          ).map((o) => (
             <option key={o.value || 'any'} value={o.value}>
               {o.label}
             </option>

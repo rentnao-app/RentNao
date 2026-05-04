@@ -1,3 +1,15 @@
+/** Map UI-only area codes to API `AreaName` values (PostgreSQL enum). */
+export function normalizeAreaForApi(value) {
+  if (value == null || value === '') return value;
+  const u = String(value).trim().toUpperCase();
+  return u === 'BARIDHARA' ? 'BASHUNDHARA' : u;
+}
+
+/** Dedupe after normalization (e.g. Baridhara + Bashundhara → one BASHUNDHARA query). */
+export function expandAreasForQuery(areas) {
+  return [...new Set((areas || []).map(normalizeAreaForApi).filter(Boolean))];
+}
+
 /** Build query string for `/listings` from PropertySearchBar / shared filter payload. */
 export function buildListingsQuery(data) {
   const params = new URLSearchParams();

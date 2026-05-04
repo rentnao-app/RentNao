@@ -287,7 +287,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <section className="relative overflow-visible md:overflow-hidden bg-[#eef7ef] border-b border-[#ddeee1]">
+      <section className="relative overflow-visible bg-[#eef7ef] border-b border-[#ddeee1]">
         <div className="relative w-full">
           <img
             src={hero}
