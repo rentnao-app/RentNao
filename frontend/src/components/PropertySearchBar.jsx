@@ -88,8 +88,10 @@ function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area', compa
     else onChange([...selectedValues, value]);
   };
 
+  const panelScrollClass = compact ? 'max-h-none overflow-visible' : 'max-h-56 overflow-y-auto';
+
   return (
-    <details ref={detailsRef} className={detailsClassName}>
+    <details ref={detailsRef} className={`${detailsClassName} overflow-visible`}>
       <summary className={areaTriggerClassName(!!compact)}>
         <span className="truncate text-gray-700">
           {selectedLabels.length > 0 ? selectedLabels.join(', ') : placeholder}
@@ -98,7 +100,9 @@ function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area', compa
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </summary>
-      <div className="absolute left-0 right-0 z-[80] mt-1 max-h-56 min-w-[12rem] overflow-y-auto rounded-xl border border-[#deeadf] bg-white py-1 shadow-lg">
+      <div
+        className={`absolute left-0 right-0 z-[80] mt-1 min-w-[12rem] rounded-xl border border-[#deeadf] bg-white py-1 shadow-lg ${panelScrollClass}`}
+      >
         {LISTING_AREA_OPTIONS.map((option) => (
           <label
             key={option.value}
