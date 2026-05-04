@@ -91,7 +91,7 @@ export async function listApprovedTestimonials(query: GetTestimonialsQueryInput)
   };
 }
 
-export async function submitTestimonial(userId: string, input: CreateTestimonialInput) {
+export async function submitTestimonial(userId: string, input: CreateTestimonialInput): Promise<{ data: any; isUpsert: boolean }> {
   // 1. Anti-Fraud & User Verification
   const userResult = await db.query(
     `SELECT is_active, kyc_verification_status FROM "User" WHERE user_id = $1`,
@@ -131,6 +131,7 @@ export async function submitTestimonial(userId: string, input: CreateTestimonial
       [sanitizedContent, input.rating, status, existingId]
     );
     const updated = await getFullTestimonialById(existingId);
+    if (!updated) throw new AppError(500, 'Failed to retrieve updated testimonial');
     return { data: updated, isUpsert: true };
   } else {
     const id = createId();
@@ -149,6 +150,7 @@ export async function submitTestimonial(userId: string, input: CreateTestimonial
       ]
     );
     const created = await getFullTestimonialById(id);
+    if (!created) throw new AppError(500, 'Failed to retrieve created testimonial');
     return { data: created, isUpsert: false };
   }
 }
