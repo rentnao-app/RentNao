@@ -41,6 +41,20 @@ function mapTestimonial(row: any) {
   };
 }
 
+async function getFullTestimonialById(id: string) {
+  const result = await db.query(
+    `SELECT t.*, b.first_name, b.last_name, b.profile_picture_path, u.is_active
+     FROM "Testimonial" t
+     LEFT JOIN "BaseUserProfile" b ON t.user_id = b.user_id
+     LEFT JOIN "User" u ON t.user_id = u.user_id
+     WHERE t.id = $1`,
+    [id]
+  );
+
+  if (result.rows.length === 0) return null;
+  return mapTestimonial(result.rows[0]);
+}
+
 export async function listApprovedTestimonials(query: GetTestimonialsQueryInput) {
   const { page = 1, limit = 20 } = query;
   
@@ -109,22 +123,23 @@ export async function submitTestimonial(userId: string, input: CreateTestimonial
 
   if (existingResult.rows.length > 0) {
     const existingId = existingResult.rows[0].id;
-    const updateResult = await db.query(
+    await db.query(
       `UPDATE "Testimonial" 
        SET content = $1, rating = $2, status = $3, updated_at = NOW() 
        WHERE id = $4 
-       RETURNING *`,
+       RETURNING id`,
       [sanitizedContent, input.rating, status, existingId]
     );
-    return { data: mapTestimonial(updateResult.rows[0]), isUpsert: true };
+    const updated = await getFullTestimonialById(existingId);
+    return { data: updated, isUpsert: true };
   } else {
     const id = createId();
-    const insertResult = await db.query(
+    await db.query(
       `INSERT INTO "Testimonial" (
         id, user_id, content, rating, is_featured, status
       ) VALUES (
         $1, $2, $3, $4, false, $5
-      ) RETURNING *`,
+      )`,
       [
         id,
         userId,
@@ -133,7 +148,8 @@ export async function submitTestimonial(userId: string, input: CreateTestimonial
         status
       ]
     );
-    return { data: mapTestimonial(insertResult.rows[0]), isUpsert: false };
+    const created = await getFullTestimonialById(id);
+    return { data: created, isUpsert: false };
   }
 }
 
@@ -152,14 +168,14 @@ export async function updateTestimonialStatus(id: string, status: TestimonialSta
   const result = await db.query(
     `UPDATE "Testimonial" 
      SET status = $1, updated_at = NOW() 
-     WHERE id = $2 
-     RETURNING *`,
+     WHERE id = $2`,
     [status, id]
   );
 
-  if (result.rows.length === 0) {
+  const updated = await getFullTestimonialById(id);
+  if (!updated) {
     throw new AppError(404, 'Testimonial not found');
   }
 
-  return mapTestimonial(result.rows[0]);
+  return updated;
 }
