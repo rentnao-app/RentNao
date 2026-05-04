@@ -3,18 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
 import { getWishlistState, toggleWishlist } from '../lib/wishlist';
+import PropertySearchBar from '../components/PropertySearchBar';
 const hero = '/hero-image.png';
 const HERO_TEXT_FONT = 'Avenir, "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif';
-
-const AREA_OPTIONS = ['Any Location', 'DHANMONDI', 'GULSHAN', 'BANANI', 'UTTARA', 'MIRPUR'];
-const PROPERTY_TYPES = ['Any Property Type', 'APARTMENT', 'HOUSE', 'OFFICE'];
-const BUDGET_OPTIONS = [
-  { label: 'Any Budget', value: '' },
-  { label: 'BDT 20,000', value: '20000' },
-  { label: 'BDT 35,000', value: '35000' },
-  { label: 'BDT 50,000', value: '50000' },
-  { label: 'BDT 80,000', value: '80000' },
-];
 
 function FeaturedCard({ listing, canWishlist, isWishlisted, onToggleWishlist }) {
   const imageUrl = listing?.primaryImageUrl || null;
@@ -82,11 +73,6 @@ export default function HomePage() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    area: '',
-    type: '',
-    maxRent: '',
-  });
   const loggedIn = isLoggedIn();
   const currentUser = getCurrentUser();
   const userRole = currentUser?.role || currentUser?.userRole;
@@ -138,16 +124,6 @@ export default function HomePage() {
       return next;
     });
     toast.success(save ? 'Saved to wishlist' : 'Removed from wishlist');
-  };
-
-  const submitSearch = (e) => {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (filters.area) params.set('areaName', filters.area);
-    if (filters.maxRent) params.set('maxRent', filters.maxRent);
-    if (filters.type && filters.type !== 'Any Property Type') params.set('propertyType', filters.type);
-    const query = params.toString();
-    navigate(query ? `/listings?${query}` : '/listings');
   };
 
   return (
@@ -335,63 +311,9 @@ export default function HomePage() {
               >
                 Connecting Owners &amp; Tenants Directly in Bangladesh.
               </p>
-              <form
-                onSubmit={submitSearch}
-                className="mt-3 sm:mt-4 md:mt-6 lg:mt-6 w-full max-w-2xl md:max-w-xl lg:max-w-2xl bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-3.5 sm:p-4 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 translate-y-[72%] sm:translate-y-[78%] md:translate-y-0 lg:translate-y-0"
-              >
-                <select
-                  className="w-full border border-[#deeadf] rounded-xl px-4 py-3 text-sm bg-[#fbfefb] focus:outline-none focus:ring-2 focus:ring-[#66aa75]"
-                  value={filters.area}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      area: e.target.value === 'Any Location' ? '' : e.target.value,
-                    }))
-                  }
-                >
-                  {AREA_OPTIONS.map((area) => (
-                    <option key={area} value={area}>
-                      {area === 'Any Location' ? 'Location' : area}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="w-full border border-[#deeadf] rounded-xl px-4 py-3 text-sm bg-[#fbfefb] focus:outline-none focus:ring-2 focus:ring-[#66aa75]"
-                  value={filters.type || 'Any Property Type'}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      type: e.target.value === 'Any Property Type' ? '' : e.target.value,
-                    }))
-                  }
-                >
-                  {PROPERTY_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type === 'Any Property Type' ? 'Property Type' : type}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="w-full border border-[#deeadf] rounded-xl px-4 py-3 text-sm bg-[#fbfefb] focus:outline-none focus:ring-2 focus:ring-[#66aa75]"
-                  value={filters.maxRent}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, maxRent: e.target.value }))}
-                >
-                  {BUDGET_OPTIONS.map((budget) => (
-                    <option key={budget.label} value={budget.value}>
-                      {budget.label === 'Any Budget' ? 'Max. Budget' : budget.label}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  type="submit"
-                  className="bg-[#2f8444] hover:bg-[#256c38] text-white font-semibold rounded-xl px-4 py-3 shadow-sm ring-1 ring-[#256c38]/30 transition"
-                >
-                  Search
-                </button>
-              </form>
+              <div className="mt-3 sm:mt-4 md:mt-6 lg:mt-6 w-full max-w-2xl md:max-w-xl lg:max-w-2xl">
+                <PropertySearchBar variant="hero" navigateOnSubmit />
+              </div>
             </div>
           </div>
         </div>

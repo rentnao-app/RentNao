@@ -1,9 +1,40 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
-import SearchFilterPanel from '../components/SearchFilterPanel';
+import PropertySearchBar from '../components/PropertySearchBar';
+import { buildListingsQuery } from '../lib/listingSearchQuery';
 import { toggleWishlist } from '../lib/wishlist';
 import toast from 'react-hot-toast';
+
+const VALID_MAX_TIERS = new Set(['20000', '35000', '50000', '80000', '100000', '200000']);
+
+function parseFiltersFromSearchParams(searchParams) {
+  const areas = [];
+  const fromRepeated = searchParams.getAll('areaName').filter(Boolean);
+  if (fromRepeated.length) areas.push(...fromRepeated.map((a) => String(a).trim().toUpperCase()));
+  const csv = searchParams.get('areas');
+  if (csv) areas.push(...csv.split(',').map((s) => String(s).trim().toUpperCase()).filter(Boolean));
+  const single = searchParams.get('area');
+  if (single && areas.length === 0) areas.push(String(single).trim().toUpperCase());
+  const uniqueAreas = [...new Set(areas)];
+
+  const rawCat = (searchParams.get('category') || '').toUpperCase();
+  const category = rawCat === 'COMMERCIAL' || rawCat === 'RESIDENTIAL' ? rawCat : '';
+
+  let maxRentKey = '';
+  const minR = searchParams.get('minRent');
+  const maxR = searchParams.get('maxRent');
+  if (minR === '200000' && !maxR) maxRentKey = '200K_PLUS';
+  else if (maxR && VALID_MAX_TIERS.has(String(maxR))) maxRentKey = String(maxR);
+
+  const mr = searchParams.get('minRooms');
+  const minRooms = ['1', '2', '3', '4', '5'].includes(mr) ? mr : '';
+
+  const sortRaw = searchParams.get('sort') || searchParams.get('sort_by') || 'newest';
+  const sort_by = ['newest', 'price_asc', 'price_desc'].includes(sortRaw) ? sortRaw : 'newest';
+
+  return { areas: uniqueAreas, category, maxRentKey, minRooms, sort_by };
+}
 
 function ListingCard({ item, canWishlist, isWishlisted, onToggleWishlist }) {
   const firstImage = item?.primaryImageUrl || null;
@@ -58,7 +89,7 @@ function ListingCard({ item, canWishlist, isWishlisted, onToggleWishlist }) {
 }
 
 export default function ListingsPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -86,26 +117,15 @@ export default function ListingsPage() {
   }, []);
 
   useEffect(() => {
-    void refreshWishlistIds();
+    queueMicrotask(() => {
+      void refreshWishlistIds();
+    });
   }, [refreshWishlistIds]);
 
-  const initialAreas = (() => {
-    const explicitAreas = searchParams.getAll('areaName').filter(Boolean);
-    if (explicitAreas.length > 0) return explicitAreas.map((item) => String(item).toUpperCase());
-    const areasCsv = searchParams.get('areas');
-    if (areasCsv) return areasCsv.split(',').map((item) => String(item).trim().toUpperCase()).filter(Boolean);
-    const singleArea = searchParams.get('area');
-    return singleArea ? [String(singleArea).trim().toUpperCase()] : [];
-  })();
+  const paramsKey = useMemo(() => searchParams.toString(), [searchParams]);
+  const filters = useMemo(() => parseFiltersFromSearchParams(searchParams), [searchParams]);
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
 
-  const [filters, setFilters] = useState(() => ({
-    areas: initialAreas,
-    min_rent: searchParams.get('min_rent') || '',
-    max_rent: searchParams.get('max_rent') || '',
-    room_count: searchParams.get('room_count') || '',
-    rent_ranges: [],
-    sort_by: searchParams.get('sort_by') || 'newest',
-  }));
   const loggedIn = isLoggedIn();
   const currentUser = getCurrentUser();
   const viewerRole = currentUser?.role || currentUser?.userRole;
@@ -138,15 +158,6 @@ export default function ListingsPage() {
         setLoading(true);
         setError('');
         const selectedAreas = filters.areas?.length ? filters.areas : [null];
-        const selectedRanges = filters.rent_ranges?.length ? filters.rent_ranges : [null];
-
-        const rangeMap = {
-          '15-40K': { minRent: 15000, maxRent: 40000 },
-          '40-60K': { minRent: 40000, maxRent: 60000 },
-          '60-100K': { minRent: 60000, maxRent: 100000 },
-          '100-200K': { minRent: 100000, maxRent: 200000 },
-          '200K+': { minRent: 200000, maxRent: null },
-        };
 
         const sortMap = {
           newest: ['createdAt', 'desc'],
@@ -155,32 +166,19 @@ export default function ListingsPage() {
         };
         const [sortBy, sortDir] = sortMap[filters.sort_by] || sortMap.newest;
 
-        const requestCombos = [];
-        selectedAreas.forEach((area) => {
-          selectedRanges.forEach((rangeKey) => {
-            requestCombos.push({ area, rangeKey });
-          });
-        });
-
         const responses = await Promise.all(
-          requestCombos.map(async ({ area, rangeKey }) => {
+          selectedAreas.map(async (area) => {
             const q = new URLSearchParams();
             q.set('page', '1');
             q.set('limit', '100');
             q.set('sortBy', sortBy);
             q.set('sortDir', sortDir);
             if (area) q.set('areaName', String(area).toUpperCase());
+            if (filters.category) q.set('propertyCategory', filters.category);
+            if (filters.maxRentKey === '200K_PLUS') q.set('minRent', '200000');
+            else if (filters.maxRentKey) q.set('maxRent', String(filters.maxRentKey));
+            if (filters.minRooms) q.set('minRoomCount', String(filters.minRooms));
 
-            if (rangeKey && rangeMap[rangeKey]) {
-              const selectedRange = rangeMap[rangeKey];
-              if (selectedRange.minRent != null) q.set('minRent', String(selectedRange.minRent));
-              if (selectedRange.maxRent != null) q.set('maxRent', String(selectedRange.maxRent));
-            } else {
-              if (filters.min_rent) q.set('minRent', String(filters.min_rent));
-              if (filters.max_rent) q.set('maxRent', String(filters.max_rent));
-            }
-
-            if (filters.room_count) q.set('roomCount', String(filters.room_count));
             const res = await apiFetch(`/properties/public/listings?${q.toString()}`);
             const body = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(body?.error || body?.message || 'Failed to load listings');
@@ -211,7 +209,15 @@ export default function ListingsPage() {
       }
     };
     load();
-  }, [filters]);
+    // filtersKey serializes URL-derived filters; avoids refetch when unrelated parent re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
+
+  const handleSearchSubmit = (payload) => {
+    const qs = buildListingsQuery(payload);
+    if (qs) setSearchParams(new URLSearchParams(qs));
+    else setSearchParams({});
+  };
 
   const handleToggleWishlist = async (item) => {
     const id = String(item?.listingId || '');
@@ -369,7 +375,12 @@ export default function ListingsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Available Listings</h1>
           <p className="mt-1 text-sm text-slate-500">Browse verified properties with flexible filters and quick actions.</p>
           <div className="mt-4">
-            <SearchFilterPanel initialValues={filters} onSubmit={setFilters} />
+            <PropertySearchBar
+              key={paramsKey}
+              showSort
+              initialValues={filters}
+              onSubmit={handleSearchSubmit}
+            />
           </div>
         </section>
 

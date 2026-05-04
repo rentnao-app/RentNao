@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi';
-import { AreaName, BuildingFacing, ListingStatus, TenantType, PropertyType } from '@/types/enums';
+import { AreaName, BuildingFacing, ListingStatus, TenantType, PropertyType, PropertyCategory } from '@/types/enums';
 
 export const propertyIdParamSchema = z.object({
   propertyId: z.string().openapi({
@@ -225,6 +225,14 @@ export const publicListingsQuerySchema = z.object({
   roomCount: z.coerce.number().nonnegative().optional().openapi({
     example: 2,
     description: 'Exact room count filter',
+  }),
+  minRoomCount: z.coerce.number().nonnegative().optional().openapi({
+    example: 2,
+    description: 'Minimum bedroom count (inclusive); use instead of roomCount for “at least N beds” search',
+  }),
+  propertyCategory: PropertyCategory.optional().openapi({
+    example: 'RESIDENTIAL',
+    description: 'Filter by owner portfolio category (residential vs commercial listings)',
   }),
   bathroomCount: z.coerce.number().nonnegative().optional().openapi({
     example: 2,

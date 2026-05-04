@@ -1,0 +1,236 @@
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { buildListingsQuery } from '../lib/listingSearchQuery';
+
+const LISTING_AREA_OPTIONS = [
+  { value: 'DHANMONDI', label: 'Dhanmondi' },
+  { value: 'GULSHAN', label: 'Gulshan' },
+  { value: 'BANANI', label: 'Banani' },
+  { value: 'UTTARA', label: 'Uttara' },
+  { value: 'MIRPUR', label: 'Mirpur' },
+  { value: 'MOHAMMADPUR', label: 'Mohammadpur' },
+  { value: 'BASHUNDHARA', label: 'Bashundhara' },
+  { value: 'BADDA', label: 'Badda' },
+];
+
+const MAX_RENT_OPTIONS = [
+  { value: '', label: 'Max. Rent' },
+  { value: '20000', label: 'BDT 20K' },
+  { value: '35000', label: 'BDT 35K' },
+  { value: '50000', label: 'BDT 50K' },
+  { value: '80000', label: 'BDT 80K' },
+  { value: '100000', label: 'BDT 100K' },
+  { value: '200000', label: 'BDT 200K' },
+  { value: '200K_PLUS', label: 'BDT 200K+' },
+];
+
+const PROPERTY_CATEGORY_OPTIONS = [
+  { value: '', label: 'Property Type' },
+  { value: 'RESIDENTIAL', label: 'Residential' },
+  { value: 'COMMERCIAL', label: 'Commercial' },
+];
+
+const ROOM_OPTIONS = [
+  { value: '', label: 'Rooms / Beds' },
+  { value: '1', label: '1' },
+  { value: '2', label: '2' },
+  { value: '3', label: '3' },
+  { value: '4', label: '4' },
+  { value: '5', label: '5+' },
+];
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest First' },
+  { value: 'price_asc', label: 'Price: Low to High' },
+  { value: 'price_desc', label: 'Price: High to Low' },
+];
+
+const selectClass =
+  'w-full border border-[#deeadf] rounded-xl px-4 py-3 text-sm bg-[#fbfefb] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#66aa75] appearance-none bg-[length:1rem_1rem] bg-[right_0.65rem_center] bg-no-repeat pr-9';
+const selectChevronStyle = {
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
+};
+
+const areaTriggerClass =
+  'w-full cursor-pointer list-none border border-[#deeadf] rounded-xl px-4 py-3 text-sm bg-[#fbfefb] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#66aa75] flex items-center justify-between gap-2 text-left [&::-webkit-details-marker]:hidden';
+
+function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area' }) {
+  const detailsRef = useRef(null);
+  const selectedLabels = LISTING_AREA_OPTIONS.filter((o) => selectedValues.includes(o.value)).map((o) => o.label);
+
+  useEffect(() => {
+    const close = (event) => {
+      if (!detailsRef.current?.contains(event.target)) detailsRef.current?.removeAttribute('open');
+    };
+    const onKey = (event) => {
+      if (event.key === 'Escape') detailsRef.current?.removeAttribute('open');
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
+
+  const toggle = (value) => {
+    if (selectedValues.includes(value)) onChange(selectedValues.filter((v) => v !== value));
+    else onChange([...selectedValues, value]);
+  };
+
+  return (
+    <details ref={detailsRef} className="group relative min-w-[min(100%,10rem)] flex-1 basis-[8.5rem]">
+      <summary className={areaTriggerClass}>
+        <span className="truncate text-gray-700">
+          {selectedLabels.length > 0 ? selectedLabels.join(', ') : placeholder}
+        </span>
+        <svg className="h-4 w-4 shrink-0 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </summary>
+      <div className="absolute left-0 right-0 z-30 mt-1 max-h-56 overflow-y-auto rounded-xl border border-[#deeadf] bg-white py-1 shadow-lg">
+        {LISTING_AREA_OPTIONS.map((option) => (
+          <label
+            key={option.value}
+            className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[#f4faf4]"
+          >
+            <input type="checkbox" checked={selectedValues.includes(option.value)} onChange={() => toggle(option.value)} />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+/**
+ * Shared listing search UI (home hero + /listings).
+ * @param {{ showSort?: boolean, variant?: 'hero' | 'default', onSubmit?: (filters: object) => void, initialValues?: object, navigateOnSubmit?: boolean }} props
+ */
+export default function PropertySearchBar({
+  showSort = false,
+  variant = 'default',
+  onSubmit,
+  initialValues = {},
+  navigateOnSubmit = false,
+}) {
+  const navigate = useNavigate();
+  const [areas, setAreas] = useState(() => initialValues.areas || []);
+  const [category, setCategory] = useState(() => initialValues.category || '');
+  const [maxRentKey, setMaxRentKey] = useState(() => initialValues.maxRentKey || '');
+  const [minRooms, setMinRooms] = useState(() => (initialValues.minRooms != null && initialValues.minRooms !== '' ? String(initialValues.minRooms) : ''));
+  const [sortBy, setSortBy] = useState(() => initialValues.sort_by || 'newest');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const payload = {
+      areas,
+      category,
+      maxRentKey,
+      minRooms: minRooms === '' ? '' : Number(minRooms),
+      sort_by: showSort ? sortBy : 'newest',
+    };
+    if (navigateOnSubmit) {
+      const q = buildListingsQuery(payload);
+      navigate(q ? `/listings?${q}` : '/listings');
+      return;
+    }
+    onSubmit?.(payload);
+  };
+
+  const formShell =
+    variant === 'hero'
+      ? 'w-full max-w-2xl md:max-w-xl lg:max-w-[min(100%,42rem)] bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-3.5 sm:p-4 translate-y-[72%] sm:translate-y-[78%] md:translate-y-0 lg:translate-y-0'
+      : 'w-full bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-3.5 sm:p-4';
+
+  return (
+    <form onSubmit={handleSubmit} className={`${formShell} flex flex-wrap items-stretch gap-2.5 sm:gap-3`}>
+      <MultiSelectArea selectedValues={areas} onChange={setAreas} placeholder="Area" />
+
+      <div className="min-w-[min(100%,7.5rem)] flex-1 basis-[6.5rem]">
+        <label htmlFor="psb-category" className="sr-only">
+          Property type
+        </label>
+        <select
+          id="psb-category"
+          className={selectClass}
+          style={selectChevronStyle}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          {PROPERTY_CATEGORY_OPTIONS.map((o) => (
+            <option key={o.value || 'any'} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="min-w-[min(100%,7.5rem)] flex-1 basis-[6.5rem]">
+        <label htmlFor="psb-maxrent" className="sr-only">
+          Max rent
+        </label>
+        <select
+          id="psb-maxrent"
+          className={selectClass}
+          style={selectChevronStyle}
+          value={maxRentKey}
+          onChange={(e) => setMaxRentKey(e.target.value)}
+        >
+          {MAX_RENT_OPTIONS.map((o) => (
+            <option key={o.value || 'any'} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="min-w-[min(100%,6.5rem)] flex-1 basis-[5.5rem]">
+        <label htmlFor="psb-rooms" className="sr-only">
+          Rooms
+        </label>
+        <select
+          id="psb-rooms"
+          className={selectClass}
+          style={selectChevronStyle}
+          value={minRooms}
+          onChange={(e) => setMinRooms(e.target.value)}
+        >
+          {ROOM_OPTIONS.map((o) => (
+            <option key={o.value || 'any'} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {showSort && (
+        <div className="min-w-[min(100%,10rem)] flex-1 basis-[8rem]">
+          <label htmlFor="psb-sort" className="sr-only">
+            Sort
+          </label>
+          <select
+            id="psb-sort"
+            className={selectClass}
+            style={selectChevronStyle}
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        className="min-w-[6.5rem] shrink-0 rounded-xl bg-[#2f8444] px-4 py-3 text-sm font-semibold text-white shadow-sm ring-1 ring-[#256c38]/30 transition hover:bg-[#256c38] sm:min-w-[7.5rem]"
+      >
+        Search
+      </button>
+    </form>
+  );
+}
