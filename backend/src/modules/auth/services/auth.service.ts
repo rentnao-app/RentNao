@@ -89,7 +89,7 @@ export async function registerUser(input: RegisterInput): Promise<UserWithTokens
     if (role === 'TENANT' || role === 'OWNER') {
       await client.query(
         `INSERT INTO "WalletAccount" (id, user_id, status, currency, available_balance)
-         VALUES (gen_random_uuid()::text, $1, 'ACTIVE', 'BDT', 1000)
+         VALUES (gen_random_uuid()::text, $1, 'ACTIVE', 'BDT', 0)
          ON CONFLICT (user_id) DO NOTHING`,
         [user.user_id]
       );
