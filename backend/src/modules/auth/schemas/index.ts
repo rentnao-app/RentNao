@@ -30,6 +30,7 @@ export {
   verificationResponseSchema,
   resendVerificationResponseSchema,
   startPhoneVerificationResponseSchema,
+  pendingPhoneVerificationResponseSchema,
   type VerifyEmailInput,
   type VerifyPhoneInput,
   type ResendVerificationInput,

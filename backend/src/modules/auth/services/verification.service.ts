@@ -6,15 +6,32 @@
 import { db } from '@/db/client';
 import { AppError } from '@/middlewares/error-handler';
 import { generateVerificationToken, generateOTP } from '../utils/token-generator';
-import { verifyToken, deleteVerificationToken, storeVerificationToken } from './token-storage.service';
+import {
+  deleteVerificationToken,
+  getVerificationTokenTTL,
+  storeVerificationToken,
+  verifyToken,
+} from './token-storage.service';
+import {
+  clearPendingPhoneVerification,
+  getOtpRateResetSeconds,
+  getPendingPhoneVerification,
+  registerOtpRequest,
+  setPendingPhoneVerification,
+} from './otp-cache.service';
 import { sendPhoneOtp } from './sms.service';
 import { TOKEN_TTL } from '../config/token-ttl';
 import type { IdentifierTypeType } from '@/types/enums';
 
-export async function startPhoneVerification(
-  userId: string,
-  phone: string
-): Promise<{ phone: string; message: string }> {
+type PhoneVerificationResult = {
+  phone: string;
+  message: string;
+  alreadySent?: boolean;
+  otpTtlSeconds?: number;
+  rateResetSeconds?: number;
+};
+
+async function loadUserForPhoneVerification(userId: string) {
   const userResult = await db.query(
     `SELECT user_id, onboarding_status, is_active, deleted_at
      FROM "User"
@@ -37,6 +54,10 @@ export async function startPhoneVerification(
     throw new AppError(409, 'Phone verification cannot be restarted for completed onboarding');
   }
 
+  return user;
+}
+
+async function ensurePhoneIsAvailable(userId: string, phone: string) {
   const ownerByCredential = await db.query(
     `SELECT user_id
      FROM "Credentials"
@@ -60,7 +81,9 @@ export async function startPhoneVerification(
   if (ownerByContact.rows.length > 0) {
     throw new AppError(409, 'This phone number is already linked to another account');
   }
+}
 
+async function upsertPendingPhoneCredential(userId: string, phone: string) {
   const passwordSource = await db.query(
     `SELECT password_hash
      FROM "Credentials"
@@ -124,10 +147,20 @@ export async function startPhoneVerification(
   } finally {
     client.release();
   }
+}
+
+async function sendPhoneVerificationOtp(userId: string, phone: string): Promise<PhoneVerificationResult> {
+  const rateLimit = await registerOtpRequest(userId);
+  if (!rateLimit.allowed) {
+    throw new AppError(429, 'OTP request limit reached. Try again later.', true, {
+      rateResetSeconds: rateLimit.resetSeconds,
+    });
+  }
 
   await deleteVerificationToken(phone, 'PHONE_VERIFICATION');
   const otp = generateOTP();
   await storeVerificationToken(phone, otp, 'PHONE_VERIFICATION', TOKEN_TTL.PHONE_VERIFICATION);
+  await setPendingPhoneVerification(userId, phone, TOKEN_TTL.PHONE_VERIFICATION);
   await sendPhoneOtp({
     identifier: phone,
     otp,
@@ -138,6 +171,102 @@ export async function startPhoneVerification(
   return {
     phone,
     message: 'Verification SMS sent successfully',
+    alreadySent: false,
+    otpTtlSeconds: TOKEN_TTL.PHONE_VERIFICATION,
+    rateResetSeconds: rateLimit.resetSeconds,
+  };
+}
+
+export async function startPhoneVerification(
+  userId: string,
+  phone: string
+): Promise<PhoneVerificationResult> {
+  await loadUserForPhoneVerification(userId);
+  await ensurePhoneIsAvailable(userId, phone);
+
+  const pending = await getPendingPhoneVerification(userId);
+  if (pending) {
+    if (pending.phone !== phone) {
+      throw new AppError(409, 'OTP already sent to another phone. Use change phone to update it.');
+    }
+    const otpTtlSeconds = await getVerificationTokenTTL(phone, 'PHONE_VERIFICATION');
+    return {
+      phone,
+      message: 'OTP already sent. Please check your phone.',
+      alreadySent: true,
+      otpTtlSeconds: otpTtlSeconds > 0 ? otpTtlSeconds : 0,
+      rateResetSeconds: await getOtpRateResetSeconds(userId),
+    };
+  }
+
+  const existingOtpTtl = await getVerificationTokenTTL(phone, 'PHONE_VERIFICATION');
+  if (existingOtpTtl > 0) {
+    await setPendingPhoneVerification(userId, phone, existingOtpTtl);
+    return {
+      phone,
+      message: 'OTP already sent. Please check your phone.',
+      alreadySent: true,
+      otpTtlSeconds: existingOtpTtl,
+      rateResetSeconds: await getOtpRateResetSeconds(userId),
+    };
+  }
+
+  await upsertPendingPhoneCredential(userId, phone);
+  return sendPhoneVerificationOtp(userId, phone);
+}
+
+export async function changePhoneVerification(
+  userId: string,
+  phone: string
+): Promise<PhoneVerificationResult> {
+  await loadUserForPhoneVerification(userId);
+  await ensurePhoneIsAvailable(userId, phone);
+
+  const pending = await getPendingPhoneVerification(userId);
+  if (pending?.phone === phone) {
+    const otpTtlSeconds = await getVerificationTokenTTL(phone, 'PHONE_VERIFICATION');
+    return {
+      phone,
+      message: 'OTP already sent. Please check your phone.',
+      alreadySent: true,
+      otpTtlSeconds: otpTtlSeconds > 0 ? otpTtlSeconds : 0,
+      rateResetSeconds: await getOtpRateResetSeconds(userId),
+    };
+  }
+
+  const existingOtpTtl = await getVerificationTokenTTL(phone, 'PHONE_VERIFICATION');
+  if (existingOtpTtl > 0) {
+    await setPendingPhoneVerification(userId, phone, existingOtpTtl);
+    return {
+      phone,
+      message: 'OTP already sent. Please check your phone.',
+      alreadySent: true,
+      otpTtlSeconds: existingOtpTtl,
+      rateResetSeconds: await getOtpRateResetSeconds(userId),
+    };
+  }
+
+  if (pending?.phone) {
+    await deleteVerificationToken(pending.phone, 'PHONE_VERIFICATION');
+    await clearPendingPhoneVerification(userId);
+  }
+
+  await upsertPendingPhoneCredential(userId, phone);
+  return sendPhoneVerificationOtp(userId, phone);
+}
+
+export async function resendPendingPhoneVerification(userId: string): Promise<PhoneVerificationResult> {
+  await loadUserForPhoneVerification(userId);
+
+  const pending = await getPendingPhoneVerification(userId);
+  if (!pending?.phone) {
+    throw new AppError(404, 'No pending phone verification found');
+  }
+
+  const result = await sendPhoneVerificationOtp(userId, pending.phone);
+  return {
+    ...result,
+    message: 'Verification SMS resent successfully',
   };
 }
 
@@ -312,6 +441,7 @@ export async function verifyPhone(token: string): Promise<{ success: boolean; me
 
     // Delete the used token from Redis after successful verification
     await deleteVerificationToken(matchedIdentifier, 'PHONE_VERIFICATION');
+    await clearPendingPhoneVerification(userId);
 
     return {
       success: true,
@@ -332,8 +462,12 @@ export async function resendVerification(
   identifier: string,
   type: IdentifierTypeType
 ): Promise<{ success: boolean; message: string }> {
-  const identifierType = type;
-  const tokenType = type === 'EMAIL' ? 'EMAIL_VERIFICATION' : 'PHONE_VERIFICATION';
+  if (type !== 'EMAIL') {
+    throw new AppError(400, 'Use /auth/phone/resend to resend phone OTP');
+  }
+
+  const identifierType = 'EMAIL';
+  const tokenType = 'EMAIL_VERIFICATION';
 
   // Check if credentials exist and are not verified
   const credResult = await db.query(
@@ -366,39 +500,39 @@ export async function resendVerification(
   await deleteVerificationToken(identifier, tokenType);
 
   // Generate new token
-  const newToken = type === 'EMAIL' ? generateVerificationToken() : generateOTP();
-  const ttl = type === 'EMAIL' ? TOKEN_TTL.EMAIL_VERIFICATION : TOKEN_TTL.PHONE_VERIFICATION;
+  const newToken = generateVerificationToken();
+  const ttl = TOKEN_TTL.EMAIL_VERIFICATION;
 
   // Store new token in Redis
   await storeVerificationToken(identifier, newToken, tokenType, ttl);
 
-  if (type === 'PHONE') {
-    await db.query(
-      `UPDATE "User"
-       SET onboarding_status = CASE
-         WHEN onboarding_status = 'PHONE_REQUIRED' THEN 'PHONE_VERIFICATION_PENDING'
-         ELSE onboarding_status
-       END,
-           updated_at = NOW()
-       WHERE user_id = $1`,
-      [credential.user_id]
-    );
-  }
-
-  if (type === 'PHONE') {
-    await sendPhoneOtp({
-      identifier,
-      otp: newToken,
-      purpose: 'PHONE_VERIFICATION',
-      ttlSeconds: ttl,
-    });
-  } else {
-    // TODO: Send verification email
-    console.log(`New verification email token: ${newToken}`);
-  }
+  // TODO: Send verification email
+  console.log(`New verification email token: ${newToken}`);
 
   return {
     success: true,
-    message: `Verification ${type === 'EMAIL' ? 'email' : 'SMS'} sent successfully`,
+    message: 'Verification email sent successfully',
+  };
+}
+
+export async function getPendingPhoneVerificationStatus(userId: string): Promise<{
+  exists: boolean;
+  phone?: string;
+  otpTtlSeconds?: number;
+  rateResetSeconds?: number;
+}> {
+  const pending = await getPendingPhoneVerification(userId);
+  if (!pending) {
+    return { exists: false };
+  }
+
+  const otpTtlSeconds = await getVerificationTokenTTL(pending.phone, 'PHONE_VERIFICATION');
+  const rateResetSeconds = await getOtpRateResetSeconds(userId);
+
+  return {
+    exists: true,
+    phone: pending.phone,
+    otpTtlSeconds: otpTtlSeconds > 0 ? otpTtlSeconds : 0,
+    rateResetSeconds,
   };
 }

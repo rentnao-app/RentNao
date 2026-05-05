@@ -23,7 +23,11 @@ export default function AuthVerificationPage() {
   
   const [identifier, setIdentifier] = useState('');
   const [phoneOtp, setPhoneOtp] = useState('');
+  const [otpTtlSeconds, setOtpTtlSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [changeLoading, setChangeLoading] = useState(false);
+  const [showChangePhone, setShowChangePhone] = useState(false);
+  const [changePhone, setChangePhone] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -40,30 +44,64 @@ export default function AuthVerificationPage() {
     }
   }, [searchParams]);
 
+  const refreshPending = async () => {
+    try {
+      const res = await apiFetch('/auth/phone/pending');
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body?.data?.exists || !body?.data?.phone) return;
+      const local11 = toLocal11Digits(clipPhoneInput(body.data.phone));
+      if (local11 && isValidBdMobileLocal11(local11)) {
+        setIdentifier(local11);
+      }
+      setOtpTtlSeconds(body?.data?.otpTtlSeconds || 0);
+    } catch {
+      // Ignore pending lookup failures to keep the page usable.
+    }
+  };
+
+  useEffect(() => {
+    if (identifier && otpTtlSeconds > 0) return;
+    let isMounted = true;
+    const load = async () => {
+      if (!isMounted) return;
+      await refreshPending();
+    };
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [identifier, otpTtlSeconds]);
+
+  useEffect(() => {
+    if (otpTtlSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setOtpTtlSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [otpTtlSeconds > 0]);
+
+  const formatCountdown = (seconds) => {
+    const total = Math.max(seconds, 0);
+    const minutes = Math.floor(total / 60);
+    const remaining = total % 60;
+    return `${minutes}:${String(remaining).padStart(2, '0')}`;
+  };
+
   const handleResend = async () => {
     setLoading(true);
     setError('');
     setSuccess('');
     try {
-      if (!identifier) {
-        throw new Error('Phone number not available. Please log in again.');
-      }
-      const forApi = normalizeBdPhoneForApi(identifier);
-      if (!forApi) throw new Error('Invalid phone number');
-
-      const res = await apiFetch('/auth/resend-verification', {
+      const res = await apiFetch('/auth/phone/resend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identifier: forApi,
-          type: 'PHONE',
-        }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(getApiErrorMessage(body, 'Could not resend verification'));
       }
       setSuccess(body?.message || 'Verification OTP sent');
+      await refreshPending();
     } catch (err) {
       setError(err.message || 'Resend failed');
     } finally {
@@ -88,6 +126,7 @@ export default function AuthVerificationPage() {
       }
       setSuccess(body?.message || 'Verification successful.');
       setPhoneOtp('');
+      setOtpTtlSeconds(0);
 
       const currentUser = getCurrentUser();
       const userId = getUserId(currentUser);
@@ -107,6 +146,48 @@ export default function AuthVerificationPage() {
       setError(err.message || 'Verification failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangePhone = async (event) => {
+    event.preventDefault();
+    setChangeLoading(true);
+    setError('');
+    setSuccess('');
+
+    const local11 = toLocal11Digits(clipPhoneInput(changePhone));
+    if (!isValidBdMobileLocal11(local11)) {
+      setError('Enter a valid Bangladesh mobile number.');
+      setChangeLoading(false);
+      return;
+    }
+
+    const forApi = normalizeBdPhoneForApi(local11);
+    if (!forApi) {
+      setError('Enter a valid Bangladesh mobile number.');
+      setChangeLoading(false);
+      return;
+    }
+
+    try {
+      const res = await apiFetch('/auth/phone/change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: forApi }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(getApiErrorMessage(body, 'Could not change phone number'));
+      }
+      setIdentifier(local11);
+      setChangePhone('');
+      setShowChangePhone(false);
+      setOtpTtlSeconds(body?.data?.otpTtlSeconds || 0);
+      setSuccess(body?.message || 'OTP sent to your new phone number.');
+    } catch (err) {
+      setError(err.message || 'Could not change phone number');
+    } finally {
+      setChangeLoading(false);
     }
   };
 
@@ -155,6 +236,12 @@ export default function AuthVerificationPage() {
               </button>
             </form>
 
+            {otpTtlSeconds > 0 && (
+              <p className="mt-3 text-xs text-gray-500">
+                Code expires in {formatCountdown(otpTtlSeconds)}
+              </p>
+            )}
+
             <div className="mt-4 pt-4 border-t border-gray-200">
               <button
                 type="button"
@@ -164,6 +251,38 @@ export default function AuthVerificationPage() {
               >
                 Didn't get the code? Resend
               </button>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setShowChangePhone((prev) => !prev)}
+                className="w-full text-sm text-gray-600 hover:text-teal-700 font-semibold py-2"
+              >
+                {showChangePhone ? 'Cancel phone change' : 'Change phone number'}
+              </button>
+
+              {showChangePhone && (
+                <form onSubmit={handleChangePhone} className="mt-3 space-y-3">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    value={changePhone}
+                    onChange={(e) => setChangePhone(clipPhoneInput(e.target.value))}
+                    placeholder="01XXXXXXXXX"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={changeLoading}
+                    className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
+                  >
+                    {changeLoading ? 'Updating...' : 'Send OTP to new number'}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>

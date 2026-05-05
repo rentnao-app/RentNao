@@ -16,6 +16,7 @@ import {
 import { hashPassword, verifyPassword } from '../utils/password';
 import { generateVerificationToken, generateOTP } from '../utils/token-generator';
 import { storeVerificationToken } from './token-storage.service';
+import { setPendingPhoneVerification } from './otp-cache.service';
 import { sendPhoneOtp } from './sms.service';
 import { TOKEN_TTL } from '../config/token-ttl';
 import type { RegisterInput, LoginInput } from '../schemas';
@@ -119,6 +120,9 @@ export async function registerUser(input: RegisterInput): Promise<UserWithTokens
 
     // Store verification token in Redis
     await storeVerificationToken(identifier, verificationToken, tokenType, ttl);
+    if (identifierType === 'PHONE') {
+      await setPendingPhoneVerification(user.user_id, identifier, ttl);
+    }
 
     // Generate JWT tokens
     const accessToken = generateAccessToken({

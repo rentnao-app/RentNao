@@ -17,6 +17,7 @@ import {
   verificationResponseSchema,
   resendVerificationResponseSchema,
   startPhoneVerificationResponseSchema,
+  pendingPhoneVerificationResponseSchema,
 } from '../schemas';
 import { commonErrors } from './helpers';
 
@@ -96,8 +97,8 @@ export const resendVerificationRoute = createRoute({
   method: 'post',
   path: '/resend-verification',
   tags: ['Authentication'],
-  summary: 'Resend verification token',
-  description: 'Resend verification token via email or SMS for unverified accounts',
+  summary: 'Resend verification token (email only)',
+  description: 'Resend verification token via email for unverified accounts',
   request: {
     body: {
       content: {
@@ -118,6 +119,7 @@ export const resendVerificationRoute = createRoute({
     },
     ...commonErrors.badRequest,
     ...commonErrors.notFound,
+    ...commonErrors.tooManyRequests,
     ...commonErrors.internalError,
   },
 });
@@ -154,6 +156,96 @@ export const startPhoneVerificationRoute = createRoute({
     ...commonErrors.badRequest,
     ...commonErrors.unauthorized,
     ...commonErrors.conflict,
+    ...commonErrors.tooManyRequests,
+    ...commonErrors.internalError,
+  },
+});
+
+// ============================================================================
+// POST /auth/phone/change
+// ============================================================================
+
+export const changePhoneVerificationRoute = createRoute({
+  method: 'post',
+  path: '/phone/change',
+  tags: ['Authentication'],
+  summary: 'Change phone during verification',
+  description: 'Replace the pending phone number and send a fresh OTP',
+  security: [{ bearerAuth: [] }],
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: startPhoneVerificationSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Verification OTP sent successfully',
+      content: {
+        'application/json': {
+          schema: startPhoneVerificationResponseSchema,
+        },
+      },
+    },
+    ...commonErrors.badRequest,
+    ...commonErrors.unauthorized,
+    ...commonErrors.conflict,
+    ...commonErrors.tooManyRequests,
+    ...commonErrors.internalError,
+  },
+});
+
+// ============================================================================
+// GET /auth/phone/pending
+// ============================================================================
+
+export const pendingPhoneVerificationRoute = createRoute({
+  method: 'get',
+  path: '/phone/pending',
+  tags: ['Authentication'],
+  summary: 'Get pending phone verification',
+  description: 'Fetch pending phone verification state for the current user',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: 'Pending phone verification state',
+      content: {
+        'application/json': {
+          schema: pendingPhoneVerificationResponseSchema,
+        },
+      },
+    },
+    ...commonErrors.unauthorized,
+    ...commonErrors.internalError,
+  },
+});
+
+// ============================================================================
+// POST /auth/phone/resend
+// ============================================================================
+
+export const resendPhoneVerificationRoute = createRoute({
+  method: 'post',
+  path: '/phone/resend',
+  tags: ['Authentication'],
+  summary: 'Resend phone verification OTP',
+  description: 'Resend OTP for the current pending phone verification',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: 'Verification OTP sent successfully',
+      content: {
+        'application/json': {
+          schema: startPhoneVerificationResponseSchema,
+        },
+      },
+    },
+    ...commonErrors.unauthorized,
+    ...commonErrors.notFound,
+    ...commonErrors.tooManyRequests,
     ...commonErrors.internalError,
   },
 });

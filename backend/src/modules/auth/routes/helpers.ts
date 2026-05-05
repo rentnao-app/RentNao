@@ -29,6 +29,7 @@ export const commonErrors = {
   notFound: errorResponse(404, 'Resource not found'),
   conflict: errorResponse(409, 'Resource already exists or conflict'),
   gone: errorResponse(410, 'Resource expired or no longer available'),
+  tooManyRequests: errorResponse(429, 'Too many requests'),
   internalError: errorResponse(500, 'Internal server error'),
 };
 

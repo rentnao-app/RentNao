@@ -5,12 +5,18 @@
 
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import {
+  changePhoneVerification,
+  getPendingPhoneVerificationStatus,
+  resendPendingPhoneVerification,
   verifyEmail,
   verifyPhone,
   resendVerification,
   startPhoneVerification,
 } from '../services';
 import {
+  changePhoneVerificationRoute,
+  pendingPhoneVerificationRoute,
+  resendPhoneVerificationRoute,
   verifyEmailRoute,
   verifyPhoneRoute,
   resendVerificationRoute,
@@ -78,8 +84,77 @@ export function registerVerificationRoutes(app: OpenAPIHono) {
       {
         success: true,
         data: {
-          sent: true,
+          sent: !result.alreadySent,
           phone: result.phone,
+          alreadySent: result.alreadySent,
+          otpTtlSeconds: result.otpTtlSeconds,
+          rateResetSeconds: result.rateResetSeconds,
+        },
+        message: result.message,
+      },
+      200
+    );
+  });
+
+  // POST /auth/phone/change
+  app.use('/phone/change', requireAuth);
+  app.openapi(changePhoneVerificationRoute, async (c) => {
+    const user = c.get('user');
+    const { phone } = c.req.valid('json');
+    const result = await changePhoneVerification(user.userId, phone);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          sent: !result.alreadySent,
+          phone: result.phone,
+          alreadySent: result.alreadySent,
+          otpTtlSeconds: result.otpTtlSeconds,
+          rateResetSeconds: result.rateResetSeconds,
+        },
+        message: result.message,
+      },
+      200
+    );
+  });
+
+  // GET /auth/phone/pending
+  app.use('/phone/pending', requireAuth);
+  app.openapi(pendingPhoneVerificationRoute, async (c) => {
+    const user = c.get('user');
+    const pending = await getPendingPhoneVerificationStatus(user.userId);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          exists: pending.exists,
+          phone: pending.phone || null,
+          otpTtlSeconds: pending.otpTtlSeconds,
+          rateResetSeconds: pending.rateResetSeconds,
+        },
+        message: pending.exists ? 'Pending phone verification found' : 'No pending phone verification',
+      },
+      200
+    );
+  });
+
+  // POST /auth/phone/resend
+  app.use('/phone/resend', requireAuth);
+  app.openapi(resendPhoneVerificationRoute, async (c) => {
+    const user = c.get('user');
+    const result = await resendPendingPhoneVerification(user.userId);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          sent: !result.alreadySent,
+          phone: result.phone,
+          alreadySent: result.alreadySent,
+          otpTtlSeconds: result.otpTtlSeconds,
+          rateResetSeconds: result.rateResetSeconds,
         },
         message: result.message,
       },
