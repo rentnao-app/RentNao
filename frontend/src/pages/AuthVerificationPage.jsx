@@ -50,11 +50,31 @@ export default function AuthVerificationPage() {
     }
   }, [searchParams]);
 
+  const bootstrapPending = async () => {
+    const res = await apiFetch('/auth/phone/bootstrap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body?.data?.phone) {
+      throw new Error(getApiErrorMessage(body, 'No pending phone verification found'));
+    }
+    const local11 = toLocal11Digits(clipPhoneInput(body.data.phone));
+    if (local11 && isValidBdMobileLocal11(local11)) {
+      setIdentifier(local11);
+    }
+    setOtpTtlSeconds(body?.data?.otpTtlSeconds || 0);
+    setResendCooldownSeconds(body?.data?.rateResetSeconds || 0);
+  };
+
   const refreshPending = async () => {
     try {
       const res = await apiFetch('/auth/phone/pending');
       const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body?.data?.exists || !body?.data?.phone) return;
+      if (!res.ok || !body?.data?.exists || !body?.data?.phone) {
+        await bootstrapPending();
+        return;
+      }
       const local11 = toLocal11Digits(clipPhoneInput(body.data.phone));
       if (local11 && isValidBdMobileLocal11(local11)) {
         setIdentifier(local11);
@@ -62,7 +82,7 @@ export default function AuthVerificationPage() {
       setOtpTtlSeconds(body?.data?.otpTtlSeconds || 0);
       setResendCooldownSeconds(body?.data?.rateResetSeconds || 0);
     } catch {
-      // Ignore pending lookup failures to keep the page usable.
+      setError('Unable to load OTP verification. Please try again.');
     }
   };
 
