@@ -224,6 +224,33 @@ export const pendingPhoneVerificationRoute = createRoute({
   },
 });
 
+  // ============================================================================
+  // POST /auth/phone/bootstrap
+  // ============================================================================
+
+  export const bootstrapPhoneVerificationRoute = createRoute({
+    method: 'post',
+    path: '/phone/bootstrap',
+    tags: ['Authentication'],
+    summary: 'Bootstrap phone verification',
+    description: 'Ensure an OTP exists for the pending phone verification',
+    security: [{ bearerAuth: [] }],
+    responses: {
+      200: {
+        description: 'Verification OTP state returned',
+        content: {
+          'application/json': {
+            schema: startPhoneVerificationResponseSchema,
+          },
+        },
+      },
+      ...commonErrors.unauthorized,
+      ...commonErrors.notFound,
+      ...commonErrors.tooManyRequests,
+      ...commonErrors.internalError,
+    },
+  });
+
 // ============================================================================
 // POST /auth/phone/resend
 // ============================================================================

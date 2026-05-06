@@ -17,6 +17,7 @@
  *   POST   /auth/phone/start             - Start phone verification (auth)
  *   POST   /auth/phone/change            - Change phone during verification (auth)
  *   POST   /auth/phone/resend            - Resend OTP for pending phone (auth)
+ *   POST   /auth/phone/bootstrap         - Ensure OTP exists for pending phone (auth)
  *   GET    /auth/phone/pending           - Get pending phone verification (auth)
  * 
  * Password Reset Routes (password.routes.ts):
@@ -32,6 +33,7 @@ export { registerRoute, loginRoute, logoutRoute } from './auth.routes';
 
 // Verification routes
 export {
+  bootstrapPhoneVerificationRoute,
   changePhoneVerificationRoute,
   pendingPhoneVerificationRoute,
   resendPhoneVerificationRoute,

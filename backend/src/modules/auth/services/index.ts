@@ -8,6 +8,7 @@ export { registerUser, loginUser, logoutUser } from './auth.service';
 
 // Verification services (email/phone verification)
 export {
+  bootstrapPhoneVerification,
   changePhoneVerification,
   getPendingPhoneVerificationStatus,
   resendPendingPhoneVerification,

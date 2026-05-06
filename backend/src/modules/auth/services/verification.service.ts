@@ -270,6 +270,42 @@ export async function resendPendingPhoneVerification(userId: string): Promise<Ph
   };
 }
 
+export async function bootstrapPhoneVerification(userId: string): Promise<PhoneVerificationResult> {
+  await loadUserForPhoneVerification(userId);
+
+  const pending = await getPendingPhoneVerification(userId);
+  if (pending?.phone) {
+    const otpTtlSeconds = await getVerificationTokenTTL(pending.phone, 'PHONE_VERIFICATION');
+    if (otpTtlSeconds > 0) {
+      return {
+        phone: pending.phone,
+        message: 'OTP already sent. Please check your phone.',
+        alreadySent: true,
+        otpTtlSeconds,
+        rateResetSeconds: await getOtpRateResetSeconds(userId),
+      };
+    }
+
+    return sendPhoneVerificationOtp(userId, pending.phone);
+  }
+
+  const credResult = await db.query(
+    `SELECT identifier
+     FROM "Credentials"
+     WHERE user_id = $1 AND identifier_type = 'PHONE' AND verified_at IS NULL
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId]
+  );
+
+  const phone = credResult.rows[0]?.identifier || null;
+  if (!phone) {
+    throw new AppError(404, 'No pending phone verification found');
+  }
+
+  return sendPhoneVerificationOtp(userId, phone);
+}
+
 /**
  * Verify email using token
  */

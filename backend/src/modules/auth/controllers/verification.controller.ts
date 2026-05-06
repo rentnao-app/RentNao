@@ -5,6 +5,7 @@
 
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import {
+  bootstrapPhoneVerification,
   changePhoneVerification,
   getPendingPhoneVerificationStatus,
   resendPendingPhoneVerification,
@@ -14,6 +15,7 @@ import {
   startPhoneVerification,
 } from '../services';
 import {
+  bootstrapPhoneVerificationRoute,
   changePhoneVerificationRoute,
   pendingPhoneVerificationRoute,
   resendPhoneVerificationRoute,
@@ -137,6 +139,28 @@ export function registerVerificationRoutes(app: OpenAPIHono) {
           rateResetSeconds: pending.rateResetSeconds,
         },
         message: pending.exists ? 'Pending phone verification found' : 'No pending phone verification',
+      },
+      200
+    );
+  });
+
+  // POST /auth/phone/bootstrap
+  app.use('/phone/bootstrap', requireAuth);
+  app.openapi(bootstrapPhoneVerificationRoute, async (c) => {
+    const user = c.get('user');
+    const result = await bootstrapPhoneVerification(user.userId);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          sent: !result.alreadySent,
+          phone: result.phone,
+          alreadySent: result.alreadySent,
+          otpTtlSeconds: result.otpTtlSeconds,
+          rateResetSeconds: result.rateResetSeconds,
+        },
+        message: result.message,
       },
       200
     );
