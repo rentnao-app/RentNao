@@ -75,7 +75,6 @@ export default function LogIn() {
         return;
       }
 
-      setSuccess('Login successful! Redirecting...');
       setPhone('');
       setPassword('');
 
@@ -90,6 +89,12 @@ export default function LogIn() {
       if (!statusRes.ok) {
         setError('Login succeeded but profile status could not be loaded.');
         return;
+      }
+
+      if (profileStatus === 'PHONE_VERIFICATION_PENDING') {
+        setSuccess('Verification required. Redirecting to OTP...');
+      } else {
+        setSuccess('Login successful! Redirecting...');
       }
 
       const target = resolveOnboardingRoute(profileStatus, role || localRole, statusBody?.data?.kycVerificationStatus || null);
@@ -198,12 +203,6 @@ export default function LogIn() {
             Don&apos;t have an account?{' '}
             <Link to="/signup" className="text-teal-700 hover:text-teal-800 font-semibold">
               Sign Up
-            </Link>
-          </p>
-          <p className="mt-2 text-center text-gray-500 text-sm">
-            Need to verify your mobile?{' '}
-            <Link to="/auth-verification?type=PHONE" className="text-teal-700 hover:text-teal-800 font-semibold">
-              Verify now
             </Link>
           </p>
           <p className="mt-3 text-center text-xs font-medium tracking-wide text-gray-500 uppercase">

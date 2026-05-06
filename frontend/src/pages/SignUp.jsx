@@ -231,12 +231,6 @@ export default function SignUp() {
               Log In
             </Link>
           </p>
-          <p className="mt-2 text-center text-gray-500 text-sm">
-            Already signed up but unverified?{' '}
-            <Link to="/auth-verification?type=PHONE" className="text-teal-700 hover:text-teal-800 font-semibold">
-              Verify mobile
-            </Link>
-          </p>
           <p className="mt-3 text-center text-xs font-medium tracking-wide text-gray-500 uppercase">
             For verified users only
           </p>

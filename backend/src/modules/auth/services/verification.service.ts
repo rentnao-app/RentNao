@@ -361,47 +361,53 @@ export async function verifyEmail(token: string): Promise<{ success: boolean; me
 /**
  * Verify phone using OTP
  */
-export async function verifyPhone(token: string): Promise<{ success: boolean; message: string }> {
-  // Get all unverified phone credentials
-  const credentialsResult = await db.query(
-    `SELECT c.identifier, c.user_id, u.is_active, u.deleted_at
-     FROM "Credentials" c
-     JOIN "User" u ON c.user_id = u.user_id
-     WHERE c.identifier_type = 'PHONE' AND c.verified_at IS NULL`
+export async function verifyPhone(
+  userId: string,
+  token: string
+): Promise<{ success: boolean; message: string }> {
+  const userResult = await db.query(
+    `SELECT is_active, deleted_at
+     FROM "User"
+     WHERE user_id = $1`,
+    [userId]
   );
 
-  let matchedIdentifier: string | null = null;
-  
-  // Check each unverified credential against Redis
-  for (const cred of credentialsResult.rows) {
-    const tokenData = await verifyToken(cred.identifier, token, 'PHONE_VERIFICATION');
-    if (tokenData) {
-      matchedIdentifier = cred.identifier;
-      break;
-    }
+  if (userResult.rows.length === 0) {
+    throw new AppError(404, 'User not found');
   }
 
-  if (!matchedIdentifier) {
-    throw new AppError(400, 'Invalid or expired OTP');
-  }
-
-  // Get user details for the matched identifier
-  const userCheck = await db.query(
-    `SELECT c.user_id, u.is_active, u.deleted_at
-     FROM "Credentials" c
-     JOIN "User" u ON c.user_id = u.user_id
-     WHERE c.identifier = $1 AND c.identifier_type = 'PHONE'`,
-    [matchedIdentifier]
-  );
-
-  const userStatus = userCheck.rows[0];
-
+  const userStatus = userResult.rows[0];
   if (userStatus.deleted_at) {
     throw new AppError(410, 'This account has been deleted');
   }
 
   if (!userStatus.is_active) {
     throw new AppError(403, 'This account is inactive. Please contact support.');
+  }
+
+  const pending = await getPendingPhoneVerification(userId);
+  let matchedIdentifier = pending?.phone || null;
+
+  if (!matchedIdentifier) {
+    const credResult = await db.query(
+      `SELECT identifier
+       FROM "Credentials"
+       WHERE user_id = $1 AND identifier_type = 'PHONE' AND verified_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [userId]
+    );
+
+    matchedIdentifier = credResult.rows[0]?.identifier || null;
+  }
+
+  if (!matchedIdentifier) {
+    throw new AppError(404, 'No pending phone verification found');
+  }
+
+  const tokenData = await verifyToken(matchedIdentifier, token, 'PHONE_VERIFICATION');
+  if (!tokenData) {
+    throw new AppError(400, 'Invalid or expired OTP');
   }
 
   const client = await db.connect();
@@ -413,16 +419,14 @@ export async function verifyPhone(token: string): Promise<{ success: boolean; me
     const updateResult = await client.query(
       `UPDATE "Credentials" 
        SET verified_at = NOW()
-       WHERE identifier = $1 AND identifier_type = 'PHONE'
+       WHERE user_id = $1 AND identifier_type = 'PHONE' AND identifier = $2
        RETURNING user_id`,
-      [matchedIdentifier]
+      [userId, matchedIdentifier]
     );
 
     if (updateResult.rows.length === 0) {
       throw new AppError(404, 'Credentials not found');
     }
-
-    const userId = updateResult.rows[0].user_id;
 
     // Phone verification unlocks profile completion stage.
     await client.query(

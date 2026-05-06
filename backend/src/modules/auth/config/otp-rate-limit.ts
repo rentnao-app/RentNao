@@ -4,6 +4,6 @@
  */
 
 export const OTP_RATE_LIMIT = {
-  WINDOW_SECONDS: 300,
-  MAX_REQUESTS: 3,
+  WINDOW_SECONDS: 120,
+  MAX_REQUESTS: 1,
 } as const;

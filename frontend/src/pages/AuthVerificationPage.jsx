@@ -8,6 +8,7 @@ import {
   getCurrentUser,
   getUserId,
   getUserRole,
+  isLoggedIn,
   resolveOnboardingRoute,
 } from '../lib/api';
 import {
@@ -24,6 +25,7 @@ export default function AuthVerificationPage() {
   const [identifier, setIdentifier] = useState('');
   const [phoneOtp, setPhoneOtp] = useState('');
   const [otpTtlSeconds, setOtpTtlSeconds] = useState(0);
+  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
   const [changeLoading, setChangeLoading] = useState(false);
   const [showChangePhone, setShowChangePhone] = useState(false);
@@ -33,6 +35,10 @@ export default function AuthVerificationPage() {
 
   // Load stored phone on mount
   useEffect(() => {
+    if (!isLoggedIn()) {
+      window.location.href = '/login';
+      return;
+    }
     const fromQuery = searchParams.get('identifier') || '';
     const fromSession = fromQuery ? '' : consumeSignupPhoneLocal11();
     const user = getCurrentUser();
@@ -54,6 +60,7 @@ export default function AuthVerificationPage() {
         setIdentifier(local11);
       }
       setOtpTtlSeconds(body?.data?.otpTtlSeconds || 0);
+      setResendCooldownSeconds(body?.data?.rateResetSeconds || 0);
     } catch {
       // Ignore pending lookup failures to keep the page usable.
     }
@@ -79,6 +86,14 @@ export default function AuthVerificationPage() {
     }, 1000);
     return () => clearInterval(interval);
   }, [otpTtlSeconds > 0]);
+
+  useEffect(() => {
+    if (resendCooldownSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldownSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldownSeconds > 0]);
 
   const formatCountdown = (seconds) => {
     const total = Math.max(seconds, 0);
@@ -127,6 +142,7 @@ export default function AuthVerificationPage() {
       setSuccess(body?.message || 'Verification successful.');
       setPhoneOtp('');
       setOtpTtlSeconds(0);
+      setResendCooldownSeconds(0);
 
       const currentUser = getCurrentUser();
       const userId = getUserId(currentUser);
@@ -183,6 +199,7 @@ export default function AuthVerificationPage() {
       setChangePhone('');
       setShowChangePhone(false);
       setOtpTtlSeconds(body?.data?.otpTtlSeconds || 0);
+      setResendCooldownSeconds(body?.data?.rateResetSeconds || 0);
       setSuccess(body?.message || 'OTP sent to your new phone number.');
     } catch (err) {
       setError(err.message || 'Could not change phone number');
@@ -246,10 +263,12 @@ export default function AuthVerificationPage() {
               <button
                 type="button"
                 onClick={handleResend}
-                disabled={loading || !identifier}
+                disabled={loading || !identifier || resendCooldownSeconds > 0}
                 className="w-full text-sm text-teal-700 hover:text-teal-800 font-semibold py-2 disabled:opacity-50"
               >
-                Didn't get the code? Resend
+                {resendCooldownSeconds > 0
+                  ? `Resend available in ${formatCountdown(resendCooldownSeconds)}`
+                  : "Didn't get the code? Resend"}
               </button>
             </div>
 

@@ -65,6 +65,7 @@ export const verifyPhoneRoute = createRoute({
   tags: ['Authentication'],
   summary: 'Verify phone number',
   description: 'Verify user phone number using the OTP sent via SMS',
+  security: [{ bearerAuth: [] }],
   request: {
     body: {
       content: {

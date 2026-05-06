@@ -44,9 +44,11 @@ export function registerVerificationRoutes(app: OpenAPIHono) {
   });
 
   // POST /auth/verify-phone
+  app.use('/verify-phone', requireAuth);
   app.openapi(verifyPhoneRoute, async (c) => {
+    const user = c.get('user');
     const { token } = c.req.valid('json');
-    const result = await verifyPhone(token);
+    const result = await verifyPhone(user.userId, token);
 
     return c.json(
       {

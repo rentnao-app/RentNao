@@ -209,11 +209,6 @@ export async function loginUser(input: LoginInput): Promise<UserWithTokens> {
     throw new AppError(403, 'This account is inactive. Please contact support.');
   }
 
-  // Check if credentials are verified
-  if (!user.verified_at) {
-    throw new AppError(401, 'Please verify your email or phone number before logging in.');
-  }
-
   // Verify password
   const isValidPassword = await verifyPassword(password, user.password_hash);
   if (!isValidPassword) {
