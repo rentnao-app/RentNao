@@ -33,6 +33,10 @@ export default function AuthVerificationPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const maskedIdentifier = identifier
+    ? `${identifier.slice(0, 3)}${'*'.repeat(Math.max(0, identifier.length - 6))}${identifier.slice(-3)}`
+    : '';
+
   // Load stored phone on mount
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -264,6 +268,11 @@ export default function AuthVerificationPage() {
                   required
                 />
               </div>
+              {maskedIdentifier && (
+                <p className="text-xs text-gray-500">
+                  OTP sent to {maskedIdentifier}
+                </p>
+              )}
               <button
                 type="submit"
                 disabled={loading}
