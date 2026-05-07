@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
 import { getWishlistState, toggleWishlist } from '../lib/wishlist';
 import PropertySearchBar from '../components/PropertySearchBar';
-import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
+import AppHeader from '../components/AppHeader';
 const hero = '/hero-image.png';
 const HERO_TEXT_FONT = 'Avenir, "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif';
 
@@ -73,26 +73,16 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const loggedIn = isLoggedIn();
   const currentUser = getCurrentUser();
   const userRole = currentUser?.role || currentUser?.userRole;
-  const unknownRole = loggedIn && !userRole;
-  const showFindProperty = !loggedIn || userRole === 'TENANT' || userRole === 'ADMIN' || unknownRole;
-  const showListProperty = !loggedIn || userRole === 'OWNER' || userRole === 'ADMIN' || unknownRole;
   const canWishlist = loggedIn && userRole === 'TENANT';
   const [wishlistIds, setWishlistIds] = useState(new Set());
-  const dashboardPath =
-    userRole === 'ADMIN'
-      ? '/admin-dashboard'
-      : userRole === 'OWNER'
-        ? '/owner-dashboard'
-        : '/tenant-dashboard';
 
   useEffect(() => {
     const loadListings = async () => {
       try {
-        const res = await apiFetch('/properties/public/listings?limit=3');
+        const res = await apiFetch('/properties/public/listings?limit=6');
         const body = await res.json().catch(() => ({}));
         if (res.ok) {
           setListings(body?.data?.items || []);
@@ -129,160 +119,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#f5faf5] text-gray-800">
-      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-[#dceadf] shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
-          <div className="flex items-center justify-between gap-4">
-            <BrandLogoLink />
-
-            <button
-              type="button"
-              className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#dceadf] bg-white text-gray-700 shadow-sm hover:bg-[#f4faf4] hover:border-[#c5ddc9] transition"
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={mobileMenuOpen}
-              aria-controls="home-mobile-nav"
-            >
-              {mobileMenuOpen ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-
-            <nav className="hidden lg:flex items-center gap-7 text-[15px] font-medium">
-              <Link to="/" className="text-[#2f8444] border-b-2 border-[#2f8444] pb-1">
-                Home
-              </Link>
-              {showFindProperty && (
-                <Link to="/listings" className="text-gray-700 hover:text-[#2f8444] transition">
-                  Find Property
-                </Link>
-              )}
-              {showListProperty && (
-                <Link to="/owner-dashboard/create-listing" className="text-gray-700 hover:text-[#2f8444] transition">
-                  List Your Property
-                </Link>
-              )}
-              {loggedIn ? (
-                <Link to={dashboardPath} className="text-gray-700 hover:text-[#2f8444] transition">
-                  Dashboard
-                </Link>
-              ) : (
-                <Link to="/login" className="text-gray-700 hover:text-[#2f8444] transition">
-                  Login
-                </Link>
-              )}
-              {!loggedIn && (
-                <Link
-                  to="/signup"
-                  className="bg-[#2f8444] hover:bg-[#256c38] text-white px-5 py-2 rounded-xl font-semibold transition"
-                >
-                  Sign Up
-                </Link>
-              )}
-            </nav>
-          </div>
-
-        </div>
-      </header>
-
-      {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
-          <button
-            type="button"
-            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
-            aria-label="Close menu"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          <aside
-            id="home-mobile-nav"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="home-mobile-nav-title"
-            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
-          >
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#eef4ef]">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <BrandLogoLink
-                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
-                  onClick={() => setMobileMenuOpen(false)}
-                />
-                <span id="home-mobile-nav-title" className="sr-only">
-                  Main menu
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
-                aria-label="Close menu"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
-              <Link
-                to="/"
-                onClick={() => setMobileMenuOpen(false)}
-                className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-[#2f8444] bg-[#eef7ef]"
-              >
-                Home
-              </Link>
-              {showFindProperty && (
-                <Link
-                  to="/listings"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
-                >
-                  Find Property
-                </Link>
-              )}
-              {showListProperty && (
-                <Link
-                  to="/owner-dashboard/create-listing"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
-                >
-                  List Your Property
-                </Link>
-              )}
-              {loggedIn ? (
-                <Link
-                  to={dashboardPath}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    to="/signup"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
-                  >
-                    Sign Up
-                  </Link>
-                </>
-              )}
-            </nav>
-          </aside>
-        </div>
-      )}
+      <AppHeader />
 
       <section className="relative overflow-visible bg-[#eef7ef] border-b border-[#ddeee1]">
         <div className="relative w-full">
@@ -388,46 +225,24 @@ export default function HomePage() {
         )}
       </section>
 
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 sm:pb-14 lg:pb-16">
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-[#2f8444] via-[#2a7a3f] to-[#1f5f31] text-white shadow-[0_20px_50px_rgba(31,95,49,0.28)] px-5 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-9">
-          <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
-          <div className="pointer-events-none absolute -left-12 -bottom-12 h-48 w-48 rounded-full bg-[#9bd5a8]/20 blur-3xl" />
-          <div className="pointer-events-none absolute inset-0 opacity-20">
-            <svg className="absolute left-4 top-5 h-12 w-12 text-emerald-100/70" viewBox="0 0 64 64" fill="none" aria-hidden>
-              <path d="M10 30L32 14L54 30V53H38V39H26V53H10V30Z" fill="currentColor" />
-              <path d="M6 31L32 10L58 31" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <svg className="absolute right-24 top-6 h-10 w-10 text-emerald-100/60" viewBox="0 0 64 64" fill="none" aria-hidden>
-              <path d="M12 31L32 17L52 31V52H39V41H25V52H12V31Z" fill="currentColor" />
-              <path d="M8 32L32 13L56 32" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <svg className="absolute left-20 bottom-6 h-11 w-11 text-emerald-100/55" viewBox="0 0 64 64" fill="none" aria-hidden>
-              <path d="M11 32L32 16L53 32V53H40V43H24V53H11V32Z" fill="currentColor" />
-              <path d="M8 33L32 13L56 33" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <div className="pointer-events-none absolute right-3 bottom-3 sm:right-5 sm:bottom-5 lg:right-7 lg:bottom-6 opacity-30 sm:opacity-35">
-            <svg className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 text-white" viewBox="0 0 120 120" fill="none" aria-hidden>
-              <path d="M18 58L60 26L102 58V98C102 101.314 99.3137 104 96 104H74V74H46V104H24C20.6863 104 18 101.314 18 98V58Z" fill="currentColor" fillOpacity="0.9" />
-              <path d="M10 60L60 18L110 60" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="86" cy="52" r="8" fill="#C7EBD0" fillOpacity="0.9" />
-            </svg>
-          </div>
+      <section className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 sm:pb-10 lg:pb-12">
+        <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-[#2f8444] via-[#2a7a3f] to-[#1f5f31] text-white shadow-[0_12px_30px_rgba(31,95,49,0.22)] px-4 py-3 sm:px-6 sm:py-4 text-center">
+          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute -left-8 -bottom-8 h-28 w-28 rounded-full bg-[#9bd5a8]/20 blur-3xl" />
 
-          <div className={`relative z-10 flex flex-col gap-5 sm:gap-6 ${loggedIn ? 'items-center text-center' : 'lg:flex-row lg:items-center lg:justify-between'}`}>
-            <div className={`${loggedIn ? 'max-w-2xl' : 'max-w-2xl'}`}>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-2">
-                <svg className="h-5 w-5 text-emerald-100" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" fill="currentColor" />
-                  <path d="M2.5 11.5L12 3L21.5 11.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span className="text-xs sm:text-sm font-semibold text-emerald-50">Verified homes, trusted people</span>
-              </div>
-              <h3 className="mt-3 text-xl sm:text-2xl lg:text-[1.8rem] font-bold leading-tight">
+          <div className="relative z-10 flex flex-col items-center gap-2 sm:gap-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-emerald-50">
+              <svg className="h-3 w-3 text-emerald-100" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" fill="currentColor" />
+              </svg>
+              Verified homes, trusted people
+            </span>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold leading-snug">
                 Rent smarter with trusted listings and verified users across Rent Nao.
               </h3>
-              <p className="mt-2 text-sm sm:text-base text-emerald-100/90 max-w-xl">
-                Whether you are finding a home or listing one, manage everything in one place from discovery to request and agreement.
+              <p className="mt-0.5 text-xs sm:text-[13px] text-emerald-100/90">
+                Find or list a home and manage everything in one place.
               </p>
             </div>
 
@@ -435,9 +250,9 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => navigate('/signup')}
-                className="inline-flex items-center justify-center rounded-xl bg-white text-[#1f5f31] font-semibold px-5 py-3 text-sm sm:text-base shadow-lg shadow-[#153f23]/25 hover:bg-[#f3fff5] transition w-full sm:w-auto"
+                className="inline-flex items-center justify-center rounded-lg bg-white text-[#1f5f31] font-semibold px-3.5 py-1.5 text-xs sm:text-sm shadow-md shadow-[#153f23]/20 hover:bg-[#f3fff5] transition"
               >
-                Get Started Free
+                Get Started
               </button>
             )}
           </div>
