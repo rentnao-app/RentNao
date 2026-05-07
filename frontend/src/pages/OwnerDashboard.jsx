@@ -5,8 +5,7 @@ import { apiFetch, getApiErrorMessage, getCurrentUser, getUserId, isLoggedIn, lo
 import { listOwnerIncomingRequests, reviewOwnerRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
-import NotificationBell from '../components/NotificationBell';
-import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
+import AppHeader from '../components/AppHeader';
 
 function Icon({ path, className = 'h-5 w-5' }) {
   return (
@@ -100,6 +99,44 @@ const FILTER_OPTIONS = [
   { value: 'ACTIVE', label: 'Active only' },
 ];
 
+function getKycProgress(status) {
+  const key = String(status || '').toUpperCase();
+  if (key === 'APPROVED' || key === 'ACCEPTED') {
+    return {
+      label: 'Verified',
+      width: 'w-full',
+      bar: 'bg-emerald-600',
+      track: 'bg-emerald-100',
+      hint: 'Your account is fully verified.',
+    };
+  }
+  if (key === 'SUBMITTED' || key === 'UNDER_REVIEW') {
+    return {
+      label: 'Under review',
+      width: 'w-2/3',
+      bar: 'bg-amber-500',
+      track: 'bg-amber-100',
+      hint: 'Documents submitted. Review usually takes 24-48 hours.',
+    };
+  }
+  if (key === 'REJECTED') {
+    return {
+      label: 'Rejected',
+      width: 'w-1/3',
+      bar: 'bg-red-500',
+      track: 'bg-red-100',
+      hint: 'Please re-upload the requested documents.',
+    };
+  }
+  return {
+    label: 'Pending',
+    width: 'w-1/3',
+    bar: 'bg-amber-500',
+    track: 'bg-amber-100',
+    hint: 'Complete verification to unlock all features.',
+  };
+}
+
 function SidebarLink({ to, label, iconPath, active, onNavigate }) {
   return (
     <Link
@@ -133,34 +170,9 @@ export default function OwnerDashboard() {
   const [incoming, setIncoming] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [propertyFilter, setPropertyFilter] = useState('ALL');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [reviewingId, setReviewingId] = useState(null);
   /** `d:propertyId` | `p:propertyId:listingId` | `r:propertyId:listingId` */
   const [propertyBusyKey, setPropertyBusyKey] = useState(null);
-
-  const closeDrawer = useCallback(() => setMobileMenuOpen(false), []);
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (!mobileMenuOpen) return undefined;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [mobileMenuOpen]);
-
-  useEffect(() => {
-    if (!mobileMenuOpen) return undefined;
-    const onKey = (e) => {
-      if (e.key === 'Escape') setMobileMenuOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [mobileMenuOpen]);
 
   const loadOwnerListingIds = useCallback(async () => {
     try {
@@ -378,7 +390,6 @@ export default function OwnerDashboard() {
   }, [properties]);
 
   const welcomeName = displayName(user);
-  const avatarLetter = initialsFromName(welcomeName);
 
   const pathActive = (prefix, exact) => {
     if (exact) return location.pathname === prefix;
@@ -389,15 +400,9 @@ export default function OwnerDashboard() {
     { to: '/owner-dashboard', label: 'Dashboard', icon: 'M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z', exact: true },
     { to: '/owner-dashboard/my-properties', label: 'My Properties', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
     { to: '/owner-dashboard/requests', label: 'Tenant Requests', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
-    { to: '/wallet', label: 'Payments', icon: 'M17 9V7a4 4 0 10-8 0v2m-2 0h12a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2z' },
+    { to: '/wallet', label: 'Wallet and Payments', icon: 'M17 9V7a4 4 0 10-8 0v2m-2 0h12a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2z' },
     { to: '/account', label: 'Settings', icon: 'M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.94L14.4 2.7a.5.5 0 0 0-.49-.4h-3.82a.5.5 0 0 0-.49.4L9.25 5.32c-.57.23-1.11.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.03.31-.05.63-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.52.4 1.06.71 1.63.94l.35 2.62a.5.5 0 0 0 .49.4h3.82a.5.5 0 0 0 .49-.4l.35-2.62c.57-.23 1.11-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 3.5-3.5A3.5 3.5 0 0 1 12 15.5z' },
     { to: '/faq', label: 'Support', icon: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm.1 15.5a1.4 1.4 0 1 1 1.4-1.4 1.4 1.4 0 0 1-1.4 1.4zM14.2 11c-.9.7-1.4 1.1-1.4 2v.3h-1.6v-.4c0-1.4.8-2.1 1.7-2.8.7-.5 1.2-.9 1.2-1.5a1.7 1.7 0 0 0-3.3-.6l-1.6-.4a3.3 3.3 0 1 1 6.5 1c0 1.4-.8 2-1.5 2.4z' },
-  ];
-
-  const centerNav = [
-    { to: '/', label: 'Home' },
-    { to: '/owner-dashboard/create-listing', label: 'List Your Property' },
-    { to: '/services', label: 'Services' },
   ];
 
   const handleReview = async (item, decision) => {
@@ -434,139 +439,7 @@ export default function OwnerDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f2f7f3] text-gray-800">
-      <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-        <div className="max-w-[1500px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
-          <BrandLogoLink className="min-w-0 shrink-0" onClick={closeDrawer} />
-
-          <div className="ml-auto flex items-center gap-4 sm:gap-5 shrink-0">
-            <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
-              {centerNav.map((item) => (
-                <Link key={item.to} to={item.to} className="text-gray-700 hover:text-emerald-700 transition">
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-
-            <NotificationBell />
-            <div
-              className="grid h-8 w-8 place-items-center rounded-full bg-emerald-700 text-xs font-semibold text-white shadow-sm sm:h-9 sm:w-9 sm:text-sm"
-              title={welcomeName}
-            >
-              {avatarLetter}
-            </div>
-
-            <button
-              type="button"
-              className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition"
-              aria-label="Open menu"
-              aria-expanded={mobileMenuOpen}
-              aria-controls="owner-mobile-nav"
-              onClick={() => setMobileMenuOpen((open) => !open)}
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
-          <button
-            type="button"
-            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
-            aria-label="Close menu"
-            onClick={closeDrawer}
-          />
-          <aside
-            id="owner-mobile-nav"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="owner-mobile-nav-title"
-            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <BrandLogoLink
-                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
-                  onClick={closeDrawer}
-                />
-                <div className="min-w-0">
-                  <span id="owner-mobile-nav-title" className="sr-only">
-                    Main menu
-                  </span>
-                  <p className="truncate text-xs text-gray-500">Owner</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={closeDrawer}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
-                aria-label="Close menu"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1">
-              <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Dashboard</p>
-              <nav className="flex flex-col gap-1" aria-label="Owner dashboard">
-                {sideLinks.map((item) => (
-                  <SidebarLink
-                    key={item.to}
-                    to={item.to}
-                    label={item.label}
-                    iconPath={item.icon}
-                    active={pathActive(item.to, item.exact)}
-                    onNavigate={closeDrawer}
-                  />
-                ))}
-              </nav>
-
-              <div className="mt-4 pt-4 border-t border-[#eef4ef] px-1 space-y-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeDrawer();
-                    logout();
-                  }}
-                  className="w-full rounded-xl bg-red-50 text-red-600 border border-red-100 py-3 text-sm font-semibold hover:bg-red-100 transition"
-                >
-                  Logout
-                </button>
-                <div className="rounded-2xl border border-emerald-100 bg-[#f9fcf9] p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Profile Status</p>
-                  <p className="mt-1 text-sm font-medium text-gray-800">{user?.kycVerificationStatus || 'PENDING'}</p>
-                  <div className="mt-3 h-2 rounded-full bg-emerald-100">
-                    <div className="h-2 w-2/3 rounded-full bg-emerald-600" />
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500">Keep profile updated for better trust.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-[#eef4ef] px-4 py-3 bg-[#fafdfb]">
-              <p className="text-xs text-center text-gray-500">
-                {centerNav.map((item, idx) => (
-                  <span key={item.to}>
-                    <Link to={item.to} className="font-medium text-[#2f8444] hover:underline" onClick={closeDrawer}>
-                      {item.label}
-                    </Link>
-                    {idx < centerNav.length - 1 ? <span className="mx-2 text-gray-300">·</span> : null}
-                  </span>
-                ))}
-              </p>
-            </div>
-          </aside>
-        </div>
-      )}
+      <AppHeader variant="wide" />
 
       <div className="mx-auto w-full max-w-[1500px] lg:flex">
         <aside className="hidden lg:block lg:w-72 lg:max-w-none lg:shrink-0 border-r border-emerald-100 bg-[#f4f8f5]">
@@ -579,7 +452,6 @@ export default function OwnerDashboard() {
                   label={item.label}
                   iconPath={item.icon}
                   active={pathActive(item.to, item.exact)}
-                  onNavigate={closeDrawer}
                 />
               ))}
             </nav>
@@ -588,22 +460,26 @@ export default function OwnerDashboard() {
           <div className="px-4 pb-5">
             <button
               type="button"
-              onClick={() => {
-                closeDrawer();
-                logout();
-              }}
+              onClick={() => logout()}
               className="w-full rounded-xl bg-red-50 text-red-600 border border-red-100 py-2.5 text-sm font-semibold hover:bg-red-100 transition"
             >
               Logout
             </button>
-            <div className="mt-4 rounded-2xl border border-emerald-100 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-gray-500">Profile Status</p>
-              <p className="mt-1 text-sm font-medium text-gray-800">{user?.kycVerificationStatus || 'PENDING'}</p>
-              <div className="mt-3 h-2 rounded-full bg-emerald-100">
-                <div className="h-2 w-2/3 rounded-full bg-emerald-600" />
-              </div>
-              <p className="mt-2 text-xs text-gray-500">Keep profile updated for better trust.</p>
-            </div>
+            {(() => {
+              const kyc = getKycProgress(user?.kycVerificationStatus);
+              return (
+                <div className="mt-4 rounded-2xl border border-emerald-100 bg-white p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Profile Status</p>
+                  <p className="mt-1 text-sm font-semibold text-gray-800">{kyc.label}</p>
+                  <div className={`mt-3 h-2 rounded-full ${kyc.track}`} aria-hidden>
+                    <div
+                      className={`h-2 rounded-full ${kyc.bar} ${kyc.width} transition-[width] duration-500`}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">{kyc.hint}</p>
+                </div>
+              );
+            })()}
           </div>
         </aside>
 

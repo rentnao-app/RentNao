@@ -136,6 +136,15 @@ export default function OwnerRegistrationPage() {
       setForm((prev) => ({ ...prev, employmentStatus: value, workSelection: '' }));
       return;
     }
+    if (name === 'workSelection') {
+      const [employmentFromSelection] = String(value).split('|');
+      setForm((prev) => ({
+        ...prev,
+        employmentStatus: prev.employmentStatus || employmentFromSelection || prev.employmentStatus,
+        workSelection: value,
+      }));
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -145,9 +154,12 @@ export default function OwnerRegistrationPage() {
       : [];
 
   function parseWorkSelection(raw) {
-    const i = raw.indexOf('|');
-    if (i <= 0 || i >= raw.length - 1) return null;
-    return { jobCategory: raw.slice(0, i), roleLabel: raw.slice(i + 1) };
+    const parts = String(raw || '').split('|');
+    if (parts.length < 3) return null;
+    const [, jobCategory, ...labelParts] = parts;
+    const roleLabel = labelParts.join('|');
+    if (!jobCategory || !roleLabel) return null;
+    return { jobCategory, roleLabel };
   }
 
   const handleSubmit = async (e) => {
@@ -484,21 +496,14 @@ export default function OwnerRegistrationPage() {
 
                 <div>
                   <label className={labelClass}>Date of birth</label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="dateOfBirth"
-                      value={form.dateOfBirth}
-                      onChange={handleChange}
-                      className={inputClass}
-                      required
-                    />
-                    <Icon>
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7 2h2v2h6V2h2v2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3V2zm13 8H4v10h16V10z" />
-                      </svg>
-                    </Icon>
-                  </div>
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={form.dateOfBirth}
+                    onChange={handleChange}
+                    className={`${inputClass} [color-scheme:light]`}
+                    required
+                  />
                 </div>
 
                 <div>
@@ -570,7 +575,7 @@ export default function OwnerRegistrationPage() {
                   </p>
                 </div>
 
-                <div className="md:col-span-2">
+                <div>
                   <label className={labelClass}>Role / profession</label>
                   <select
                     name="workSelection"
@@ -578,13 +583,15 @@ export default function OwnerRegistrationPage() {
                     onChange={handleChange}
                     className={inputClass}
                     required
-                    disabled={!form.employmentStatus}
                   >
                     <option value="">
                       {form.employmentStatus ? 'Select the option that best describes you' : 'Choose employment first'}
                     </option>
                     {professionRows.map((row) => (
-                      <option key={`${row.jobCategory}-${row.label}`} value={`${row.jobCategory}|${row.label}`}>
+                      <option
+                        key={`${form.employmentStatus}-${row.jobCategory}-${row.label}`}
+                        value={`${form.employmentStatus}|${row.jobCategory}|${row.label}`}
+                      >
                         {row.label}
                       </option>
                     ))}
@@ -597,27 +604,20 @@ export default function OwnerRegistrationPage() {
 
                 <div>
                   <label className={labelClass}>Primary area (current)</label>
-                  <div className="relative">
-                    <select
-                      name="currentLocation"
-                      value={form.currentLocation}
-                      onChange={handleChange}
-                      className={inputClass}
-                      required
-                    >
-                      <option value="">Where are you based?</option>
-                      {LOCATION_OPTIONS.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                    <Icon>
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z" />
-                      </svg>
-                    </Icon>
-                  </div>
+                  <select
+                    name="currentLocation"
+                    value={form.currentLocation}
+                    onChange={handleChange}
+                    className={inputClass}
+                    required
+                  >
+                    <option value="">Where are you based?</option>
+                    {LOCATION_OPTIONS.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

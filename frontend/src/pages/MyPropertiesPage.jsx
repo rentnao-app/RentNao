@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import BrandLogoLink from '../components/BrandLogoLink';
+import AppHeader from '../components/AppHeader';
 import { apiFetch, getApiErrorMessage, isLoggedIn } from '../lib/api';
 import toast from 'react-hot-toast';
 
@@ -118,31 +118,27 @@ export default function MyPropertiesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <BrandLogoLink />
-          <Link
-            to="/owner-dashboard/create-listing"
-            className="bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold px-4 sm:px-5 py-2.5 rounded-lg transition whitespace-nowrap"
-          >
-            + New Listing
-          </Link>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
           <div>
+            <Link
+              to="/owner-dashboard"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 mb-2"
+            >
+              <span aria-hidden>&larr;</span> Owner dashboard
+            </Link>
             <h1 className="text-2xl font-bold text-gray-900">My Properties</h1>
             <p className="text-sm text-gray-500 mt-1">
               Pause sets a listing to inactive (hidden from search). Delete removes the whole property permanently from the database.
             </p>
           </div>
           <Link
-            to="/owner-dashboard"
-            className="text-sm font-medium text-teal-700 hover:text-teal-800 self-start sm:self-auto"
+            to="/owner-dashboard/create-listing"
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 transition whitespace-nowrap"
           >
-            Owner dashboard
+            <span aria-hidden>+</span> List New Property
           </Link>
         </div>
 

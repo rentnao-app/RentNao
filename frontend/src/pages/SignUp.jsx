@@ -170,7 +170,7 @@ export default function SignUp() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">I want to</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Select Role</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -186,7 +186,8 @@ export default function SignUp() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
                     </div>
-                    Find a Home
+                    <div className="font-semibold">Tenant</div>
+                    <div className="mt-0.5 text-xs font-normal text-gray-500">Rent a Property</div>
                   </button>
                   <button
                     type="button"
@@ -202,7 +203,8 @@ export default function SignUp() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" />
                       </svg>
                     </div>
-                    List Property
+                    <div className="font-semibold">Owner</div>
+                    <div className="mt-0.5 text-xs font-normal text-gray-500">List your Property</div>
                   </button>
                 </div>
               </div>
