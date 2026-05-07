@@ -1,6 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import BrandLogoLink from '../components/BrandLogoLink';
+import AppHeader from '../components/AppHeader';
 import { apiFetch, isLoggedIn } from '../lib/api';
 import toast from 'react-hot-toast';
 import ImageUploader from '../components/ImageUploader';
@@ -228,19 +228,15 @@ export default function OwnerPropertyEditPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <BrandLogoLink />
-          <Link
-            to="/owner-dashboard/my-properties"
-            className="text-sm font-medium text-gray-600 hover:text-teal-700 transition"
-          >
-            &larr; My Properties
-          </Link>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="max-w-5xl mx-auto px-6 py-8">
+        <Link
+          to="/owner-dashboard/my-properties"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 mb-3"
+        >
+          <span aria-hidden>&larr;</span> My Properties
+        </Link>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Edit property</h1>
           <p className="text-sm text-gray-500">Update details anytime. Add or remove photos; choose which image is shown first.</p>

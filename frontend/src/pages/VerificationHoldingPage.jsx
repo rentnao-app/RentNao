@@ -1,5 +1,6 @@
-﻿import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+﻿import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, clearAuthSession, getCurrentUser } from '../lib/api';
 
@@ -90,12 +91,19 @@ export default function VerificationHoldingPage() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [reviewedAt, setReviewedAt] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
+  const navigate = useNavigate();
   const user = useMemo(() => getCurrentUser(), []);
   const dashboardHref = dashboardPathForRole(user?.role);
+  const verificationHref = user?.role ? `/verification?role=${encodeURIComponent(user.role)}` : '/verification';
 
-  const fetchDocuments = async () => {
+  // Track previous status so we can detect the moment it transitions to APPROVED
+  const previousStatusRef = useRef(null);
+  const approvalHandledRef = useRef(false);
+
+  const fetchDocuments = useCallback(async () => {
     try {
       const currentUser = getCurrentUser();
       if (!currentUser?.userId) {
@@ -112,6 +120,7 @@ export default function VerificationHoldingPage() {
         setSubmissionStatus(submission?.status || '');
         setRejectionReason(submission?.rejectionReason || '');
         setReviewedAt(submission?.reviewedAt || '');
+        setError('');
       } else {
         setError('Could not fetch your documents');
       }
@@ -120,13 +129,46 @@ export default function VerificationHoldingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const handleManualRefresh = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await fetchDocuments();
+      toast.success('Status refreshed', { duration: 1500 });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchDocuments, refreshing]);
 
   useEffect(() => {
     fetchDocuments();
     const interval = setInterval(fetchDocuments, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchDocuments]);
+
+  // Detect transition into APPROVED/ACCEPTED and notify + redirect to role dashboard
+  useEffect(() => {
+    if (!submissionStatus) return;
+    const current = normalizeStatus(submissionStatus);
+    const previous = previousStatusRef.current;
+    const isNowApproved = current === 'APPROVED' || current === 'ACCEPTED';
+    const wasPreviouslyOther =
+      previous !== null && previous !== 'APPROVED' && previous !== 'ACCEPTED';
+
+    if (isNowApproved && wasPreviouslyOther && !approvalHandledRef.current) {
+      approvalHandledRef.current = true;
+      toast.success('You are verified! Redirecting to your dashboard...', { duration: 2500 });
+      const timer = setTimeout(() => {
+        navigate(dashboardHref);
+      }, 2500);
+      previousStatusRef.current = current;
+      return () => clearTimeout(timer);
+    }
+
+    previousStatusRef.current = current;
+  }, [submissionStatus, navigate, dashboardHref]);
 
   const handleLogout = () => {
     clearAuthSession();
@@ -260,7 +302,7 @@ export default function VerificationHoldingPage() {
               )}
               {phase === 'idle' && (
                 <Link
-                  to="/verification"
+                  to={verificationHref}
                   className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 transition w-full sm:w-auto text-center"
                 >
                   Upload documents
@@ -268,7 +310,7 @@ export default function VerificationHoldingPage() {
               )}
               {phase === 'rejected' && (
                 <Link
-                  to="/verification"
+                  to={verificationHref}
                   className="inline-flex items-center justify-center rounded-xl bg-red-700 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800 transition w-full sm:w-auto text-center"
                 >
                   Update &amp; resubmit
@@ -290,10 +332,11 @@ export default function VerificationHoldingPage() {
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Submitted documents</h2>
               <button
                 type="button"
-                onClick={() => window.location.reload()}
-                className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition self-start sm:self-auto"
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition self-start sm:self-auto disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Refresh
+                {refreshing ? 'Refreshing...' : 'Refresh'}
               </button>
             </div>
 
@@ -301,7 +344,7 @@ export default function VerificationHoldingPage() {
               <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/40 p-6 sm:p-8 text-center">
                 <p className="text-gray-600 mb-4 text-sm sm:text-base">You haven&apos;t uploaded any documents for this submission yet.</p>
                 <Link
-                  to="/verification"
+                  to={verificationHref}
                   className="inline-flex items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-3 text-sm sm:text-base transition w-full max-w-xs mx-auto"
                 >
                   Upload documents
@@ -339,13 +382,14 @@ export default function VerificationHoldingPage() {
             <div className="mt-5 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => window.location.reload()}
-                className="min-h-[44px] rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition"
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="min-h-[44px] rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Refresh status
+                {refreshing ? 'Refreshing...' : 'Refresh status'}
               </button>
               <Link
-                to="/verification"
+                to={verificationHref}
                 className="min-h-[44px] rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-800 transition flex items-center justify-center text-center"
               >
                 Re-upload

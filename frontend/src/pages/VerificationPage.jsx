@@ -123,7 +123,6 @@ export default function VerificationPage() {
   const [success, setSuccess] = useState('');
   const [documents, setDocuments] = useState({ nidFront: null, nidBack: null, propertyCertificate: null });
   const [previews, setPreviews] = useState({ nidFront: null, nidBack: null, propertyCertificate: null });
-  const [showNidBackUpload, setShowNidBackUpload] = useState(false);
   const [draggingDoc, setDraggingDoc] = useState('');
 
   useEffect(() => {
@@ -487,53 +486,41 @@ export default function VerificationPage() {
                   />
                 </div>
 
-                {showNidBackUpload || documents.nidBack ? (
-                  <div className="mt-4">
-                    <UploadCard
-                      title="NID backside (optional)"
-                      description="Use this only if the back side is in a separate image."
-                      file={documents.nidBack}
-                      preview={previews.nidBack}
-                      isDragging={draggingDoc === 'nidBack'}
-                      onDragEnter={(e) => {
-                        e.preventDefault();
-                        setDraggingDoc('nidBack');
-                      }}
-                      onDragLeave={(e) => {
-                        e.preventDefault();
-                        setDraggingDoc('');
-                      }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        setDraggingDoc('');
-                        const file = e.dataTransfer.files?.[0];
-                        setFileForType(file, 'nidBack');
-                      }}
-                      onFileChange={(e) => handleFileChange(e, 'nidBack')}
-                      onRemove={() => {
-                        setDocuments((p) => ({ ...p, nidBack: null }));
-                        setPreviews((p) => ({ ...p, nidBack: null }));
-                      }}
-                    />
-                  </div>
-                ) : null}
-
-                {documents.nidFront && !showNidBackUpload && !documents.nidBack ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowNidBackUpload(true)}
-                    className="mt-4 inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition"
-                  >
-                    Add backside upload
-                  </button>
-                ) : null}
+                <div className="mt-4">
+                  <UploadCard
+                    title="NID backside"
+                    description="If you already uploaded NID pdf containing both side, you can skip it"
+                    file={documents.nidBack}
+                    preview={previews.nidBack}
+                    isDragging={draggingDoc === 'nidBack'}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      setDraggingDoc('nidBack');
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      setDraggingDoc('');
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDraggingDoc('');
+                      const file = e.dataTransfer.files?.[0];
+                      setFileForType(file, 'nidBack');
+                    }}
+                    onFileChange={(e) => handleFileChange(e, 'nidBack')}
+                    onRemove={() => {
+                      setDocuments((p) => ({ ...p, nidBack: null }));
+                      setPreviews((p) => ({ ...p, nidBack: null }));
+                    }}
+                  />
+                </div>
 
                 {isOwner && (
                   <div className="mt-4">
                     <UploadCard
-                      title="Property Ownership Document"
-                      description="Upload property certificate, deed, or tax document."
+                      title="Electricy/Water Bill/Holding Tax Document"
+                      description="property ownership document"
                       file={documents.propertyCertificate}
                       preview={previews.propertyCertificate}
                       isDragging={draggingDoc === 'propertyCertificate'}
@@ -588,9 +575,6 @@ export default function VerificationPage() {
 
               </div>
 
-              <div className="block rounded-2xl sm:rounded-3xl lg:rounded-xl overflow-hidden border border-emerald-100 bg-white max-w-[360px] sm:max-w-[420px] lg:max-w-none mx-auto lg:mx-0">
-                <VerificationIllustration />
-              </div>
             </div>
           </form>
         </div>
