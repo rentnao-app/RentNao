@@ -35,9 +35,9 @@ export const createTenantProfileSchema = z.object({
     example: 'TECHNOLOGY',
     description: 'Job category',
   }),
-  profilePhotoUrl: z.string().min(1).openapi({
-    example: 'https://example.com/photo.jpg',
-    description: 'URL to profile photo',
+  profilePhotoKey: z.string().min(1).optional().openapi({
+    example: 'profiles/user123/avatar-1710000000000.jpg',
+    description: 'S3 file key for profile photo',
   }),
   currentLat: z.number().openapi({
     example: 23.8103,
@@ -103,9 +103,9 @@ export const createOwnerProfileSchema = z.object({
     example: 'SELF_EMPLOYED',
     description: 'Job category',
   }),
-  profilePhotoUrl: z.string().min(1).openapi({
-    example: 'https://example.com/photo.jpg',
-    description: 'URL to profile photo',
+  profilePhotoKey: z.string().min(1).optional().openapi({
+    example: 'profiles/user123/avatar-1710000000000.jpg',
+    description: 'S3 file key for profile photo',
   }),
   currentLat: z.number().openapi({
     example: 23.8103,
@@ -190,7 +190,7 @@ export const profileStatusSchema = z.object({
     religion: z.string().nullable().optional(),
     profession: z.string().nullable().optional(),
     jobCategory: z.string().nullable().optional(),
-    profilePhotoUrl: z.string().nullable().optional(),
+    profilePhotoKey: z.string().nullable().optional(),
     currentLat: z.number().nullable().optional(),
     currentLng: z.number().nullable().optional(),
     currentArea: z.string().nullable().optional(),
@@ -279,6 +279,20 @@ export const profilePhotoUploadUrlRequestSchema = z.object({
 });
 
 export type ProfilePhotoUploadUrlRequest = z.infer<typeof profilePhotoUploadUrlRequestSchema>;
+
+export const profilePhotoDownloadUrlResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    downloadUrl: z.string().url().openapi({
+      example: 'https://s3.example.com/profiles/user123/avatar-1710000000000.jpg?...',
+      description: 'Presigned URL for GET download',
+    }),
+    expiresIn: z.number().openapi({
+      example: 3600,
+      description: 'URL expiration time in seconds',
+    }),
+  }),
+});
 
 export const submitVerificationSchema = z.object({
   documents: z

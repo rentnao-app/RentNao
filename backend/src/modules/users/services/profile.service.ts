@@ -37,6 +37,31 @@ export async function getProfilePhotoUploadUrl(
   };
 }
 
+export async function getProfilePhotoDownloadUrl(
+  userId: string
+): Promise<{ downloadUrl: string; expiresIn: number }> {
+  const profileResult = await db.query(
+    'SELECT profile_picture_path FROM "BaseUserProfile" WHERE user_id = $1',
+    [userId]
+  );
+
+  if (profileResult.rows.length === 0) {
+    throw new AppError(404, 'User profile not found');
+  }
+
+  const key = profileResult.rows[0].profile_picture_path;
+  if (!key) {
+    throw new AppError(404, 'Profile photo not found');
+  }
+
+  const downloadUrl = await storage.presignDownload(key, 3600);
+
+  return {
+    downloadUrl,
+    expiresIn: 3600,
+  };
+}
+
 async function ensureWalletAccount(client: any, userId: string) {
   await client.query(
     `INSERT INTO "WalletAccount" (id, user_id, status, currency, available_balance)
@@ -55,7 +80,7 @@ export interface ProfileData {
   religion?: string;
   profession?: string;
   jobCategory?: string;
-  profilePhotoUrl?: string;
+  profilePhotoKey?: string;
   currentLat?: number;
   currentLng?: number;
   currentArea?: string;
@@ -277,9 +302,9 @@ export async function createOrUpdateProfile(
         updateFields.push(`job_category = $${paramIndex++}`);
         updateValues.push(data.jobCategory);
       }
-      if (data.profilePhotoUrl) {
+      if (data.profilePhotoKey) {
         updateFields.push(`profile_picture_path = $${paramIndex++}`);
-        updateValues.push(data.profilePhotoUrl);
+        updateValues.push(data.profilePhotoKey);
       }
       if (data.currentLat !== undefined) {
         updateFields.push(`current_lat = $${paramIndex++}`);
@@ -318,7 +343,7 @@ export async function createOrUpdateProfile(
           data.religion || null,
           data.profession || null,
           data.jobCategory || null,
-          data.profilePhotoUrl || null,
+          data.profilePhotoKey || null,
           data.currentLat || null,
           data.currentLng || null,
           data.currentArea || null,
@@ -470,7 +495,7 @@ export async function getProfileDetails(userId: string, role: UserRoleType) {
     religion: base.religion || null,
     profession: base.profession || null,
     jobCategory: base.job_category || null,
-    profilePhotoUrl: base.profile_picture_path || null,
+    profilePhotoKey: base.profile_picture_path || null,
     currentLat: base.current_lat ?? null,
     currentLng: base.current_lng ?? null,
     currentArea: base.current_area || null,

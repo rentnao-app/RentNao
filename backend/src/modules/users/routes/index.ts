@@ -83,7 +83,7 @@ export const createProfileRoute = createRoute({
                 religion: 'Islam',
                 profession: 'Software Engineer',
                 jobCategory: 'TECHNOLOGY',
-                profilePhotoUrl: 'https://example.com/photo.jpg',
+                profilePhotoKey: 'profiles/user123/avatar-1710000000000.jpg',
                 currentLat: 23.8103,
                 currentLng: 90.4125,
                 currentArea: 'Dhaka, Bangladesh',
@@ -104,7 +104,7 @@ export const createProfileRoute = createRoute({
                 religion: 'Islam',
                 profession: 'Real Estate Broker',
                 jobCategory: 'SELF_EMPLOYED',
-                profilePhotoUrl: 'https://example.com/photo.jpg',
+                profilePhotoKey: 'profiles/user123/avatar-1710000000000.jpg',
                 currentLat: 23.8103,
                 currentLng: 90.4125,
                 currentArea: 'Dhaka, Bangladesh',
@@ -344,6 +344,44 @@ export const getProfilePhotoUploadUrlRoute = createRoute({
     },
     401: {
       description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+  security: [{ bearerAuth: [] }],
+});
+
+export const getProfilePhotoDownloadUrlRoute = createRoute({
+  method: 'get',
+  path: '/{userId}/profile-photo/download-url',
+  tags: ['Users - Profile'],
+  summary: 'Get presigned download URL for profile photo',
+  description: 'Generate presigned S3 URL for downloading a profile photo',
+  request: {
+    params: userIdParamSchema,
+  },
+  responses: {
+    200: {
+      description: 'Presigned URL generated',
+      content: {
+        'application/json': {
+          schema: schemas.profilePhotoDownloadUrlResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: 'Profile photo not found',
       content: {
         'application/json': {
           schema: errorResponseSchema,

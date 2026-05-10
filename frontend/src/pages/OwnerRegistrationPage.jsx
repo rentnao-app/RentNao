@@ -223,7 +223,6 @@ export default function OwnerRegistrationPage() {
           religion: form.religion,
           profession: professionPayload,
           jobCategory: parsed.jobCategory,
-          profilePhotoUrl: 'https://example.com/profile.jpg',
           currentLat: 23.8103,
           currentLng: 90.4125,
           currentArea: form.currentLocation,

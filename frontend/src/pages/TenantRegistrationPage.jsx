@@ -172,7 +172,6 @@ export default function TenantRegistrationPage() {
           religion: form.religion || "Not specified",
           profession: form.profession || "Not specified",
           jobCategory: "OTHER",
-          profilePhotoUrl: "https://example.com/profile.jpg",
           currentLat: 23.8103,
           currentLng: 90.4125,
           currentArea: form.currentLocation || "Dhaka",

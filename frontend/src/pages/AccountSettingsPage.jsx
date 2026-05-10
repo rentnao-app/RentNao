@@ -65,6 +65,7 @@ export default function AccountSettingsPage() {
   const [user, setUser] = useState(null);
   const [profilePhotoFile, setProfilePhotoFile] = useState(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState('');
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const [profileForm, setProfileForm] = useState({
     firstName: '',
     lastName: '',
@@ -73,7 +74,7 @@ export default function AccountSettingsPage() {
     religion: '',
     profession: '',
     jobCategory: '',
-    profilePhotoUrl: '',
+    profilePhotoKey: '',
     currentArea: '',
     incomeRange: '',
     employmentStatus: '',
@@ -85,6 +86,22 @@ export default function AccountSettingsPage() {
   const [localUser] = useState(() => getCurrentUser());
   const localUserId = getLocalUserId(localUser);
   const role = statusData?.role || getUserRole(localUser);
+
+  const loadProfilePhotoUrl = async (profileKey) => {
+    if (!profileKey || !localUserId) {
+      setProfilePhotoUrl('');
+      return;
+    }
+
+    const res = await apiFetch(`/users/${localUserId}/profile-photo/download-url`);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setProfilePhotoUrl('');
+      return;
+    }
+
+    setProfilePhotoUrl(body?.data?.downloadUrl || '');
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -108,6 +125,7 @@ export default function AccountSettingsPage() {
         if (!statusRes.ok) throw new Error(getApiErrorMessage(statusBody, 'Failed to load profile status'));
         setStatusData(statusBody?.data || null);
         const profile = statusBody?.data?.profile || {};
+        await loadProfilePhotoUrl(profile?.profilePhotoKey);
         savePublicProfileSnapshot({
           userId: localUserId,
           name: `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || localUser?.username || 'User',
@@ -214,7 +232,7 @@ export default function AccountSettingsPage() {
         });
         if (!putRes.ok) throw new Error('Failed to upload profile photo.');
 
-        payload.profilePhotoUrl = fileKey;
+        payload.profilePhotoKey = fileKey;
       }
 
       // Explicit role helps backend pick the right validation branch.
@@ -240,6 +258,7 @@ export default function AccountSettingsPage() {
       if (statusRes.ok) {
         setStatusData(statusBody?.data || null);
         const profile = statusBody?.data?.profile || {};
+        await loadProfilePhotoUrl(profile?.profilePhotoKey);
         savePublicProfileSnapshot({
           userId: localUserId,
           name: `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || user?.username || 'User',
@@ -269,7 +288,7 @@ export default function AccountSettingsPage() {
         religion: '',
         profession: '',
         jobCategory: '',
-        profilePhotoUrl: '',
+        profilePhotoKey: '',
         currentArea: '',
         incomeRange: '',
         employmentStatus: '',
@@ -405,8 +424,12 @@ export default function AccountSettingsPage() {
             <div className="md:col-span-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="h-20 w-20 rounded-full border border-gray-200 bg-white overflow-hidden flex items-center justify-center shrink-0">
-                  {profilePhotoPreview ? (
-                    <img src={profilePhotoPreview} alt="Profile preview" className="h-full w-full object-cover" />
+                  {profilePhotoPreview || profilePhotoUrl ? (
+                    <img
+                      src={profilePhotoPreview || profilePhotoUrl}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <span className="text-xs text-gray-400 text-center px-2">No image selected</span>
                   )}
