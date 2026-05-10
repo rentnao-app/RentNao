@@ -4,6 +4,12 @@ import AppHeader from '../components/AppHeader';
 import { apiFetch, getApiErrorMessage, getCurrentUser, getUserId, getUserRole, isLoggedIn } from '../lib/api';
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
+import {
+  clearCachedProfilePhoto,
+  emitProfilePhotoUpdate,
+  getCachedProfilePhoto,
+  setCachedProfilePhoto,
+} from '../lib/profilePhotoCache';
 import { getAcceptValue, isAllowedFileByMimeAndExtension, PROFILE_PHOTO_MIMES } from '../lib/fileValidation';
 
 const INCOME_RANGES = ['BELOW_20K', 'RANGE_20K_40K', 'RANGE_40K_60K', 'RANGE_60K_100K', 'RANGE_100K_200K', 'ABOVE_200K'];
@@ -88,8 +94,17 @@ export default function AccountSettingsPage() {
   const role = statusData?.role || getUserRole(localUser);
 
   const loadProfilePhotoUrl = async (profileKey) => {
-    if (!profileKey || !localUserId) {
+    if (!localUserId) return;
+
+    if (!profileKey) {
+      clearCachedProfilePhoto(localUserId);
       setProfilePhotoUrl('');
+      return;
+    }
+
+    const cached = getCachedProfilePhoto(localUserId);
+    if (cached?.profilePhotoKey === profileKey && cached?.downloadUrl) {
+      setProfilePhotoUrl(cached.downloadUrl);
       return;
     }
 
@@ -100,7 +115,12 @@ export default function AccountSettingsPage() {
       return;
     }
 
-    setProfilePhotoUrl(body?.data?.downloadUrl || '');
+    const downloadUrl = body?.data?.downloadUrl || '';
+    const expiresIn = body?.data?.expiresIn || 0;
+    setProfilePhotoUrl(downloadUrl);
+    if (downloadUrl) {
+      setCachedProfilePhoto({ userId: localUserId, profilePhotoKey: profileKey, downloadUrl, expiresIn });
+    }
   };
 
   useEffect(() => {
@@ -135,6 +155,7 @@ export default function AccountSettingsPage() {
           area: profile?.currentArea || '',
           profession: profile?.profession || '',
           verificationStatus: statusBody?.data?.kycVerificationStatus || '',
+          profilePhotoKey: profile?.profilePhotoKey || '',
         });
       } catch (e) {
         setError(e.message || 'Failed to load account settings.');
@@ -268,7 +289,9 @@ export default function AccountSettingsPage() {
           area: profile?.currentArea || '',
           profession: profile?.profession || '',
           verificationStatus: statusBody?.data?.kycVerificationStatus || '',
+          profilePhotoKey: profile?.profilePhotoKey || '',
         });
+        emitProfilePhotoUpdate(localUserId);
       }
 
       addLocalNotification({
