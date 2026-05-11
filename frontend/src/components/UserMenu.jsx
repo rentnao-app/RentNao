@@ -33,17 +33,11 @@ function roleLabel(role) {
  *  - email: optional secondary line (string)
  *  - role: 'OWNER' | 'TENANT' | 'ADMIN'
  */
-export default function UserMenu({ name = '', email = '', role = '', photoUrl = '' }) {
+export default function UserMenu({ name = '', email = '', role = '' }) {
   const [open, setOpen] = useState(false);
-  const [photoError, setPhotoError] = useState(false);
   const wrapRef = useRef(null);
   const initials = initialsFromName(name || email);
   const dashboardHref = dashboardPathFor(role);
-  const showPhoto = Boolean(photoUrl) && !photoError;
-
-  useEffect(() => {
-    setPhotoError(false);
-  }, [photoUrl]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -74,16 +68,7 @@ export default function UserMenu({ name = '', email = '', role = '', photoUrl = 
         aria-label="Open user menu"
         title={name || 'Account'}
       >
-        {showPhoto ? (
-          <img
-            src={photoUrl}
-            alt={name || 'Profile photo'}
-            className="h-full w-full rounded-full object-cover"
-            onError={() => setPhotoError(true)}
-          />
-        ) : (
-          initials
-        )}
+        {initials}
       </button>
 
       {open && (

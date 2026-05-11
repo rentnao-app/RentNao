@@ -3,14 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from './BrandLogoLink';
 import NotificationBell from './NotificationBell';
 import UserMenu from './UserMenu';
-import { apiFetch, getCurrentUser, getUserId, getUserRole, isLoggedIn, logout } from '../lib/api';
+import { getCurrentUser, getUserRole, isLoggedIn, logout } from '../lib/api';
 import { formatWalletAmount, useWalletBalance } from '../lib/walletBalance';
-import {
-  PROFILE_PHOTO_UPDATE_EVENT,
-  clearCachedProfilePhoto,
-  getCachedProfilePhoto,
-  setCachedProfilePhoto,
-} from '../lib/profilePhotoCache';
 
 /**
  * Shared global header.
@@ -23,7 +17,6 @@ export default function AppHeader({ variant = 'app' }) {
   const user = useMemo(() => getCurrentUser(), []);
   const loggedIn = isLoggedIn();
   const role = getUserRole(user);
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
 
   useEffect(() => {
     const id = window.setTimeout(() => setDrawerOpen(false), 0);
@@ -43,74 +36,6 @@ export default function AppHeader({ variant = 'app' }) {
       window.removeEventListener('keydown', onKey);
     };
   }, [drawerOpen]);
-
-  useEffect(() => {
-    if (!loggedIn) {
-      setProfilePhotoUrl('');
-      return undefined;
-    }
-
-    const userId = getUserId(user);
-    if (!userId) {
-      setProfilePhotoUrl('');
-      return undefined;
-    }
-
-    const cached = getCachedProfilePhoto(userId);
-    if (cached?.downloadUrl) {
-      setProfilePhotoUrl(cached.downloadUrl);
-    }
-
-    let cancelled = false;
-
-    const loadPhoto = async () => {
-      try {
-        const statusRes = await apiFetch(`/users/${userId}/profile-status`);
-        const statusBody = await statusRes.json().catch(() => ({}));
-        if (!statusRes.ok) return;
-
-        const profilePhotoKey = statusBody?.data?.profile?.profilePhotoKey || '';
-        if (!profilePhotoKey) {
-          clearCachedProfilePhoto(userId);
-          if (!cancelled) setProfilePhotoUrl('');
-          return;
-        }
-
-        const cachedNow = getCachedProfilePhoto(userId);
-        if (cachedNow?.profilePhotoKey === profilePhotoKey && cachedNow?.downloadUrl) {
-          if (!cancelled) setProfilePhotoUrl(cachedNow.downloadUrl);
-          return;
-        }
-
-        const photoRes = await apiFetch(`/users/${userId}/profile-photo/download-url`);
-        const photoBody = await photoRes.json().catch(() => ({}));
-        if (!photoRes.ok) return;
-
-        const downloadUrl = photoBody?.data?.downloadUrl || '';
-        const expiresIn = photoBody?.data?.expiresIn || 0;
-        if (downloadUrl) {
-          setCachedProfilePhoto({ userId, profilePhotoKey, downloadUrl, expiresIn });
-        }
-        if (!cancelled) setProfilePhotoUrl(downloadUrl);
-      } catch {
-        /* ignore */
-      }
-    };
-
-    void loadPhoto();
-
-    const onUpdate = (event) => {
-      const updatedId = event?.detail?.userId;
-      if (String(updatedId || '') !== String(userId)) return;
-      void loadPhoto();
-    };
-    window.addEventListener(PROFILE_PHOTO_UPDATE_EVENT, onUpdate);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener(PROFILE_PHOTO_UPDATE_EVENT, onUpdate);
-    };
-  }, [loggedIn, user]);
 
   const navItems = useMemo(() => buildNav(role, loggedIn), [role, loggedIn]);
   const userName = displayName(user);
@@ -141,7 +66,7 @@ export default function AppHeader({ variant = 'app' }) {
             {loggedIn ? (
               <>
                 <NotificationBell />
-                <UserMenu name={userName} email={userEmail} role={role} photoUrl={profilePhotoUrl} />
+                <UserMenu name={userName} email={userEmail} role={role} />
               </>
             ) : (
               <div className="hidden sm:flex items-center gap-2">
