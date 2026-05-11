@@ -480,4 +480,7 @@ function formatApiError(body) {
       </div>
     );
   }
+  // At the end of CreateListingPage.jsx (line 483), add:
+
+  export default CreateListingPage;
 }
