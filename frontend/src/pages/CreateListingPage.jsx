@@ -281,3 +281,225 @@ export default function CreateListingPage() {
 }
 
 
+<<<<<<< HEAD
+=======
+          {!createdPropertyId && (
+            <div className="mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                {FORM_STEPS.map((step, index) => {
+                  const isActive = index === currentStep;
+                  const isComplete = index < currentStep;
+                  return (
+                    <div
+                      key={step.title}
+                      className={`rounded-xl border p-3 ${isActive
+                        ? 'border-teal-600 bg-teal-50 text-teal-900'
+                        : isComplete
+                          ? 'border-teal-100 bg-white text-teal-700'
+                          : 'border-gray-100 bg-white text-gray-400'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${isActive || isComplete ? 'bg-teal-700 text-white' : 'bg-gray-100 text-gray-400'
+                            }`}
+                        >
+                          {index + 1}
+                        </span>
+                        <span className="text-sm font-semibold">{step.title}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
+              {error}
+            </div>
+          )}
+
+          {!createdPropertyId && (
+            <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-5" noValidate>
+              <section className={sectionClass}>
+                <div>
+                  <p className="text-sm font-semibold text-teal-700">Section {currentStep + 1}</p>
+                  <h2 className="text-xl font-bold text-gray-900 mt-1">{currentStepConfig.title}</h2>
+                  <p className="text-sm text-gray-500 mt-1">{currentStepConfig.description}</p>
+                </div>
+
+                {currentStep === 0 && (
+                  <>
+                    <div>
+                      <label className={labelClass}>Title</label>
+                      <input type="text" name="title" value={form.title} onChange={handleChange} className={inputClass} placeholder="3 Bedroom Apartment in Dhanmondi" required />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Description</label>
+                      <textarea name="description" value={form.description} onChange={handleChange} className={`${inputClass} min-h-24`} placeholder="Describe the property..." required />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>Size (sqft)</label>
+                        <input type="number" name="property_size" value={form.property_size} onChange={handleChange} className={inputClass} placeholder="e.g. 1450" min="0" required />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Rooms / Beds</label>
+                        <input type="number" name="room_count" value={form.room_count} onChange={handleChange} className={inputClass} placeholder="e.g. 3" min="0" required />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Bathrooms</label>
+                        <input type="number" name="bathroom_count" value={form.bathroom_count} onChange={handleChange} className={inputClass} placeholder="e.g. 2" min="0" required />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Balconies</label>
+                        <input type="number" name="balcony_count" value={form.balcony_count} onChange={handleChange} className={inputClass} min="0" required />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {currentStep === 1 && (
+                  <>
+                    <div>
+                      <label className={labelClass}>Area / Location</label>
+                      <select name="area_name" value={form.area_name} onChange={handleChange} className={inputClass} required>
+                        <option value="">Select area</option>
+                        <option value="DHANMONDI">Dhanmondi</option>
+                        <option value="GULSHAN">Gulshan</option>
+                        <option value="BANANI">Banani</option>
+                        <option value="UTTARA">Uttara</option>
+                        <option value="MIRPUR">Mirpur</option>
+                        <option value="MOHAMMADPUR">Mohammadpur</option>
+                        <option value="BASHUNDHARA">Bashundhara</option>
+                        <option value="BADDA">Badda</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Address</label>
+                      <input type="text" name="address" value={form.address} onChange={handleChange} className={inputClass} placeholder="Street, building, area" />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Map location (click to adjust pin; defaults to Dhaka center)</label>
+                      <div className="rounded-xl overflow-hidden border border-gray-200" style={{ height: '280px' }}>
+                        <MapPicker value={location} onChange={setLocation} height="280px" />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {currentStep === 2 && (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>Building Floors</label>
+                        <input type="number" name="building_floors" value={form.building_floors} onChange={handleChange} className={inputClass} min="1" required />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Building Facing</label>
+                        <select name="building_facing" value={form.building_facing} onChange={handleChange} className={inputClass}>
+                          <option value="NORTH">North</option>
+                          <option value="SOUTH">South</option>
+                          <option value="EAST">East</option>
+                          <option value="WEST">West</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                        <input type="checkbox" name="has_lift" checked={form.has_lift} onChange={(e) => setForm((prev) => ({ ...prev, has_lift: e.target.checked }))} />
+                        Lift
+                      </label>
+                      <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                        <input type="checkbox" name="has_generator" checked={form.has_generator} onChange={(e) => setForm((prev) => ({ ...prev, has_generator: e.target.checked }))} />
+                        Generator
+                      </label>
+                      <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                        <input type="checkbox" name="has_security_guard" checked={form.has_security_guard} onChange={(e) => setForm((prev) => ({ ...prev, has_security_guard: e.target.checked }))} />
+                        Security Guard
+                      </label>
+                    </div>
+                  </>
+                )}
+
+                {currentStep === 3 && (
+                  <>
+                    <div>
+                      <label className={labelClass}>Intended Tenant Type</label>
+                      <select name="intended_tenant_type" value={form.intended_tenant_type} onChange={handleChange} className={inputClass}>
+                        <option value="BOTH">Both</option>
+                        <option value="FAMILY">Family</option>
+                        <option value="BACHELOR">Bachelor</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Monthly Rent ($)</label>
+                      <input type="number" name="rent" value={form.rent} onChange={handleChange} className={inputClass} placeholder="e.g. 15000" min="0" required />
+                    </div>
+                  </>
+                )}
+              </section>
+
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handlePreviousStep}
+                  disabled={currentStep === 0 || loading}
+                  className="px-5 py-3 rounded-lg border border-gray-200 text-gray-700 font-semibold transition hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Back
+                </button>
+
+                {isLastStep ? (
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Creating...' : 'Create Property & Listing'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleNextStep}
+                    disabled={loading}
+                    className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Continue
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
+
+          {createdPropertyId && (
+            <div className="mt-10 p-6 bg-white rounded-xl border border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Add photos and videos</h2>
+              <p className="text-sm text-gray-500 mb-4">Upload media now, or go back to My Properties when you are done.</p>
+              <ImageUploader
+                propertyId={createdPropertyId}
+                initialImages={[]}
+                onUpdate={() => { }}
+              />
+              <Link
+                to="/owner-dashboard/my-properties"
+                className="inline-block mt-4 text-teal-700 font-semibold text-sm hover:text-teal-800"
+              >
+                Done — My Properties &rarr;
+              </Link>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+}
+>>>>>>> parent of 056d84d (UI updated)
