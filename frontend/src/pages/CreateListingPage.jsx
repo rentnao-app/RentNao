@@ -5,7 +5,7 @@ import MapPicker from '../components/MapPicker';
 import ImageUploader from '../components/ImageUploader';
 import { addLocalNotification } from '../lib/notifications';
 
-/** Matches MapPicker default center so API always receives coordinates before the user clicks. */
+/** Fallback used if browser geolocation is unavailable and the user does not move the pin. */
 const DEFAULT_LOCATION = { lat: 23.8103, lng: 90.4125 };
 
 const FORM_STEPS = [
@@ -78,7 +78,7 @@ export default function CreateListingPage() {
     intended_tenant_type: 'BOTH',
     rent: '',
   });
-  const [location, setLocation] = useState(DEFAULT_LOCATION);
+  const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdPropertyId, setCreatedPropertyId] = useState(null);
@@ -387,7 +387,7 @@ export default function CreateListingPage() {
                   </div>
 
                   <div>
-                    <label className={labelClass}>Map location (click to adjust pin; defaults to Dhaka center)</label>
+                    <label className={labelClass}>Map location (uses your current location when allowed; click to adjust pin)</label>
                     <div className="rounded-xl overflow-hidden border border-gray-200" style={{ height: '280px' }}>
                       <MapPicker value={location} onChange={setLocation} height="280px" />
                     </div>
