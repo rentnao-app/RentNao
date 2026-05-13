@@ -298,6 +298,8 @@ export default function OwnerPropertyEditPage() {
                 <input
                   type="number"
                   min="1"
+                  step="any"
+                  inputMode="decimal"
                   name="propertySizeSqft"
                   value={form.propertySizeSqft}
                   onChange={handleChange}
@@ -310,6 +312,7 @@ export default function OwnerPropertyEditPage() {
                 <input
                   type="number"
                   min="0"
+                  inputMode="numeric"
                   name="roomCount"
                   value={form.roomCount}
                   onChange={handleChange}
@@ -322,6 +325,7 @@ export default function OwnerPropertyEditPage() {
                 <input
                   type="number"
                   min="0"
+                  inputMode="numeric"
                   name="bathroomCount"
                   value={form.bathroomCount}
                   onChange={handleChange}
@@ -334,6 +338,7 @@ export default function OwnerPropertyEditPage() {
                 <input
                   type="number"
                   min="0"
+                  inputMode="numeric"
                   name="balconyCount"
                   value={form.balconyCount}
                   onChange={handleChange}
@@ -346,6 +351,7 @@ export default function OwnerPropertyEditPage() {
                 <input
                   type="number"
                   min="1"
+                  inputMode="numeric"
                   name="buildingFloors"
                   value={form.buildingFloors}
                   onChange={handleChange}
@@ -482,5 +488,3 @@ export default function OwnerPropertyEditPage() {
     </div>
   );
 }
-
-

@@ -346,19 +346,19 @@ export default function CreateListingPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className={labelClass}>Size (sqft)</label>
-                      <input type="number" name="property_size" value={form.property_size} onChange={handleChange} className={inputClass} placeholder="e.g. 1450" min="0" required />
+                      <input type="number" name="property_size" value={form.property_size} onChange={handleChange} className={inputClass} placeholder="e.g. 1450" min="0" step="any" inputMode="decimal" required />
                     </div>
                     <div>
                       <label className={labelClass}>Rooms / Beds</label>
-                      <input type="number" name="room_count" value={form.room_count} onChange={handleChange} className={inputClass} placeholder="e.g. 3" min="0" required />
+                      <input type="number" name="room_count" value={form.room_count} onChange={handleChange} className={inputClass} placeholder="e.g. 3" min="0" inputMode="numeric" required />
                     </div>
                     <div>
                       <label className={labelClass}>Bathrooms</label>
-                      <input type="number" name="bathroom_count" value={form.bathroom_count} onChange={handleChange} className={inputClass} placeholder="e.g. 2" min="0" required />
+                      <input type="number" name="bathroom_count" value={form.bathroom_count} onChange={handleChange} className={inputClass} placeholder="e.g. 2" min="0" inputMode="numeric" required />
                     </div>
                     <div>
                       <label className={labelClass}>Balconies</label>
-                      <input type="number" name="balcony_count" value={form.balcony_count} onChange={handleChange} className={inputClass} min="0" required />
+                      <input type="number" name="balcony_count" value={form.balcony_count} onChange={handleChange} className={inputClass} min="0" inputMode="numeric" required />
                     </div>
                   </div>
                 </>
@@ -399,8 +399,8 @@ export default function CreateListingPage() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>Building Floors</label>
-                      <input type="number" name="building_floors" value={form.building_floors} onChange={handleChange} className={inputClass} min="1" required />
+                      <label className={labelClass}>Floor Number</label>
+                      <input type="number" name="building_floors" value={form.building_floors} onChange={handleChange} className={inputClass} min="1" inputMode="numeric" required />
                     </div>
                     <div>
                       <label className={labelClass}>Building Facing</label>
@@ -443,7 +443,7 @@ export default function CreateListingPage() {
 
                   <div>
                     <label className={labelClass}>Monthly Rent ($)</label>
-                    <input type="number" name="rent" value={form.rent} onChange={handleChange} className={inputClass} placeholder="e.g. 15000" min="0" required />
+                    <input type="number" name="rent" value={form.rent} onChange={handleChange} className={inputClass} placeholder="e.g. 15000" min="0" step="any" inputMode="decimal" required />
                   </div>
                 </>
               )}
