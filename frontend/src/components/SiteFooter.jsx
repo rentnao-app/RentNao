@@ -12,7 +12,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
-          <p className="text-xs sm:text-sm">&copy; 2026 RentNao. All rights reserved.</p>
+          <p className="text-xs sm:text-sm">&copy; Copyright 2026 Rent Nao Limited. All rights reserved.</p>
           <div className="flex flex-wrap gap-5 text-xs sm:text-sm">
             <Link to="/about" className="hover:text-white transition">
               About
