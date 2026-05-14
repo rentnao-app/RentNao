@@ -28,6 +28,7 @@ import AboutPage from './pages/AboutPage';
 import TermsPage from './pages/TermsPage';
 import FAQPage from './pages/FAQPage';
 import ServicesPage from './pages/ServicesPage';
+import ReviewPage from './pages/ReviewPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import ListingPage from './pages/ListingPage';
@@ -84,6 +85,8 @@ function App() {
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/service" element={<ServicesPage />} />
             <Route path="/services" element={<ServicesPage />} />
+            <Route path="/review" element={<ReviewPage />} />
+            <Route path="/reviews" element={<ReviewPage />} />
             <Route path="/listings" element={<ListingPage />} />
             <Route path="/listings/:id" element={<ListingDetailsPage />} />
             <Route path="/profile/:userId" element={<PublicProfilePage />} />

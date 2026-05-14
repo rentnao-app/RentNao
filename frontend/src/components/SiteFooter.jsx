@@ -26,8 +26,8 @@ export default function SiteFooter() {
             <Link to="/services" className="hover:text-white transition">
               Services
             </Link>
-            <Link to="/listings" className="hover:text-white transition">
-              Listings
+            <Link to="/review" className="hover:text-white transition">
+              Reviews
             </Link>
           </div>
         </div>

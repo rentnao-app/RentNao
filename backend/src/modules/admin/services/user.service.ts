@@ -381,8 +381,11 @@ export async function restoreUser(userId: string) {
 export async function forceKycStatus(userId: string, status: string, reason: string) {
   const result = await db.query(
     `UPDATE "User"
-     SET kyc_verification_status = $1, 
-         onboarding_status = CASE WHEN $1 = 'APPROVED' THEN 'COMPLETED' ELSE onboarding_status END,
+     SET kyc_verification_status = $1::"KycVerificationStatus",
+         onboarding_status = CASE
+           WHEN $1::text = 'APPROVED' THEN 'COMPLETED'::"OnboardingStatus"
+           ELSE onboarding_status
+         END,
          updated_at = NOW()
      WHERE user_id = $2
      RETURNING kyc_verification_status, onboarding_status`,
