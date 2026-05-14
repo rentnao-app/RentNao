@@ -5,6 +5,7 @@ import {
   testimonialResponseSchema,
   getTestimonialsQuerySchema,
   testimonialStatusSchema,
+  myTestimonialStatusResponseSchema,
 } from '../schemas';
 
 const errorResponseSchema = z.object({
@@ -33,12 +34,35 @@ export const listTestimonialsRoute = createRoute({
   },
 });
 
+export const getMyTestimonialStatusRoute = createRoute({
+  method: 'get',
+  path: '/me',
+  tags: ['Testimonials'],
+  summary: 'Whether the current user has submitted a testimonial',
+  description: 'Used by the home page CTA so users who already reviewed are not prompted again.',
+  responses: {
+    200: {
+      description: 'Status returned',
+      content: {
+        'application/json': {
+          schema: myTestimonialStatusResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: 'Unauthorized',
+      content: { 'application/json': { schema: errorResponseSchema } },
+    },
+  },
+  security: [{ bearerAuth: [] }],
+});
+
 export const createTestimonialRoute = createRoute({
   method: 'post',
   path: '/',
   tags: ['Testimonials'],
   summary: 'Submit a testimonial',
-  description: 'Submit a new testimonial for review.',
+  description: 'Submit or update your testimonial. It appears on the public list immediately.',
   request: {
     body: {
       content: {

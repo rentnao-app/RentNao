@@ -3,7 +3,16 @@ import { Link, useLocation } from 'react-router-dom';
 import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from './BrandLogoLink';
 import NotificationBell from './NotificationBell';
 import UserMenu from './UserMenu';
-import { getCurrentUser, getUserRole, isLoggedIn, logout } from '../lib/api';
+import {
+  AUTH_UPDATE_EVENT,
+  getCurrentUser,
+  getUserDisplayName,
+  getUserInitials,
+  getUserRole,
+  isLoggedIn,
+  logout,
+} from '../lib/api';
+import { useProfilePhotoDownloadUrl } from '../hooks/useProfilePhotoDownloadUrl';
 import { formatWalletAmount, useWalletBalance } from '../lib/walletBalance';
 
 /**
@@ -14,7 +23,18 @@ import { formatWalletAmount, useWalletBalance } from '../lib/walletBalance';
 export default function AppHeader({ variant = 'app' }) {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const user = useMemo(() => getCurrentUser(), []);
+  const [user, setUser] = useState(() => getCurrentUser());
+
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const onAuth = () => setUser(getCurrentUser());
+    window.addEventListener(AUTH_UPDATE_EVENT, onAuth);
+    return () => window.removeEventListener(AUTH_UPDATE_EVENT, onAuth);
+  }, []);
+
   const loggedIn = isLoggedIn();
   const role = getUserRole(user);
 
@@ -38,8 +58,11 @@ export default function AppHeader({ variant = 'app' }) {
   }, [drawerOpen]);
 
   const navItems = useMemo(() => buildNav(role, loggedIn), [role, loggedIn]);
-  const userName = displayName(user);
+  const userName = getUserDisplayName(user);
   const userEmail = user?.contactEmail || user?.contact_email || user?.email || '';
+  const userInitials = getUserInitials(user);
+  const profileAvatarUrl = useProfilePhotoDownloadUrl(loggedIn ? user : null);
+
   const containerClass =
     variant === 'wide'
       ? 'mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8'
@@ -66,7 +89,13 @@ export default function AppHeader({ variant = 'app' }) {
             {loggedIn ? (
               <>
                 <NotificationBell />
-                <UserMenu name={userName} email={userEmail} role={role} />
+                <UserMenu
+                  name={userName}
+                  email={userEmail}
+                  role={role}
+                  initials={userInitials}
+                  avatarUrl={profileAvatarUrl}
+                />
               </>
             ) : (
               <div className="hidden sm:flex items-center gap-2">
@@ -337,14 +366,6 @@ function isActive(item, pathname) {
   if (!item?.to) return false;
   if (item.to === '/') return pathname === '/';
   return pathname === item.to || pathname.startsWith(`${item.to}/`);
-}
-
-function displayName(user) {
-  const fn = user?.profile?.firstName;
-  const ln = user?.profile?.lastName;
-  const full = [fn, ln].filter(Boolean).join(' ').trim();
-  if (full) return full;
-  return user?.username || user?.contactEmail || user?.contact_email || user?.email || '';
 }
 
 function roleLabel(role) {

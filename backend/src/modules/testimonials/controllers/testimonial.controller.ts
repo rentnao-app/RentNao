@@ -2,6 +2,7 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import { AppError } from '@/errors/base';
 import {
   listTestimonialsRoute,
+  getMyTestimonialStatusRoute,
   createTestimonialRoute,
   listAllTestimonialsAdminRoute,
   updateTestimonialStatusRoute,
@@ -17,6 +18,16 @@ export function registerPublicTestimonialRoutes(app: OpenAPIHono) {
 }
 
 export function registerPrivateTestimonialRoutes(app: OpenAPIHono<any, any, any>) {
+  app.openapi(getMyTestimonialStatusRoute, async (c: any) => {
+    const user = c.get('user' as any);
+    const userId = user?.userId;
+    if (!userId) {
+      return c.json({ success: false, error: 'User context missing' }, 401);
+    }
+    const hasReview = await testimonialService.hasUserSubmittedTestimonial(userId);
+    return c.json({ success: true, data: { hasReview } }, 200);
+  });
+
   app.openapi(createTestimonialRoute, async (c: any) => {
     const body = c.req.valid('json');
     const user = c.get('user' as any);

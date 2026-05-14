@@ -2,14 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { logout } from '../lib/api';
 
-function initialsFromName(name) {
-  const parts = String(name || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  if (parts.length === 1 && parts[0].length) return parts[0].slice(0, 2).toUpperCase();
-  return '?';
+function isHttpUrl(s) {
+  if (!s || typeof s !== 'string') return false;
+  return /^https?:\/\//i.test(s.trim());
 }
 
 function dashboardPathFor(role) {
@@ -32,12 +27,19 @@ function roleLabel(role) {
  *  - name: display name (string)
  *  - email: optional secondary line (string)
  *  - role: 'OWNER' | 'TENANT' | 'ADMIN'
+ *  - initials: two-letter (or similar) fallback when no photo
+ *  - avatarUrl: optional presigned HTTPS URL for profile photo
  */
-export default function UserMenu({ name = '', email = '', role = '' }) {
+export default function UserMenu({ name = '', email = '', role = '', initials = '?', avatarUrl = '' }) {
   const [open, setOpen] = useState(false);
+  const [imgErr, setImgErr] = useState(false);
   const wrapRef = useRef(null);
-  const initials = initialsFromName(name || email);
   const dashboardHref = dashboardPathFor(role);
+  const showPhoto = isHttpUrl(avatarUrl) && !imgErr;
+
+  useEffect(() => {
+    setImgErr(false);
+  }, [avatarUrl]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -62,13 +64,25 @@ export default function UserMenu({ name = '', email = '', role = '' }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="grid h-9 w-9 place-items-center rounded-full bg-emerald-700 text-xs font-semibold text-white shadow-sm ring-2 ring-white/0 transition hover:ring-emerald-200 focus:outline-none focus:ring-emerald-300 sm:h-10 sm:w-10 sm:text-sm"
+        className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-emerald-700 text-xs font-semibold text-white shadow-sm ring-2 ring-white/0 transition hover:ring-emerald-200 focus:outline-none focus:ring-emerald-300 sm:h-10 sm:w-10 sm:text-sm"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Open user menu"
         title={name || 'Account'}
       >
-        {initials}
+        {showPhoto ? (
+          <img
+            key={avatarUrl}
+            src={avatarUrl}
+            alt=""
+            decoding="async"
+            referrerPolicy="no-referrer"
+            className="h-full w-full min-h-0 min-w-0 rounded-full object-cover"
+            onError={() => setImgErr(true)}
+          />
+        ) : (
+          <span className="leading-none">{initials}</span>
+        )}
       </button>
 
       {open && (

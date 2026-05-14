@@ -44,5 +44,12 @@ export const testimonialListResponseSchema = z.object({
   }).optional(),
 });
 
+export const myTestimonialStatusResponseSchema = z.object({
+  success: z.boolean().openapi({ example: true }),
+  data: z.object({
+    hasReview: z.boolean().openapi({ example: false }),
+  }),
+});
+
 export type CreateTestimonialInput = z.infer<typeof createTestimonialSchema>;
 export type GetTestimonialsQueryInput = z.infer<typeof getTestimonialsQuerySchema>;

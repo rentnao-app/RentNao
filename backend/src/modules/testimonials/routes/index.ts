@@ -1,5 +1,6 @@
 export {
   listTestimonialsRoute,
+  getMyTestimonialStatusRoute,
   createTestimonialRoute,
   listAllTestimonialsAdminRoute,
   updateTestimonialStatusRoute,

@@ -8,20 +8,36 @@ export function getApiUrl() {
   return API_URL;
 }
 
+export const AUTH_UPDATE_EVENT = 'rentnao-auth-update';
+
+function notifyAuthListeners() {
+  try {
+    window.dispatchEvent(new CustomEvent(AUTH_UPDATE_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function setAuthSession({ accessToken, refreshToken, user }) {
   if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+  notifyAuthListeners();
 }
 
 export function clearAuthSession() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  notifyAuthListeners();
 }
 
 export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function getRefreshToken() {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 export function getCurrentUser() {
@@ -39,6 +55,40 @@ export function getUserId(user) {
 
 export function getUserRole(user) {
   return user?.role || user?.userRole || null;
+}
+
+/** Display name for header / menus (login payload often omits nested profile). */
+export function getUserDisplayName(user) {
+  if (!user) return '';
+  const p = user.profile || {};
+  const fn = p.firstName ?? p.first_name;
+  const ln = p.lastName ?? p.last_name;
+  const full = [fn, ln].filter(Boolean).join(' ').trim();
+  if (full) return full;
+  return (
+    user.username ||
+    user.contactEmail ||
+    user.contact_email ||
+    user.contactPhone ||
+    user.contact_phone ||
+    user.email ||
+    ''
+  );
+}
+
+/** Two-letter avatar fallback when no photo URL is available. */
+export function getUserInitials(user) {
+  const label = getUserDisplayName(user);
+  if (label) {
+    const digits = String(label).replace(/\D/g, '');
+    if (digits.length >= 11) return digits.slice(-2);
+    const parts = String(label).trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    if (parts.length === 1 && parts[0].length) return parts[0].slice(0, 2).toUpperCase();
+  }
+  const phone = String(user?.contactPhone || user?.contact_phone || '').replace(/\D/g, '');
+  if (phone.length >= 2) return phone.slice(-2);
+  return '?';
 }
 
 export function isLoggedIn() {
