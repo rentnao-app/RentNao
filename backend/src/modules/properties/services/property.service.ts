@@ -2,6 +2,7 @@ import { db } from '@/db/client';
 import { storage } from '@/db/s3';
 import { AppError } from '@/errors/base';
 import { assertPaidActionAndDebit } from '@/modules/wallet/services';
+import { createConversationOnUnlock } from '@/modules/conversations';
 import type {
   AdminListingsQueryInput,
   CreatePropertyImageInput,
@@ -944,10 +945,19 @@ export async function unlockListingForTenant(userId: string, role: string, listi
     );
 
     if (existingUnlockResult.rows.length > 0) {
+      // Look up existing conversation for idempotent response
+      const existingConvResult = await client.query(
+        `SELECT c.id FROM "Conversation" c
+         JOIN "Listing" l ON l.property_id = c.property_id
+         WHERE l.listing_id = $1 AND c.tenant_user_id = $2
+         LIMIT 1`,
+        [listingId, userId]
+      );
       await client.query('COMMIT');
       return {
         listingId,
         unlockId: existingUnlockResult.rows[0].id,
+        conversationId: existingConvResult.rows[0]?.id || null,
         isUnlocked: true,
         alreadyUnlocked: true,
         unlockRequiredFields: [] as Array<'address' | 'exactLat' | 'exactLng' | 'owner'>,
@@ -971,11 +981,28 @@ export async function unlockListingForTenant(userId: string, role: string, listi
       [unlockId, listingId, userId, paid.chargeId]
     );
 
+    // Auto-create conversation: resolve owner and property from listing
+    const ownerResult = await client.query(
+      `SELECT o.user_id AS owner_user_id, l.property_id
+       FROM "Listing" l
+       JOIN "Property" p ON p.property_id = l.property_id
+       JOIN "OwnerProfile" o ON o.owner_id = p.owner_id
+       WHERE l.listing_id = $1`,
+      [listingId]
+    );
+    const ownerUserId = ownerResult.rows[0].owner_user_id;
+    const propertyId = ownerResult.rows[0].property_id;
+
+    const conversationId = await createConversationOnUnlock(
+      client, userId, propertyId, ownerUserId
+    );
+
     await client.query('COMMIT');
 
     return {
       listingId,
       unlockId,
+      conversationId,
       isUnlocked: true,
       alreadyUnlocked: false,
       unlockRequiredFields: [] as Array<'address' | 'exactLat' | 'exactLng' | 'owner'>,

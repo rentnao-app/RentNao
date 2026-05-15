@@ -150,3 +150,8 @@ export type TopupStatusType = z.infer<typeof TopupStatus>;
 
 export const ChargeStatus = z.enum(['PENDING', 'SETTLED', 'FAILED', 'VOID']);
 export type ChargeStatusType = z.infer<typeof ChargeStatus>;
+
+// Chat Enums
+
+export const ConversationStatus = z.enum(['PENDING', 'ACCEPTED', 'CLOSED']);
+export type ConversationStatusType = z.infer<typeof ConversationStatus>;

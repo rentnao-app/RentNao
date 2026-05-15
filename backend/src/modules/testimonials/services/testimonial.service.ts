@@ -1,15 +1,11 @@
 import { db } from '@/db/client';
 import { AppError } from '@/errors/base';
+import { sanitizeHtml } from '@/utils/sanitize';
 import type { TestimonialStatus } from '@prisma/client';
 import type { CreateTestimonialInput, GetTestimonialsQueryInput } from '../schemas';
 
 function createId() {
   return crypto.randomUUID();
-}
-
-function sanitizeHtml(content: string) {
-  // Basic HTML tag stripping to prevent XSS
-  return content.replace(/<[^>]*>?/gm, '');
 }
 
 function checkPii(content: string) {

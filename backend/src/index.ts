@@ -7,6 +7,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { Scalar } from '@scalar/hono-api-reference';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { upgradeWebSocket, websocket } from 'hono/bun';
 import { env } from '@/config/env';
 import { defaultValidationHook } from '@/config/openapi';
 import { errorHandler } from '@/middlewares/error-handler';
@@ -25,6 +26,8 @@ import wishlists from '@/modules/wishlist';
 import rentalRequests from '@/modules/rental-requests';
 import notifications from '@/modules/notifications';
 import testimonials from '@/modules/testimonials';
+import conversations from '@/modules/conversations';
+import { chatWebSocketHandler } from '@/modules/conversations/ws/ws-handler';
 import { bearerAuth } from 'hono/bearer-auth';
 
 const app = new OpenAPIHono({
@@ -68,6 +71,10 @@ app.route('/wishlists', wishlists);
 app.route('/requests', rentalRequests);
 app.route('/notifications', notifications);
 app.route('/testimonials', testimonials);
+app.route('/conversations', conversations);
+
+// WebSocket endpoint for real-time chat and notifications
+app.get('/ws', upgradeWebSocket(chatWebSocketHandler));
 
 app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
   type: 'http',
@@ -125,6 +132,10 @@ app.doc('/openapi.json', {
     {
       name: 'Testimonials',
       description: 'User feedback and platform testimonials',
+    },
+    {
+      name: 'Conversations',
+      description: 'Listing-based chat conversations and real-time messaging',
     },
     {
       name: 'Admin - User Management',
@@ -258,4 +269,5 @@ process.once('SIGTERM', () => {
 export default {
   port,
   fetch: app.fetch,
+  websocket,
 };
