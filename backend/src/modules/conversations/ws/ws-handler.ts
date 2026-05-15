@@ -1,7 +1,11 @@
 /**
  * WebSocket handler for real-time chat and notifications
  *
- * Connection: ws://host/ws?token=<JWT>
+ * Connection flow (ticket-based auth):
+ *   1. Client calls POST /conversations/ws-ticket (with Bearer JWT)
+ *   2. Server returns { ticket: "abc-123" } (valid for 30 seconds, single-use)
+ *   3. Client connects: ws://host/ws?ticket=abc-123
+ *   4. Server consumes ticket from Redis, authenticates user
  *
  * Client → Server:
  *   { type: "join",    conversationId: string }
@@ -18,7 +22,6 @@
  */
 
 import type { WSContext, WSMessageReceive } from 'hono/ws';
-import { verifyAccessToken } from '@/security/jwt';
 import { db } from '@/db/client';
 import {
   addConnection,
@@ -29,46 +32,106 @@ import {
   pushToUser,
   isUserInRoom,
 } from './ws-registry';
+import { consumeWsTicket } from './ws-ticket';
 import { sendMessage } from '../services/conversation.service';
 import { createNotification } from '@/modules/notifications/notifications.service';
 
 // Re-export pushToUser for use by notification service
 export { pushToUser } from './ws-registry';
 
-// ============================================================================
+
+// Rate Limiting (in-memory sliding window per user per conversation)
+
+const MESSAGE_RATE_WINDOW_MS = 10_000; // 10 seconds
+const MESSAGE_RATE_MAX = 10;           // max 10 messages per window
+
+// userId → { conversationId → timestamp[] }
+const messageTimestamps = new Map<string, Map<string, number[]>>();
+
+function isRateLimited(userId: string, conversationId: string): boolean {
+  const now = Date.now();
+  const cutoff = now - MESSAGE_RATE_WINDOW_MS;
+
+  let userMap = messageTimestamps.get(userId);
+  if (!userMap) {
+    userMap = new Map();
+    messageTimestamps.set(userId, userMap);
+  }
+
+  let timestamps = userMap.get(conversationId);
+  if (!timestamps) {
+    timestamps = [];
+    userMap.set(conversationId, timestamps);
+  }
+
+  // Prune expired timestamps
+  const filtered = timestamps.filter(t => t > cutoff);
+  userMap.set(conversationId, filtered);
+
+  if (filtered.length >= MESSAGE_RATE_MAX) {
+    return true;
+  }
+
+  filtered.push(now);
+  return false;
+}
+
+// Clean up rate limit data when connection drops
+function cleanupRateLimitData(userId: string): void {
+  messageTimestamps.delete(userId);
+}
+
+
+// Input Validation
+
+const MAX_ID_LENGTH = 128;
+const MAX_CONTENT_LENGTH = 2000;
+
+function isValidId(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= MAX_ID_LENGTH;
+}
+
+
 // WebSocket Handler Factory (used by upgradeWebSocket)
-// ============================================================================
 
 /**
  * Creates WebSocket event handlers for a connection.
  * Called by Hono's upgradeWebSocket middleware.
+ *
+ * Authentication is now ticket-based:
+ *   ws://host/ws?ticket=<single-use-ticket>
+ * The ticket is consumed from Redis on connection open.
  */
 export function chatWebSocketHandler(c: any) {
-  // Extract JWT token from query param
+  // Extract ticket from query param (NOT a JWT — single-use, short-lived)
   const url = new URL(c.req.url);
-  const token = url.searchParams.get('token');
+  const ticket = url.searchParams.get('ticket');
 
   let userId: string | null = null;
 
   return {
-    onOpen(_event: Event, ws: WSContext) {
-      if (!token) {
-        sendError(ws, 'AUTH_REQUIRED', 'Missing token query parameter');
-        ws.close(1008, 'Missing token');
+    async onOpen(_event: Event, ws: WSContext) {
+      if (!ticket) {
+        sendError(ws, 'AUTH_REQUIRED', 'Missing ticket query parameter. Call POST /conversations/ws-ticket first.');
+        ws.close(1008, 'Missing ticket');
         return;
       }
 
       try {
-        const payload = verifyAccessToken(token);
-        userId = payload.userId;
+        // Consume the ticket (single-use — deleted from Redis on first read)
+        const ticketData = await consumeWsTicket(ticket);
+        if (!ticketData) {
+          sendError(ws, 'AUTH_FAILED', 'Invalid or expired ticket. Request a new one via POST /conversations/ws-ticket.');
+          ws.close(1008, 'Invalid ticket');
+          return;
+        }
+
+        userId = ticketData.userId;
         addConnection(userId, ws);
-        console.log(`[WS] User ${userId} connected`);
+        console.log(`[WS] User ${userId} connected (ticket auth)`);
       } catch (err: any) {
-        const reason = err.message?.includes('expired')
-          ? 'Token expired'
-          : 'Invalid token';
-        sendError(ws, 'AUTH_FAILED', reason);
-        ws.close(1008, reason);
+        sendError(ws, 'AUTH_FAILED', 'Ticket verification failed');
+        ws.close(1008, 'Auth failed');
       }
     },
 
@@ -78,6 +141,13 @@ export function chatWebSocketHandler(c: any) {
       let data: any;
       try {
         const raw = typeof event.data === 'string' ? event.data : event.data.toString();
+
+        // Guard against excessively large payloads
+        if (raw.length > MAX_CONTENT_LENGTH + 500) {
+          sendError(ws, 'PAYLOAD_TOO_LARGE', 'Message payload exceeds maximum size');
+          return;
+        }
+
         data = JSON.parse(raw);
       } catch {
         sendError(ws, 'INVALID_JSON', 'Could not parse message as JSON');
@@ -111,6 +181,7 @@ export function chatWebSocketHandler(c: any) {
     onClose(_event: CloseEvent, ws: WSContext) {
       if (userId) {
         console.log(`[WS] User ${userId} disconnected`);
+        cleanupRateLimitData(userId);
         removeConnection(ws);
       }
     },
@@ -118,19 +189,19 @@ export function chatWebSocketHandler(c: any) {
     onError(event: Event, ws: WSContext) {
       console.error(`[WS] Error for user ${userId}:`, event);
       if (userId) {
+        cleanupRateLimitData(userId);
         removeConnection(ws);
       }
     },
   };
 }
 
-// ============================================================================
-// Message Handlers
-// ============================================================================
 
-async function handleJoin(userId: string, conversationId: string | undefined, ws: WSContext) {
-  if (!conversationId) {
-    sendError(ws, 'MISSING_FIELD', 'conversationId is required');
+// Message Handlers
+
+async function handleJoin(userId: string, conversationId: unknown, ws: WSContext) {
+  if (!isValidId(conversationId)) {
+    sendError(ws, 'INVALID_INPUT', 'conversationId must be a non-empty string');
     return;
   }
 
@@ -164,9 +235,9 @@ async function handleJoin(userId: string, conversationId: string | undefined, ws
   }));
 }
 
-function handleLeave(conversationId: string | undefined, ws: WSContext) {
-  if (!conversationId) {
-    sendError(ws, 'MISSING_FIELD', 'conversationId is required');
+function handleLeave(conversationId: unknown, ws: WSContext) {
+  if (!isValidId(conversationId)) {
+    sendError(ws, 'INVALID_INPUT', 'conversationId must be a non-empty string');
     return;
   }
 
@@ -180,16 +251,26 @@ function handleLeave(conversationId: string | undefined, ws: WSContext) {
 
 async function handleMessage(
   userId: string,
-  conversationId: string | undefined,
-  content: string | undefined,
+  conversationId: unknown,
+  content: unknown,
   ws: WSContext
 ) {
-  if (!conversationId) {
-    sendError(ws, 'MISSING_FIELD', 'conversationId is required');
+  if (!isValidId(conversationId)) {
+    sendError(ws, 'INVALID_INPUT', 'conversationId must be a non-empty string');
     return;
   }
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
     sendError(ws, 'MISSING_FIELD', 'content is required and must be non-empty');
+    return;
+  }
+  if (content.length > MAX_CONTENT_LENGTH) {
+    sendError(ws, 'PAYLOAD_TOO_LARGE', `content cannot exceed ${MAX_CONTENT_LENGTH} characters`);
+    return;
+  }
+
+  // Rate limit check
+  if (isRateLimited(userId, conversationId)) {
+    sendError(ws, 'RATE_LIMITED', 'You are sending messages too fast. Please slow down.');
     return;
   }
 
@@ -224,12 +305,15 @@ async function handleMessage(
         : conv.tenant_user_id;
 
       if (!isUserInRoom(conversationId, recipientId)) {
-        // Recipient is not actively viewing this conversation — send notification
-        // (createNotification will also push via WebSocket if they're connected)
+        // Use SANITIZED content from the service response, not raw input
+        const preview = message.content.length > 100
+          ? message.content.substring(0, 100) + '...'
+          : message.content;
+
         await createNotification(
           recipientId,
           'New message',
-          content.length > 100 ? content.substring(0, 100) + '...' : content,
+          preview,
           {
             conversation_id: conversationId,
             sender_user_id: userId,
@@ -243,9 +327,8 @@ async function handleMessage(
   }
 }
 
-// ============================================================================
+
 // Helpers
-// ============================================================================
 
 function sendError(ws: WSContext, code: string, reason: string) {
   try {

@@ -29,25 +29,27 @@ export async function createConversationOnUnlock(
   propertyId: string,
   ownerUserId: string
 ): Promise<string> {
-  // Idempotency: check if conversation already exists
-  const existing = await client.query(
-    `SELECT id FROM "Conversation"
-     WHERE property_id = $1 AND tenant_user_id = $2
-     LIMIT 1`,
-    [propertyId, tenantUserId]
-  );
-
-  if (existing.rows.length > 0) {
-    return existing.rows[0].id as string;
-  }
-
+  // Idempotent upsert: INSERT ON CONFLICT prevents duplicate conversation race condition
   const conversationId = createId();
-  await client.query(
+  const upsertResult = await client.query(
     `INSERT INTO "Conversation" (
       id, property_id, tenant_user_id, owner_user_id, status, created_at
-    ) VALUES ($1, $2, $3, $4, 'PENDING', NOW())`,
+    ) VALUES ($1, $2, $3, $4, 'PENDING', NOW())
+    ON CONFLICT (property_id, tenant_user_id) DO NOTHING
+    RETURNING id`,
     [conversationId, propertyId, tenantUserId, ownerUserId]
   );
+
+  // If ON CONFLICT fired, the row already exists — fetch the existing ID
+  if (upsertResult.rows.length === 0) {
+    const existing = await client.query(
+      `SELECT id FROM "Conversation"
+       WHERE property_id = $1 AND tenant_user_id = $2
+       LIMIT 1`,
+      [propertyId, tenantUserId]
+    );
+    return existing.rows[0].id as string;
+  }
 
   // Resolve property title for notification
   const propResult = await client.query(
@@ -100,12 +102,17 @@ export async function acceptConversation(
 
   const expiresAt = computeExpiresAt(new Date(), CONVERSATION_TTL_DAYS);
 
-  await db.query(
+  // Optimistic concurrency: only update if status is still PENDING
+  const updateResult = await db.query(
     `UPDATE "Conversation"
      SET status = 'ACCEPTED', expires_at = $1, updated_at = NOW()
-     WHERE id = $2`,
+     WHERE id = $2 AND status = 'PENDING'`,
     [expiresAt, conversationId]
   );
+
+  if (updateResult.rowCount === 0) {
+    throw new AppError(409, 'Conversation state has changed. Please refresh.');
+  }
 
   // Notify tenant
   const propResult = await db.query(
@@ -157,12 +164,17 @@ export async function closeConversation(
   }
 
   const now = new Date();
-  await db.query(
+  // Optimistic concurrency: only close if status hasn't changed since we read it
+  const updateResult = await db.query(
     `UPDATE "Conversation"
      SET status = 'CLOSED', closed_at = $1, closed_by = $2, updated_at = $1
-     WHERE id = $3`,
-    [now, userId, conversationId]
+     WHERE id = $3 AND status = $4`,
+    [now, userId, conversationId, conv.status]
   );
+
+  if (updateResult.rowCount === 0) {
+    throw new AppError(409, 'Conversation state has changed. Please refresh.');
+  }
 
   // Notify the other party
   const otherUserId = userId === conv.tenant_user_id ? conv.owner_user_id : conv.tenant_user_id;
@@ -352,54 +364,7 @@ export async function sendMessage(
   conversationId: string,
   content: string
 ): Promise<MessageType> {
-  const conv = await getConversationRow(conversationId);
-
-  if (!conv) {
-    throw new AppError(404, 'Conversation not found');
-  }
-
-  // Access check
-  if (conv.tenant_user_id !== userId && conv.owner_user_id !== userId) {
-    throw new AppError(403, 'You are not a participant in this conversation');
-  }
-
-  // Status check
-  if (conv.status === 'CLOSED') {
-    throw new AppError(403, 'This conversation has been closed');
-  }
-
-  // Expiry check (query-time enforcement)
-  if (conv.status === 'ACCEPTED' && isExpired(conv.expires_at)) {
-    // Lazily close
-    await db.query(
-      `UPDATE "Conversation"
-       SET status = 'CLOSED', closed_at = expires_at, closed_by = NULL, updated_at = NOW()
-       WHERE id = $1 AND status = 'ACCEPTED'`,
-      [conversationId]
-    );
-    throw new AppError(403, 'This conversation has expired');
-  }
-
-  // One-message gate for PENDING conversations
-  if (conv.status === 'PENDING') {
-    // Only tenant can send the first message
-    if (userId !== conv.tenant_user_id) {
-      throw new AppError(403, 'Accept the conversation before sending a message');
-    }
-
-    const msgCountResult = await db.query(
-      `SELECT COUNT(*)::int AS count
-       FROM "Message"
-       WHERE conversation_id = $1 AND sender_user_id = $2`,
-      [conversationId, userId]
-    );
-
-    if (msgCountResult.rows[0].count >= 1) {
-      throw new AppError(403, 'Waiting for the owner to accept the conversation');
-    }
-  }
-
-  // Content filter
+  // Content filter (run BEFORE acquiring locks to fail fast)
   const filterResult = detectBlockedContent(content);
   if (filterResult.blocked) {
     throw new AppError(400, filterResult.reason || 'Message contains blocked content');
@@ -416,30 +381,103 @@ export async function sendMessage(
     throw new AppError(400, 'Message cannot exceed 2000 characters');
   }
 
-  // Persist
-  const messageId = createId();
-  await db.query(
-    `INSERT INTO "Message" (id, conversation_id, sender_user_id, content, created_at)
-     VALUES ($1, $2, $3, $4, NOW())`,
-    [messageId, conversationId, userId, sanitizedContent]
-  );
+  // Use a transaction with row-level lock to prevent race conditions
+  // (especially the one-message gate bypass via rapid parallel requests)
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
 
-  // Fetch the inserted message (to get the server-set created_at)
-  const msgResult = await db.query(
-    `SELECT id, conversation_id, sender_user_id, content, created_at
-     FROM "Message" WHERE id = $1`,
-    [messageId]
-  );
+    // Lock the conversation row to serialize concurrent sends
+    const convResult = await client.query(
+      `SELECT id, property_id, tenant_user_id, owner_user_id,
+              status, expires_at, created_at, updated_at,
+              closed_at, closed_by
+       FROM "Conversation"
+       WHERE id = $1
+       FOR UPDATE`,
+      [conversationId]
+    );
 
-  const msg = msgResult.rows[0];
+    if (convResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      throw new AppError(404, 'Conversation not found');
+    }
 
-  return {
-    messageId: msg.id,
-    conversationId: msg.conversation_id,
-    senderId: msg.sender_user_id,
-    content: msg.content,
-    createdAt: msg.created_at.toISOString(),
-  };
+    const conv = convResult.rows[0];
+
+    // Access check
+    if (conv.tenant_user_id !== userId && conv.owner_user_id !== userId) {
+      await client.query('ROLLBACK');
+      throw new AppError(403, 'You are not a participant in this conversation');
+    }
+
+    // Status check
+    if (conv.status === 'CLOSED') {
+      await client.query('ROLLBACK');
+      throw new AppError(403, 'This conversation has been closed');
+    }
+
+    // Expiry check (query-time enforcement)
+    if (conv.status === 'ACCEPTED' && isExpired(conv.expires_at)) {
+      // Lazily close within the same transaction
+      await client.query(
+        `UPDATE "Conversation"
+         SET status = 'CLOSED', closed_at = expires_at, closed_by = NULL, updated_at = NOW()
+         WHERE id = $1 AND status = 'ACCEPTED'`,
+        [conversationId]
+      );
+      await client.query('COMMIT');
+      throw new AppError(403, 'This conversation has expired');
+    }
+
+    // One-message gate for PENDING conversations (now race-safe due to FOR UPDATE lock)
+    if (conv.status === 'PENDING') {
+      // Only tenant can send the first message
+      if (userId !== conv.tenant_user_id) {
+        await client.query('ROLLBACK');
+        throw new AppError(403, 'Accept the conversation before sending a message');
+      }
+
+      const msgCountResult = await client.query(
+        `SELECT COUNT(*)::int AS count
+         FROM "Message"
+         WHERE conversation_id = $1 AND sender_user_id = $2`,
+        [conversationId, userId]
+      );
+
+      if (msgCountResult.rows[0].count >= 1) {
+        await client.query('ROLLBACK');
+        throw new AppError(403, 'Waiting for the owner to accept the conversation');
+      }
+    }
+
+    // Persist with RETURNING to avoid a second round trip
+    const messageId = createId();
+    const msgResult = await client.query(
+      `INSERT INTO "Message" (id, conversation_id, sender_user_id, content, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       RETURNING id, conversation_id, sender_user_id, content, created_at`,
+      [messageId, conversationId, userId, sanitizedContent]
+    );
+
+    await client.query('COMMIT');
+
+    const msg = msgResult.rows[0];
+
+    return {
+      messageId: msg.id,
+      conversationId: msg.conversation_id,
+      senderId: msg.sender_user_id,
+      content: msg.content,
+      createdAt: msg.created_at.toISOString(),
+    };
+  } catch (err) {
+    // Only rollback if it's not already committed/rolled back
+    try { await client.query('ROLLBACK'); } catch { /* already done */ }
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 /**

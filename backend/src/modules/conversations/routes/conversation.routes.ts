@@ -166,3 +166,30 @@ export const sendMessageRoute = createRoute({
     ...errorResponse(404, 'Conversation not found'),
   },
 });
+
+// POST /conversations/ws-ticket
+export const createWsTicketRoute = createRoute({
+  method: 'post',
+  path: '/ws-ticket',
+  tags: [TAG],
+  summary: 'Generate a WebSocket ticket',
+  description: 'Generates a single-use, 30-second ticket for authenticating a WebSocket connection. Use the ticket in the query string: ws://host/ws?ticket=<ticket>',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    201: {
+      description: 'Ticket issued',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean().openapi({ example: true }),
+            data: z.object({
+              ticket: z.string().openapi({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' }),
+            }),
+            message: z.string().optional(),
+          }),
+        },
+      },
+    },
+    ...errorResponse(401, 'Unauthorized'),
+  },
+});

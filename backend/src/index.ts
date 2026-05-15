@@ -28,6 +28,8 @@ import notifications from '@/modules/notifications';
 import testimonials from '@/modules/testimonials';
 import conversations from '@/modules/conversations';
 import { chatWebSocketHandler } from '@/modules/conversations/ws/ws-handler';
+import { startHeartbeat, stopHeartbeat } from '@/modules/conversations/ws/ws-registry';
+import { startScheduledJobs, stopScheduledJobs } from '@/jobs/scheduler';
 import { bearerAuth } from 'hono/bearer-auth';
 
 const app = new OpenAPIHono({
@@ -205,6 +207,10 @@ connectRedis()
     if (!healthy) {
       process.exit(1);
     }
+
+    // Start WebSocket heartbeat and scheduled jobs after Redis is ready
+    startHeartbeat();
+    startScheduledJobs();
   })
   .catch((err) => {
     console.error('Redis connection failed:', err.message);
@@ -237,6 +243,10 @@ const gracefulShutdown = async (signal: string) => {
 
   isShuttingDown = true;
   console.log(`\n[App] ${signal} received, shutting down...`);
+
+  // Stop background tasks first
+  stopHeartbeat();
+  stopScheduledJobs();
 
   const [dbResult, redisResult] = await Promise.allSettled([
     closeDbConnection(),

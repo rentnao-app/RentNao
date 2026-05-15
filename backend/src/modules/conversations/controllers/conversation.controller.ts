@@ -7,6 +7,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { requireAuth } from '@/security/middlewares/auth';
 import * as routes from '../routes/conversation.routes';
 import * as service from '../services/conversation.service';
+import { createWsTicket } from '../ws/ws-ticket';
 
 const app = new OpenAPIHono();
 
@@ -97,6 +98,18 @@ app.openapi(routes.sendMessageRoute, async (c) => {
   return c.json({
     success: true,
     data: message,
+  }, 201);
+});
+
+// POST /conversations/ws-ticket — Generate a single-use WebSocket ticket
+app.openapi(routes.createWsTicketRoute, async (c) => {
+  const user = c.get('user');
+  const ticket = await createWsTicket(user.userId, user.role);
+
+  return c.json({
+    success: true,
+    data: { ticket },
+    message: 'WebSocket ticket issued. Use within 30 seconds.',
   }, 201);
 });
 

@@ -14,6 +14,11 @@
  * - conversationRooms maps conversationId → Set<userId>
  * - A userId is removed from a room only when ALL their connections have left
  *   (tracked via wsRooms: per-connection set of joined conversationIds)
+ *
+ * Heartbeat:
+ * - Server pings all connections every HEARTBEAT_INTERVAL_MS
+ * - If a connection fails to respond (ws.send throws), it is force-removed
+ * - Prevents ghost connections from accumulating in memory
  */
 
 import type { WSContext } from 'hono/ws';
@@ -30,9 +35,8 @@ const wsToUser = new Map<WSContext, string>();
 // WSContext → Set of conversationIds this specific connection has joined
 const wsRooms = new Map<WSContext, Set<string>>();
 
-// ============================================================================
+
 // Connection Management
-// ============================================================================
 
 export function addConnection(userId: string, ws: WSContext): void {
   // Add to user connections
@@ -82,9 +86,8 @@ export function isUserOnline(userId: string): boolean {
   return !!connections && connections.size > 0;
 }
 
-// ============================================================================
+
 // Room Management
-// ============================================================================
 
 export function joinRoom(conversationId: string, userId: string, ws: WSContext): void {
   // Add userId to room
@@ -142,9 +145,8 @@ export function leaveRoom(conversationId: string, ws: WSContext): void {
   leaveRoomInternal(conversationId, userId, ws);
 }
 
-// ============================================================================
+
 // Messaging
-// ============================================================================
 
 /**
  * Broadcast a payload to all participants in a conversation room,
@@ -169,7 +171,7 @@ export function broadcastToRoom(
         try {
           ws.send(message);
         } catch {
-          // Connection may have died — will be cleaned up on next ping/close
+          // Connection may have died — will be cleaned up by heartbeat
         }
       }
     }
@@ -191,7 +193,7 @@ export function pushToUser(userId: string, payload: unknown): void {
     try {
       ws.send(message);
     } catch {
-      // Swallow — dead connections will be cleaned up on close event
+      // Swallow — dead connections will be cleaned up by heartbeat
     }
   }
 }
@@ -202,4 +204,57 @@ export function pushToUser(userId: string, payload: unknown): void {
 export function isUserInRoom(conversationId: string, userId: string): boolean {
   const room = conversationRooms.get(conversationId);
   return !!room && room.has(userId);
+}
+
+
+// Heartbeat (server-initiated ping to detect dead connections)
+
+const HEARTBEAT_INTERVAL_MS = 30_000; // 30 seconds
+const PING_PAYLOAD = JSON.stringify({ type: 'ping' });
+
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Start the heartbeat interval. Should be called once at server startup.
+ * Iterates all connected WebSockets and sends a ping.
+ * If ws.send() throws, the connection is dead and gets removed.
+ */
+export function startHeartbeat(): void {
+  if (heartbeatTimer) return; // already running
+
+  heartbeatTimer = setInterval(() => {
+    const deadConnections: WSContext[] = [];
+
+    for (const [ws] of wsToUser) {
+      try {
+        ws.send(PING_PAYLOAD);
+      } catch {
+        // Send failed — connection is dead
+        deadConnections.push(ws);
+      }
+    }
+
+    // Clean up dead connections outside the iteration
+    for (const ws of deadConnections) {
+      console.log(`[WS Heartbeat] Removing dead connection for user: ${wsToUser.get(ws)}`);
+      removeConnection(ws);
+    }
+
+    if (deadConnections.length > 0) {
+      console.log(`[WS Heartbeat] Cleaned up ${deadConnections.length} dead connection(s). Active: ${wsToUser.size}`);
+    }
+  }, HEARTBEAT_INTERVAL_MS);
+
+  console.log(`[WS Heartbeat] Started (interval: ${HEARTBEAT_INTERVAL_MS / 1000}s)`);
+}
+
+/**
+ * Stop the heartbeat interval. Called during graceful shutdown.
+ */
+export function stopHeartbeat(): void {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+    console.log('[WS Heartbeat] Stopped');
+  }
 }
