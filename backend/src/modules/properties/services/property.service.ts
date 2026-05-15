@@ -352,6 +352,9 @@ export async function createListingForProperty(
         referenceId: listingId,
         walletTxnType: 'LISTING_FEE',
         description: `Listing creation fee for property ${propertyId}`,
+        referenceData: {
+          rent: Number(input.rent),
+        },
       });
     }
 
@@ -464,6 +467,8 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
     minRent,
     maxRent,
     roomCount,
+    minRoomCount,
+    propertyCategory,
     bathroomCount,
     intendedTenantType,
     sortBy = 'createdAt',
@@ -473,6 +478,8 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
   const conditions = [`l.listing_status = 'ACTIVE'`];
   const params: any[] = [];
   let idx = 1;
+
+  const ownerJoin = `LEFT JOIN "OwnerProfile" op ON op.owner_id = p.owner_id`;
 
   if (areaName) {
     conditions.push(`p.area_name = $${idx++}`);
@@ -486,9 +493,13 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
     conditions.push(`l.rent <= $${idx++}`);
     params.push(maxRent);
   }
-  if (roomCount !== undefined) {
+  if (roomCount !== undefined && minRoomCount === undefined) {
     conditions.push(`p.room_count = $${idx++}`);
     params.push(roomCount);
+  }
+  if (minRoomCount !== undefined) {
+    conditions.push(`p.room_count >= $${idx++}`);
+    params.push(minRoomCount);
   }
   if (bathroomCount !== undefined) {
     conditions.push(`p.bathroom_count = $${idx++}`);
@@ -498,6 +509,11 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
     conditions.push(`p.intended_tenant_type = $${idx++}`);
     params.push(intendedTenantType);
   }
+  if (propertyCategory === 'RESIDENTIAL') {
+    conditions.push(`(op.owner_category = 'RESIDENTIAL' OR op.owner_category IS NULL)`);
+  } else if (propertyCategory === 'COMMERCIAL') {
+    conditions.push(`op.owner_category = 'COMMERCIAL'`);
+  }
 
   const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
@@ -505,6 +521,7 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
     `SELECT COUNT(*)::int AS total
      FROM "Listing" l
      JOIN "Property" p ON p.property_id = l.property_id
+     ${ownerJoin}
      ${whereClause}`,
     params
   );
@@ -544,6 +561,7 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
       pi.storage_path AS primary_image_path
      FROM "Listing" l
      JOIN "Property" p ON p.property_id = l.property_id
+     ${ownerJoin}
      LEFT JOIN "PropertyImage" pi ON pi.property_id = p.property_id AND pi.is_primary = true
      ${whereClause}
      ORDER BY ${orderColumn} ${orderDirection}

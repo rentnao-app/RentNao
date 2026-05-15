@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { apiFetch, getApiErrorMessage, getCurrentUser, getUserId, isLoggedIn, logout } from '../lib/api';
 import { listOwnerIncomingRequests, reviewOwnerRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
-import NotificationBell from '../components/NotificationBell';
+import AppHeader from '../components/AppHeader';
 
 function Icon({ path, className = 'h-5 w-5' }) {
   return (
@@ -16,7 +16,7 @@ function Icon({ path, className = 'h-5 w-5' }) {
 }
 
 function formatBdt(n) {
-  if (n == null || Number.isNaN(Number(n))) return '—';
+  if (n == null || Number.isNaN(Number(n))) return '-';
   try {
     return new Intl.NumberFormat('en-BD', {
       style: 'currency',
@@ -99,6 +99,44 @@ const FILTER_OPTIONS = [
   { value: 'ACTIVE', label: 'Active only' },
 ];
 
+function getKycProgress(status) {
+  const key = String(status || '').toUpperCase();
+  if (key === 'APPROVED' || key === 'ACCEPTED') {
+    return {
+      label: 'Verified',
+      width: 'w-full',
+      bar: 'bg-emerald-600',
+      track: 'bg-emerald-100',
+      hint: 'Your account is fully verified.',
+    };
+  }
+  if (key === 'SUBMITTED' || key === 'UNDER_REVIEW') {
+    return {
+      label: 'Under review',
+      width: 'w-2/3',
+      bar: 'bg-amber-500',
+      track: 'bg-amber-100',
+      hint: 'Documents submitted. Review usually takes 24-48 hours.',
+    };
+  }
+  if (key === 'REJECTED') {
+    return {
+      label: 'Rejected',
+      width: 'w-1/3',
+      bar: 'bg-red-500',
+      track: 'bg-red-100',
+      hint: 'Please re-upload the requested documents.',
+    };
+  }
+  return {
+    label: 'Pending',
+    width: 'w-1/3',
+    bar: 'bg-amber-500',
+    track: 'bg-amber-100',
+    hint: 'Complete verification to unlock all features.',
+  };
+}
+
 function SidebarLink({ to, label, iconPath, active, onNavigate }) {
   return (
     <Link
@@ -132,34 +170,9 @@ export default function OwnerDashboard() {
   const [incoming, setIncoming] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [propertyFilter, setPropertyFilter] = useState('ALL');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [reviewingId, setReviewingId] = useState(null);
   /** `d:propertyId` | `p:propertyId:listingId` | `r:propertyId:listingId` */
   const [propertyBusyKey, setPropertyBusyKey] = useState(null);
-
-  const closeDrawer = useCallback(() => setMobileMenuOpen(false), []);
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (!mobileMenuOpen) return undefined;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [mobileMenuOpen]);
-
-  useEffect(() => {
-    if (!mobileMenuOpen) return undefined;
-    const onKey = (e) => {
-      if (e.key === 'Escape') setMobileMenuOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [mobileMenuOpen]);
 
   const loadOwnerListingIds = useCallback(async () => {
     try {
@@ -278,7 +291,7 @@ export default function OwnerDashboard() {
       setPropertyBusyKey(`p:${propertyId}:${listingId}`);
       try {
         await patchListingStatus(propertyId, listingId, 'UNLISTED');
-        toast.success('Listing paused — hidden from search');
+        toast.success('Listing paused - hidden from search');
         await refreshDashboard();
       } catch (e) {
         toast.error(e?.message || 'Pause failed');
@@ -367,7 +380,7 @@ export default function OwnerDashboard() {
 
   const previewProperties = useMemo(() => filteredProperties.slice(0, 4), [filteredProperties]);
 
-  /** Properties with no live (ACTIVE) listing — paused, draft-only, or no listing yet. */
+  /** Properties with no live (ACTIVE) listing - paused, draft-only, or no listing yet. */
   const inactivePropertiesAll = useMemo(() => {
     return properties.filter((p) => {
       const listings = p.listings || [];
@@ -377,7 +390,6 @@ export default function OwnerDashboard() {
   }, [properties]);
 
   const welcomeName = displayName(user);
-  const avatarLetter = initialsFromName(welcomeName);
 
   const pathActive = (prefix, exact) => {
     if (exact) return location.pathname === prefix;
@@ -388,15 +400,9 @@ export default function OwnerDashboard() {
     { to: '/owner-dashboard', label: 'Dashboard', icon: 'M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z', exact: true },
     { to: '/owner-dashboard/my-properties', label: 'My Properties', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
     { to: '/owner-dashboard/requests', label: 'Tenant Requests', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
-    { to: '/wallet', label: 'Payments', icon: 'M17 9V7a4 4 0 10-8 0v2m-2 0h12a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2z' },
+    { to: '/wallet', label: 'Wallet and Payments', icon: 'M17 9V7a4 4 0 10-8 0v2m-2 0h12a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2z' },
     { to: '/account', label: 'Settings', icon: 'M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.94L14.4 2.7a.5.5 0 0 0-.49-.4h-3.82a.5.5 0 0 0-.49.4L9.25 5.32c-.57.23-1.11.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.03.31-.05.63-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.52.4 1.06.71 1.63.94l.35 2.62a.5.5 0 0 0 .49.4h3.82a.5.5 0 0 0 .49-.4l.35-2.62c.57-.23 1.11-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 3.5-3.5A3.5 3.5 0 0 1 12 15.5z' },
     { to: '/faq', label: 'Support', icon: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm.1 15.5a1.4 1.4 0 1 1 1.4-1.4 1.4 1.4 0 0 1-1.4 1.4zM14.2 11c-.9.7-1.4 1.1-1.4 2v.3h-1.6v-.4c0-1.4.8-2.1 1.7-2.8.7-.5 1.2-.9 1.2-1.5a1.7 1.7 0 0 0-3.3-.6l-1.6-.4a3.3 3.3 0 1 1 6.5 1c0 1.4-.8 2-1.5 2.4z' },
-  ];
-
-  const centerNav = [
-    { to: '/', label: 'Home' },
-    { to: '/owner-dashboard/create-listing', label: 'List Your Property' },
-    { to: '/services', label: 'Services' },
   ];
 
   const handleReview = async (item, decision) => {
@@ -409,7 +415,7 @@ export default function OwnerDashboard() {
       }
       addLocalNotification({
         title: decision === 'ACCEPT' ? 'Request approved' : 'Request rejected',
-        message: `Listing #${item.listingId} — ${item.tenant?.name || 'Tenant'}.`,
+        message: `Listing #${item.listingId} - ${item.tenant?.name || 'Tenant'}.`,
         url: '/owner-dashboard/requests',
         type: 'REQUEST',
       });
@@ -425,7 +431,7 @@ export default function OwnerDashboard() {
       <div className="flex min-h-screen items-center justify-center bg-[#f2f7f3]">
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-emerald-700" />
-          <p className="text-sm font-medium text-gray-600">Loading your dashboard…</p>
+          <p className="text-sm font-medium text-gray-600">Loading your dashboard</p>
         </div>
       </div>
     );
@@ -433,89 +439,10 @@ export default function OwnerDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f2f7f3] text-gray-800">
-      <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white">
-        <div className="max-w-[1500px] mx-auto px-4 sm:px-6">
-          <div className="flex items-center gap-2 py-2.5 sm:gap-3 sm:py-3">
-            <button
-              type="button"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-gray-200 text-gray-600 transition hover:bg-gray-50 lg:hidden"
-              aria-label="Open menu"
-              onClick={() => setMobileMenuOpen((v) => !v)}
-            >
-              <Icon className="h-4 w-4" path="M4 7h16M4 12h16M4 17h16" />
-            </button>
-
-            <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5" onClick={closeDrawer}>
-              <img
-                src="/logo.jpg"
-                alt="Rent Nao"
-                className="h-8 w-8 shrink-0 rounded-md border border-green-100 object-cover sm:h-9 sm:w-9"
-              />
-              <span className="truncate text-base font-semibold text-[#2f8444] sm:text-xl sm:tracking-tight">
-                Rent Nao
-              </span>
-            </Link>
-
-            <nav
-              className="mx-auto hidden min-w-0 flex-1 items-center justify-center gap-0.5 px-2 md:flex lg:gap-1"
-              aria-label="Primary"
-            >
-              {centerNav.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className="rounded-lg px-2 py-2 text-sm font-medium text-gray-700 transition hover:bg-emerald-50/80 hover:text-emerald-800 sm:px-3"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-
-            <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <NotificationBell />
-              <div
-                className="grid h-8 w-8 place-items-center rounded-full bg-emerald-700 text-xs font-semibold text-white shadow-sm sm:h-9 sm:w-9 sm:text-sm"
-                title={welcomeName}
-              >
-                {avatarLetter}
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-100 pb-2 md:hidden">
-            <nav
-              className="flex w-full snap-x snap-mandatory gap-1 overflow-x-auto pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              aria-label="Primary mobile"
-            >
-              {centerNav.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  onClick={closeDrawer}
-                  className="snap-start shrink-0 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-emerald-50/80"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </div>
-      </header>
+      <AppHeader variant="wide" />
 
       <div className="mx-auto w-full max-w-[1500px] lg:flex">
-        {mobileMenuOpen ? (
-          <div
-            className="fixed inset-0 z-30 bg-black/30 lg:hidden"
-            onClick={closeDrawer}
-            aria-hidden="true"
-          />
-        ) : null}
-
-        <aside
-          className={`fixed inset-y-0 left-0 z-40 flex h-screen w-[min(270px,88vw)] max-w-[270px] flex-col overflow-y-auto overscroll-contain border-r border-emerald-100 bg-[#f4f8f5] transition-transform duration-200 ease-out ${
-            mobileMenuOpen ? 'translate-x-0 shadow-[4px_0_24px_rgba(30,71,50,0.08)]' : '-translate-x-full'
-          } lg:static lg:translate-x-0 lg:h-auto lg:w-72 lg:max-w-none lg:shrink-0 lg:shadow-none`}
-        >
+        <aside className="hidden lg:block lg:w-72 lg:max-w-none lg:shrink-0 border-r border-emerald-100 bg-[#f4f8f5]">
           <div className="flex min-h-0 flex-col">
             <nav className="p-4 space-y-1.5" aria-label="Owner sidebar">
               {sideLinks.map((item) => (
@@ -525,7 +452,6 @@ export default function OwnerDashboard() {
                   label={item.label}
                   iconPath={item.icon}
                   active={pathActive(item.to, item.exact)}
-                  onNavigate={closeDrawer}
                 />
               ))}
             </nav>
@@ -534,22 +460,26 @@ export default function OwnerDashboard() {
           <div className="px-4 pb-5">
             <button
               type="button"
-              onClick={() => {
-                closeDrawer();
-                logout();
-              }}
+              onClick={() => logout()}
               className="w-full rounded-xl bg-red-50 text-red-600 border border-red-100 py-2.5 text-sm font-semibold hover:bg-red-100 transition"
             >
               Logout
             </button>
-            <div className="mt-4 rounded-2xl border border-emerald-100 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-gray-500">Profile Status</p>
-              <p className="mt-1 text-sm font-medium text-gray-800">{user?.kycVerificationStatus || 'PENDING'}</p>
-              <div className="mt-3 h-2 rounded-full bg-emerald-100">
-                <div className="h-2 w-2/3 rounded-full bg-emerald-600" />
-              </div>
-              <p className="mt-2 text-xs text-gray-500">Keep profile updated for better trust.</p>
-            </div>
+            {(() => {
+              const kyc = getKycProgress(user?.kycVerificationStatus);
+              return (
+                <div className="mt-4 rounded-2xl border border-emerald-100 bg-white p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Profile Status</p>
+                  <p className="mt-1 text-sm font-semibold text-gray-800">{kyc.label}</p>
+                  <div className={`mt-3 h-2 rounded-full ${kyc.track}`} aria-hidden>
+                    <div
+                      className={`h-2 rounded-full ${kyc.bar} ${kyc.width} transition-[width] duration-500`}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">{kyc.hint}</p>
+                </div>
+              );
+            })()}
           </div>
         </aside>
 
@@ -592,38 +522,51 @@ export default function OwnerDashboard() {
               </div>
             </section>
 
-            {/* lg+: properties cols 1–7; requests row 1 + payments row 2 in cols 8–12 */}
+            {/* lg+: properties cols 1-7; requests row 1 + payments row 2 in cols 8-12 */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:grid-rows-[auto_auto] lg:gap-5 lg:gap-x-6">
               <section className="flex min-h-0 flex-col rounded-2xl border border-emerald-100/80 bg-white shadow-sm lg:col-span-7 lg:col-start-1 lg:row-span-2 lg:row-start-1">
-                <div className="flex flex-col gap-4 border-b border-slate-100/90 bg-gradient-to-r from-slate-50/50 to-white px-4 pb-4 pt-4 sm:p-5 md:flex-row md:flex-wrap md:items-center md:gap-x-5 md:gap-y-2 lg:gap-x-6">
-                  <h2 className="shrink-0 text-lg font-bold tracking-tight text-slate-900">My Properties</h2>
-                  <label className="flex w-full max-w-full items-center justify-between gap-3 rounded-lg border border-slate-200/80 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm md:w-auto md:max-w-[14rem] md:justify-start md:shadow-sm">
-                    <span className="shrink-0 font-medium text-slate-500">Filter</span>
-                    <select
-                      value={propertyFilter}
-                      onChange={(e) => setPropertyFilter(e.target.value)}
-                      className="min-w-0 flex-1 rounded-md border-0 bg-transparent py-0.5 text-sm font-medium text-slate-900 focus:ring-0 md:max-w-[10rem]"
-                    >
-                      {FILTER_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="flex w-full flex-col gap-2.5 max-md:pt-0.5 md:w-auto md:flex-row md:flex-wrap md:items-center md:gap-3">
-                    <Link
-                      to="/owner-dashboard/my-properties"
-                      className="inline-flex min-h-[40px] items-center justify-center rounded-lg px-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50/80 hover:text-emerald-900 md:min-h-0 md:px-2"
-                    >
-                      View all
-                    </Link>
-                    <Link
-                      to="/owner-dashboard/create-listing"
-                      className="inline-flex min-h-[44px] w-full items-center justify-center whitespace-nowrap rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 md:min-h-0 md:w-auto md:py-2"
-                    >
-                      List new property
-                    </Link>
+                <div className="border-b border-slate-100/90 bg-gradient-to-r from-slate-50/50 to-white px-4 pb-4 pt-4 sm:p-5">
+                  <div className="flex flex-col gap-3">
+                    <h2 className="text-center text-xl font-bold tracking-tight text-slate-900">My Properties</h2>
+
+                    <div className="flex w-full items-center justify-center gap-2 pt-1 flex-nowrap">
+                      <label className="relative w-[7.75rem] shrink-0 sm:w-[8.5rem]">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden>
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 5h18M6 12h12m-9 7h6" />
+                          </svg>
+                        </span>
+                        <select
+                          value={propertyFilter}
+                          onChange={(e) => setPropertyFilter(e.target.value)}
+                          className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-8 pr-8 text-xs font-semibold text-slate-800 shadow-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 sm:h-11 sm:pl-9 sm:pr-10 sm:text-sm sm:font-medium"
+                          aria-label="Filter properties"
+                        >
+                          {FILTER_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 sm:right-3" aria-hidden>
+                          <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.174l3.71-3.944a.75.75 0 111.08 1.04l-4.25 4.52a.75.75 0 01-1.08 0l-4.25-4.52a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                          </svg>
+                        </span>
+                      </label>
+                      <Link
+                        to="/owner-dashboard/my-properties"
+                        className="inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50/60 px-2.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100/70 hover:text-emerald-900 sm:px-3 sm:text-sm"
+                      >
+                        View all
+                      </Link>
+                      <Link
+                        to="/owner-dashboard/create-listing"
+                        className="inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-emerald-700 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800 sm:px-4 sm:text-sm"
+                      >
+                        List property
+                      </Link>
+                    </div>
                   </div>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3 sm:px-4 sm:pb-5 sm:pt-4 lg:px-5 lg:pb-6">
@@ -657,12 +600,16 @@ export default function OwnerDashboard() {
                           >
                             <div className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-500/0 via-emerald-500/40 to-teal-500/0 opacity-0 transition group-hover:opacity-100" />
                             <div className="flex flex-col gap-3 px-3.5 pb-4 pt-3.5 sm:flex-row sm:items-stretch sm:gap-5 sm:p-4">
-                              <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:aspect-auto sm:h-auto sm:w-36 sm:min-h-[7.5rem]">
+                              <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/80 sm:h-auto sm:w-40 sm:min-h-[7.75rem]">
                                 {src ? (
-                                  <img src={src} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
+                                  <img
+                                    src={src}
+                                    alt={property.title || 'Property'}
+                                    className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.02]"
+                                  />
                                 ) : (
-                                  <div className="flex h-full min-h-[5.5rem] items-center justify-center text-xs font-medium text-slate-400 sm:min-h-[7rem]">
-                                    No photo
+                                  <div className="flex h-full items-center justify-center text-xs font-medium text-slate-500">
+                                    No photo yet
                                   </div>
                                 )}
                               </div>
@@ -695,7 +642,7 @@ export default function OwnerDashboard() {
                                     <p className="mt-1.5 text-sm font-medium text-slate-400">No listing yet</p>
                                   )}
                                 </div>
-                                <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-50/90 p-2 ring-1 ring-slate-100 sm:flex sm:flex-wrap sm:justify-end sm:gap-2 sm:p-1.5">
+                                <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-50/90 p-2 ring-1 ring-slate-100 sm:flex sm:flex-wrap sm:justify-end sm:gap-2 sm:p-1.5 md:grid md:grid-cols-3 md:justify-stretch md:p-2 lg:flex lg:flex-wrap lg:justify-end lg:p-1.5">
                                   <Link
                                     to={viewTo}
                                     className="flex min-h-[42px] items-center justify-center rounded-lg bg-white px-2 text-center text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 sm:min-h-0 sm:px-3 sm:py-2"
@@ -715,7 +662,7 @@ export default function OwnerDashboard() {
                                       onClick={() => handlePauseListing(property.propertyId, toPause.listingId)}
                                       className="flex min-h-[42px] items-center justify-center rounded-lg bg-amber-50 px-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200/80 transition hover:bg-amber-100 disabled:opacity-50 sm:min-h-0 sm:px-3 sm:py-2"
                                     >
-                                      {rowBusy && propertyBusyKey?.startsWith('p:') ? 'Pausing…' : 'Pause'}
+                                      {rowBusy && propertyBusyKey?.startsWith('p:') ? 'Pausing...' : 'Pause'}
                                     </button>
                                   ) : null}
                                   {toResume ? (
@@ -725,7 +672,7 @@ export default function OwnerDashboard() {
                                       onClick={() => handleResumeListing(property.propertyId, toResume.listingId)}
                                       className="flex min-h-[42px] items-center justify-center rounded-lg bg-white px-2 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-50/80 disabled:opacity-50 sm:min-h-0 sm:px-3 sm:py-2"
                                     >
-                                      {rowBusy && propertyBusyKey?.startsWith('r:') ? 'Resuming…' : 'Resume'}
+                                      {rowBusy && propertyBusyKey?.startsWith('r:') ? 'Resuming...' : 'Resume'}
                                     </button>
                                   ) : null}
                                   <Link
@@ -738,9 +685,9 @@ export default function OwnerDashboard() {
                                     type="button"
                                     disabled={!!propertyBusyKey}
                                     onClick={() => handleDeleteProperty(property.propertyId)}
-                                    className="col-span-2 flex min-h-[42px] items-center justify-center rounded-lg bg-white px-2 text-xs font-semibold text-red-600 ring-1 ring-red-100 transition hover:bg-red-50 disabled:opacity-50 sm:col-span-1 sm:min-h-0 sm:bg-transparent sm:px-3 sm:py-2 sm:ring-0"
+                                    className="flex min-h-[42px] items-center justify-center rounded-lg bg-white px-2 text-xs font-semibold text-red-600 ring-1 ring-red-100 transition hover:bg-red-50 disabled:opacity-50 sm:min-h-0 sm:bg-transparent sm:px-3 sm:py-2 sm:ring-0"
                                   >
-                                    {propertyBusyKey === `d:${property.propertyId}` ? 'Deleting…' : 'Delete'}
+                                    {propertyBusyKey === `d:${property.propertyId}` ? 'Deleting...' : 'Delete'}
                                   </button>
                                 </div>
                               </div>
@@ -789,7 +736,7 @@ export default function OwnerDashboard() {
                                   item.tenant?.name || 'Tenant'
                                 )}
                               </p>
-                              <p className="truncate text-xs text-gray-500">{item.tenant?.phone || item.tenant?.email || '—'}</p>
+                              <p className="truncate text-xs text-gray-500">{item.tenant?.phone || item.tenant?.email || '-'}</p>
                               <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(item.requestedAt)}</p>
                               <Link
                                 to={`/listings/${item.listingId}`}
@@ -812,7 +759,7 @@ export default function OwnerDashboard() {
                               onClick={() => handleReview(item, 'ACCEPT')}
                               className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
                             >
-                              {reviewingId === item.requestId ? '…' : 'Approve'}
+                              {reviewingId === item.requestId ? '...' : 'Approve'}
                             </button>
                             <button
                               type="button"
@@ -854,7 +801,7 @@ export default function OwnerDashboard() {
                               {txn.description || txn.type || 'Transaction'}
                             </p>
                             <p className="mt-0.5 text-xs text-gray-500">
-                              {txn.type} · {txn.status || '—'}
+                              {txn.type} - {txn.status || '-'}
                             </p>
                             <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(txn.createdAt)}</p>
                           </div>
@@ -880,4 +827,5 @@ export default function OwnerDashboard() {
     </div>
   );
 }
+
 

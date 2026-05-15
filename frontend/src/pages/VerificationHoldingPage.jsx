@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+﻿import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, clearAuthSession, getCurrentUser } from '../lib/api';
 
 function normalizeStatus(status) {
@@ -89,12 +91,19 @@ export default function VerificationHoldingPage() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [reviewedAt, setReviewedAt] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
+  const navigate = useNavigate();
   const user = useMemo(() => getCurrentUser(), []);
   const dashboardHref = dashboardPathForRole(user?.role);
+  const verificationHref = user?.role ? `/verification?role=${encodeURIComponent(user.role)}` : '/verification';
 
-  const fetchDocuments = async () => {
+  // Track previous status so we can detect the moment it transitions to APPROVED
+  const previousStatusRef = useRef(null);
+  const approvalHandledRef = useRef(false);
+
+  const fetchDocuments = useCallback(async () => {
     try {
       const currentUser = getCurrentUser();
       if (!currentUser?.userId) {
@@ -111,6 +120,7 @@ export default function VerificationHoldingPage() {
         setSubmissionStatus(submission?.status || '');
         setRejectionReason(submission?.rejectionReason || '');
         setReviewedAt(submission?.reviewedAt || '');
+        setError('');
       } else {
         setError('Could not fetch your documents');
       }
@@ -119,13 +129,46 @@ export default function VerificationHoldingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const handleManualRefresh = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await fetchDocuments();
+      toast.success('Status refreshed', { duration: 1500 });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchDocuments, refreshing]);
 
   useEffect(() => {
     fetchDocuments();
     const interval = setInterval(fetchDocuments, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchDocuments]);
+
+  // Detect transition into APPROVED/ACCEPTED and notify + redirect to role dashboard
+  useEffect(() => {
+    if (!submissionStatus) return;
+    const current = normalizeStatus(submissionStatus);
+    const previous = previousStatusRef.current;
+    const isNowApproved = current === 'APPROVED' || current === 'ACCEPTED';
+    const wasPreviouslyOther =
+      previous !== null && previous !== 'APPROVED' && previous !== 'ACCEPTED';
+
+    if (isNowApproved && wasPreviouslyOther && !approvalHandledRef.current) {
+      approvalHandledRef.current = true;
+      toast.success('You are verified! Redirecting to your dashboard...', { duration: 2500 });
+      const timer = setTimeout(() => {
+        navigate(dashboardHref);
+      }, 2500);
+      previousStatusRef.current = current;
+      return () => clearTimeout(timer);
+    }
+
+    previousStatusRef.current = current;
+  }, [submissionStatus, navigate, dashboardHref]);
 
   const handleLogout = () => {
     clearAuthSession();
@@ -141,7 +184,7 @@ export default function VerificationHoldingPage() {
       <div className="min-h-screen bg-[#f4f7f5] flex items-center justify-center px-4">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="h-12 w-12 rounded-full border-2 border-emerald-200 border-t-emerald-700 animate-spin" aria-hidden />
-          <p className="text-sm text-gray-600">Checking your verification status…</p>
+          <p className="text-sm text-gray-600">Checking your verification status...</p>
         </div>
       </div>
     );
@@ -205,17 +248,14 @@ export default function VerificationHoldingPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f7f5]">
-      <header className="bg-white border-b border-emerald-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Link to="/" className="flex items-center gap-2.5 min-w-0">
-            <img src="/logo.jpg" alt="Rent Nao" className="h-9 w-9 sm:h-10 sm:w-10 rounded-md object-cover border border-emerald-100 shrink-0" />
-            <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-emerald-800 tracking-tight truncate">Rent Nao</span>
-          </Link>
+      <header className="bg-white border-b border-emerald-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 flex items-center justify-between gap-3">
+          <BrandLogoLink className="min-w-0" />
 
           <button
             type="button"
             onClick={handleLogout}
-            className="self-start sm:self-auto text-sm font-semibold text-red-600 hover:text-red-700 transition px-1"
+            className="text-sm font-semibold text-red-600 hover:text-red-700 transition px-1 shrink-0"
           >
             Logout
           </button>
@@ -257,12 +297,12 @@ export default function VerificationHoldingPage() {
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/10 hover:bg-emerald-800 transition text-center w-full sm:w-auto"
                 >
                   Go to dashboard
-                  <span aria-hidden>→</span>
+                  <span aria-hidden>{'->'}</span>
                 </Link>
               )}
               {phase === 'idle' && (
                 <Link
-                  to="/verification"
+                  to={verificationHref}
                   className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 transition w-full sm:w-auto text-center"
                 >
                   Upload documents
@@ -270,7 +310,7 @@ export default function VerificationHoldingPage() {
               )}
               {phase === 'rejected' && (
                 <Link
-                  to="/verification"
+                  to={verificationHref}
                   className="inline-flex items-center justify-center rounded-xl bg-red-700 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800 transition w-full sm:w-auto text-center"
                 >
                   Update &amp; resubmit
@@ -292,10 +332,11 @@ export default function VerificationHoldingPage() {
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Submitted documents</h2>
               <button
                 type="button"
-                onClick={() => window.location.reload()}
-                className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition self-start sm:self-auto"
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition self-start sm:self-auto disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Refresh
+                {refreshing ? 'Refreshing...' : 'Refresh'}
               </button>
             </div>
 
@@ -303,7 +344,7 @@ export default function VerificationHoldingPage() {
               <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/40 p-6 sm:p-8 text-center">
                 <p className="text-gray-600 mb-4 text-sm sm:text-base">You haven&apos;t uploaded any documents for this submission yet.</p>
                 <Link
-                  to="/verification"
+                  to={verificationHref}
                   className="inline-flex items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-3 text-sm sm:text-base transition w-full max-w-xs mx-auto"
                 >
                   Upload documents
@@ -341,13 +382,14 @@ export default function VerificationHoldingPage() {
             <div className="mt-5 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => window.location.reload()}
-                className="min-h-[44px] rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition"
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="min-h-[44px] rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Refresh status
+                {refreshing ? 'Refreshing...' : 'Refresh status'}
               </button>
               <Link
-                to="/verification"
+                to={verificationHref}
                 className="min-h-[44px] rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-800 transition flex items-center justify-center text-center"
               >
                 Re-upload
@@ -376,7 +418,7 @@ export default function VerificationHoldingPage() {
                 {phase === 'processing' && (
                   <>
                     Status: <span className="font-bold text-amber-900">{currentSubmissionMeta.label}</span>
-                    <span className="block mt-1 text-xs text-gray-600">Verification is in process. Typical review time is 24–48 hours.</span>
+                    <span className="block mt-1 text-xs text-gray-600">Verification is in process. Typical review time is 24-48 hours.</span>
                   </>
                 )}
                 {phase === 'rejected' && (
@@ -444,7 +486,7 @@ export default function VerificationHoldingPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                    Verification usually takes 24–48 hours.
+                    Verification usually takes 24 to 48 hours.
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
@@ -481,7 +523,7 @@ export default function VerificationHoldingPage() {
               <svg className="w-5 h-5 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              <span className="font-medium">Verified — thank you for completing identity verification.</span>
+              <span className="font-medium">Verified - thank you for completing identity verification.</span>
             </>
           ) : (
             <>
@@ -496,4 +538,5 @@ export default function VerificationHoldingPage() {
     </div>
   );
 }
+
 

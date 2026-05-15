@@ -75,6 +75,53 @@ users.openapi(routes.getProfileStatusRoute, async (c) => {
 });
 
 /**
+ * POST /users/{userId}/profile-photo/upload-url
+ * Get presigned upload URL for profile photo
+ */
+users.openapi(routes.getProfilePhotoUploadUrlRoute, async (c) => {
+  const { userId } = c.req.valid('param');
+  const authUser = c.get('user');
+  const body = c.req.valid('json');
+
+  if (authUser.userId !== userId) {
+    throw new AppError(403, 'You can only upload a profile photo for your own account');
+  }
+
+  const presigned = await profileService.getProfilePhotoUploadUrl(userId, body);
+
+  return c.json(
+    {
+      success: true,
+      data: presigned,
+    },
+    200
+  );
+});
+
+/**
+ * GET /users/{userId}/profile-photo/download-url
+ * Get presigned download URL for profile photo
+ */
+users.openapi(routes.getProfilePhotoDownloadUrlRoute, async (c) => {
+  const { userId } = c.req.valid('param');
+  const authUser = c.get('user');
+
+  if (authUser.userId !== userId && authUser.role !== 'ADMIN') {
+    throw new AppError(403, 'You can only access your own profile photo');
+  }
+
+  const presigned = await profileService.getProfilePhotoDownloadUrl(userId);
+
+  return c.json(
+    {
+      success: true,
+      data: presigned,
+    },
+    200
+  );
+});
+
+/**
  * POST /users/{userId}/profile
  * Create user profile (tenant or owner)
  */

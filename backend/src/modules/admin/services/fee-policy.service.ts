@@ -14,7 +14,11 @@ function mapFeePolicyRow(row: any) {
     version: row.version,
     name: row.name,
     currency: row.currency,
-    baseAmount: row.base_amount.toString(),
+    fixedAmount: row.fixed_amount != null ? row.fixed_amount.toString() : null,
+    percentage: row.percentage != null ? row.percentage.toString() : null,
+    percentBaseField: row.percent_base_field ?? null,
+    minAmount: row.min_amount != null ? row.min_amount.toString() : null,
+    maxAmount: row.max_amount != null ? row.max_amount.toString() : null,
     isActive: row.is_active,
     effectiveFrom: row.effective_from instanceof Date ? row.effective_from.toISOString() : new Date(row.effective_from).toISOString(),
     effectiveTo: row.effective_to
@@ -57,7 +61,9 @@ export async function listFeePolicies(query: ListFeePoliciesQuery) {
 
   params.push(limit, offset);
   const listResult = await db.query(
-    `SELECT id, code, version, name, currency, base_amount, is_active, effective_from, effective_to, created_by, created_at
+    `SELECT id, code, version, name, currency,
+            fixed_amount, percentage, percent_base_field, min_amount, max_amount,
+            is_active, effective_from, effective_to, created_by, created_at
      FROM "FeePolicy"
      ${whereClause}
      ORDER BY code ASC, version DESC
@@ -73,7 +79,9 @@ export async function listFeePolicies(query: ListFeePoliciesQuery) {
 
 export async function getFeePolicyById(feePolicyId: string) {
   const result = await db.query(
-    `SELECT id, code, version, name, currency, base_amount, is_active, effective_from, effective_to, created_by, created_at
+    `SELECT id, code, version, name, currency,
+            fixed_amount, percentage, percent_base_field, min_amount, max_amount,
+            is_active, effective_from, effective_to, created_by, created_at
      FROM "FeePolicy"
      WHERE id = $1`,
     [feePolicyId]
@@ -108,21 +116,46 @@ export async function createFeePolicy(input: CreateFeePolicyInput, adminUserId: 
       throw new AppError(400, 'effectiveTo must be later than effectiveFrom');
     }
 
+    const fixedAmount = typeof input.fixedAmount === 'number' ? input.fixedAmount : null;
+
+    if (typeof input.percentage === 'number' && !input.percentBaseField) {
+      throw new AppError(400, 'percentBaseField is required when percentage is provided');
+    }
+
+    if (
+      typeof input.minAmount === 'number' &&
+      typeof input.maxAmount === 'number' &&
+      input.minAmount > input.maxAmount
+    ) {
+      throw new AppError(400, 'minAmount cannot be greater than maxAmount');
+    }
+
     const feePolicyId = createCuidLikeId();
 
     const createResult = await client.query(
       `INSERT INTO "FeePolicy" (
-        id, code, version, name, currency, base_amount, is_active,
-        effective_from, effective_to, created_by, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-      RETURNING id, code, version, name, currency, base_amount, is_active, effective_from, effective_to, created_by, created_at`,
+        id, code, version, name, currency,
+        fixed_amount, percentage, percent_base_field, min_amount, max_amount,
+        is_active, effective_from, effective_to, created_by, created_at
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, NOW()
+      )
+      RETURNING id, code, version, name, currency,
+                fixed_amount, percentage, percent_base_field, min_amount, max_amount,
+                is_active, effective_from, effective_to, created_by, created_at`,
       [
         feePolicyId,
         input.code,
         nextVersion,
         input.name,
         input.currency.toUpperCase(),
-        input.baseAmount,
+        fixedAmount,
+        input.percentage ?? null,
+        input.percentBaseField ?? null,
+        input.minAmount ?? null,
+        input.maxAmount ?? null,
         input.isActive,
         effectiveFrom,
         effectiveTo,
@@ -151,7 +184,7 @@ export async function createFeePolicy(input: CreateFeePolicyInput, adminUserId: 
 
 export async function updateFeePolicy(feePolicyId: string, input: UpdateFeePolicyInput) {
   const existingResult = await db.query(
-    `SELECT id, code FROM "FeePolicy" WHERE id = $1`,
+    `SELECT id, code, percent_base_field FROM "FeePolicy" WHERE id = $1`,
     [feePolicyId]
   );
 
@@ -160,6 +193,7 @@ export async function updateFeePolicy(feePolicyId: string, input: UpdateFeePolic
   }
 
   const existingCode = existingResult.rows[0].code;
+  const existingPercentBaseField = existingResult.rows[0].percent_base_field as string | null;
   const updates: string[] = [];
   const params: any[] = [];
   let idx = 1;
@@ -174,9 +208,29 @@ export async function updateFeePolicy(feePolicyId: string, input: UpdateFeePolic
     params.push(input.currency.toUpperCase());
   }
 
-  if (typeof input.baseAmount === 'number') {
-    updates.push(`base_amount = $${idx++}`);
-    params.push(input.baseAmount);
+  if (input.fixedAmount !== undefined) {
+    updates.push(`fixed_amount = $${idx++}`);
+    params.push(input.fixedAmount);
+  }
+
+  if (input.percentage !== undefined) {
+    updates.push(`percentage = $${idx++}`);
+    params.push(input.percentage);
+  }
+
+  if (input.percentBaseField !== undefined) {
+    updates.push(`percent_base_field = $${idx++}`);
+    params.push(input.percentBaseField);
+  }
+
+  if (input.minAmount !== undefined) {
+    updates.push(`min_amount = $${idx++}`);
+    params.push(input.minAmount);
+  }
+
+  if (input.maxAmount !== undefined) {
+    updates.push(`max_amount = $${idx++}`);
+    params.push(input.maxAmount);
   }
 
   if (typeof input.effectiveFrom === 'string') {
@@ -199,12 +253,34 @@ export async function updateFeePolicy(feePolicyId: string, input: UpdateFeePolic
   try {
     await client.query('BEGIN');
 
+    if (typeof input.percentage === 'number' && input.percentBaseField === null) {
+      throw new AppError(400, 'percentBaseField cannot be null when percentage is provided');
+    }
+
+    if (
+      typeof input.percentage === 'number' &&
+      input.percentBaseField === undefined &&
+      !existingPercentBaseField
+    ) {
+      throw new AppError(400, 'percentBaseField is required when percentage is provided');
+    }
+
+    if (
+      typeof input.minAmount === 'number' &&
+      typeof input.maxAmount === 'number' &&
+      input.minAmount > input.maxAmount
+    ) {
+      throw new AppError(400, 'minAmount cannot be greater than maxAmount');
+    }
+
     params.push(feePolicyId);
     const result = await client.query(
       `UPDATE "FeePolicy"
        SET ${updates.join(', ')}
        WHERE id = $${idx}
-       RETURNING id, code, version, name, currency, base_amount, is_active, effective_from, effective_to, created_by, created_at`,
+       RETURNING id, code, version, name, currency,
+                 fixed_amount, percentage, percent_base_field, min_amount, max_amount,
+                 is_active, effective_from, effective_to, created_by, created_at`,
       params
     );
 
@@ -257,7 +333,9 @@ export async function activateFeePolicy(feePolicyId: string) {
       `UPDATE "FeePolicy"
        SET is_active = true
        WHERE id = $1
-       RETURNING id, code, version, name, currency, base_amount, is_active, effective_from, effective_to, created_by, created_at`,
+       RETURNING id, code, version, name, currency,
+                 fixed_amount, percentage, percent_base_field, min_amount, max_amount,
+                 is_active, effective_from, effective_to, created_by, created_at`,
       [feePolicyId]
     );
 
@@ -276,7 +354,9 @@ export async function deactivateFeePolicy(feePolicyId: string) {
     `UPDATE "FeePolicy"
      SET is_active = false
      WHERE id = $1
-     RETURNING id, code, version, name, currency, base_amount, is_active, effective_from, effective_to, created_by, created_at`,
+     RETURNING id, code, version, name, currency,
+               fixed_amount, percentage, percent_base_field, min_amount, max_amount,
+               is_active, effective_from, effective_to, created_by, created_at`,
     [feePolicyId]
   );
 

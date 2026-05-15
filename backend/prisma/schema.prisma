@@ -15,8 +15,10 @@ enum UserRole {
 }
 
 enum OnboardingStatus {
-  AUTH_PENDING
+  PHONE_REQUIRED
+  PHONE_VERIFICATION_PENDING
   PROFILE_PENDING
+  UNDER_REVIEW
   COMPLETED
 }
 
@@ -178,22 +180,22 @@ enum WalletTxnStatus {
   REVERSED
 }
 
-enum TopupProvider {
-  BKASH
-}
-
-enum TopupStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  EXPIRED
-}
-
 enum ChargeStatus {
   PENDING
   SETTLED
   FAILED
   VOID
+}
+
+enum TopupRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DiscountType {
+  FIXED
+  PERCENTAGE
 }
 
 enum TestimonialStatus {
@@ -213,7 +215,7 @@ enum ConversationStatus {
 model User {
   user_id           String           @id @default(cuid())
   role              UserRole         @default(TENANT)
-  onboarding_status OnboardingStatus @default(AUTH_PENDING)
+  onboarding_status OnboardingStatus @default(PHONE_VERIFICATION_PENDING)
 
   // Contact info (populated after verification)
   contact_email String? @unique
@@ -224,7 +226,7 @@ model User {
 
   // Metadata
   created_at    DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime?  @updatedAt @db.Timestamptz(6)
+  updated_at    DateTime? @updatedAt @db.Timestamptz(6)
   deleted_at    DateTime? @db.Timestamptz(6)
   is_active     Boolean   @default(true)
   last_login_at DateTime? @db.Timestamptz(6)
@@ -258,10 +260,10 @@ model Credentials {
 
   verified_at DateTime? @db.Timestamptz(6)
 
-  created_at DateTime @default(now()) @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)
 
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
   @@unique([identifier_type, identifier])
   @@index([user_id])
@@ -287,10 +289,10 @@ model OAuthAccount {
 
   verified_at DateTime @default(now()) @db.Timestamptz(6)
 
-  created_at DateTime @default(now()) @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)
 
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
   @@unique([provider, provider_user_id])
   @@index([user_id])
@@ -317,10 +319,10 @@ model BaseUserProfile {
   current_lng  Float?
   current_area String?
 
-  created_at DateTime @default(now()) @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)
 
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model OwnerProfile {
@@ -333,7 +335,7 @@ model OwnerProfile {
 
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  user       User       @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
+  user       User       @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   properties Property[]
 }
 
@@ -350,21 +352,21 @@ model TenantProfile {
 
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  user            User            @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
-  wishlist_items  Wishlist[]
+  user           User       @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  wishlist_items Wishlist[]
 }
 
 model Property {
-  property_id    String   @id @default(cuid())
-  owner_id       String
-  property_type  PropertyType @default(APARTMENT)
+  property_id        String       @id @default(cuid())
+  owner_id           String
+  property_type      PropertyType @default(APARTMENT)
   property_size_sqft Decimal
-  room_count     Decimal
-  bathroom_count Decimal
-  balcony_count  Int     @default(0)
-  area_name      AreaName
-  exact_lat      Float
-  exact_lng      Float
+  room_count         Decimal
+  bathroom_count     Decimal
+  balcony_count      Int          @default(0)
+  area_name          AreaName
+  exact_lat          Float
+  exact_lng          Float
 
   // Property details
   title       String
@@ -374,16 +376,16 @@ model Property {
   // Building features
   building_floors    Int
   building_facing    BuildingFacing
-  has_lift           Boolean         @default(false)
-  has_generator      Boolean         @default(false)
-  has_security_guard Boolean         @default(false)
+  has_lift           Boolean        @default(false)
+  has_generator      Boolean        @default(false)
+  has_security_guard Boolean        @default(false)
 
   // Property preferences
   intended_tenant_type TenantType
 
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  owner    OwnerProfile    @relation(fields: [owner_id], references: [owner_id], onDelete: Restrict)
+  owner    OwnerProfile    @relation(fields: [owner_id], references: [owner_id], onDelete: Cascade)
   listings Listing[]
   images   PropertyImage[]
   conversations Conversation[]
@@ -392,36 +394,36 @@ model Property {
 }
 
 model WalletAccount {
-  id                String        @id @default(cuid())
-  user_id           String        @unique
-  status            WalletStatus  @default(ACTIVE)
-  currency          String        @default("BDT")
-  available_balance Decimal       @default(0)
-  created_at        DateTime      @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime?     @updatedAt @db.Timestamptz(6)
+  id                String       @id @default(cuid())
+  user_id           String       @unique
+  status            WalletStatus @default(ACTIVE)
+  currency          String       @default("BDT")
+  available_balance Decimal      @default(0)
+  created_at        DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?    @updatedAt @db.Timestamptz(6)
 
-  user              User              @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
-  transactions      WalletTransaction[]
-  topup_requests    WalletTopupRequest[]
+  user           User                @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  transactions   WalletTransaction[]
+  topup_requests TopupRequest[]
 
   @@index([status])
 }
 
 model WalletTransaction {
-  id                String            @id @default(cuid())
+  id                String             @id @default(cuid())
   wallet_account_id String
   direction         WalletTxnDirection
   type              WalletTxnType
-  status            WalletTxnStatus   @default(PENDING)
+  status            WalletTxnStatus    @default(PENDING)
   amount            Decimal
-  currency          String            @default("BDT")
+  currency          String             @default("BDT")
   reference_type    String?
   reference_id      String?
   description       String?
-  created_at        DateTime          @default(now()) @db.Timestamptz(6)
-  posted_at         DateTime?         @db.Timestamptz(6)
+  created_at        DateTime           @default(now()) @db.Timestamptz(6)
+  posted_at         DateTime?          @db.Timestamptz(6)
 
-  wallet_account    WalletAccount     @relation(fields: [wallet_account_id], references: [id], onDelete: Restrict)
+  wallet_account WalletAccount @relation(fields: [wallet_account_id], references: [id], onDelete: Cascade)
 
   @@index([wallet_account_id, created_at])
   @@index([reference_type, reference_id])
@@ -429,69 +431,137 @@ model WalletTransaction {
 }
 
 model FeePolicy {
-  id            String   @id @default(cuid())
-  code          String
-  version       Int
-  name          String
-  currency      String   @default("BDT")
-  base_amount   Decimal
-  is_active     Boolean  @default(true)
-  effective_from DateTime @db.Timestamptz(6)
-  effective_to  DateTime? @db.Timestamptz(6)
-  created_by    String?
-  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  id       String @id @default(cuid())
+  code     String
+  version  Int
+  name     String
+  currency String @default("BDT")
 
-  charges       Charge[]
+  // Fee composition: any combination of fixed + percentage
+  fixed_amount       Decimal?
+  percentage         Decimal?
+  percent_base_field String? // Field name to calculate percentage on (e.g., "rent")
+
+  // Bounds
+  min_amount Decimal?
+  max_amount Decimal?
+
+  is_active      Boolean   @default(true)
+  effective_from DateTime  @db.Timestamptz(6)
+  effective_to   DateTime? @db.Timestamptz(6)
+  created_by     String?
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+
+  charges Charge[]
 
   @@unique([code, version])
   @@index([code])
   @@index([is_active, effective_from])
 }
 
-model Charge {
-  id                String       @id @default(cuid())
-  user_id           String
-  fee_policy_id     String
-  reference_type    String
-  reference_id      String
-  currency          String       @default("BDT")
-  base_amount       Decimal
-  final_amount      Decimal
-  status            ChargeStatus @default(PENDING)
-  failure_reason    String?
-  created_at        DateTime     @default(now()) @db.Timestamptz(6)
-  settled_at        DateTime?    @db.Timestamptz(6)
-  updated_at        DateTime?    @updatedAt @db.Timestamptz(6)
+model DiscountPolicy {
+  id                       String       @id @default(cuid())
+  code                     String       @unique
+  fee_policy_code          String
+  discount_type            DiscountType
+  fixed_amount             Decimal?
+  percentage               Decimal?
+  min_amount               Decimal?
+  max_amount               Decimal?
+  max_redemptions_total    Int?
+  max_redemptions_per_user Int?
+  eligible_role            UserRole?
+  effective_from           DateTime     @db.Timestamptz(6)
+  effective_to             DateTime?    @db.Timestamptz(6)
+  is_active                Boolean      @default(true)
+  created_at               DateTime     @default(now()) @db.Timestamptz(6)
 
-  user              User         @relation(fields: [user_id], references: [user_id], onDelete: Restrict)
-  fee_policy        FeePolicy    @relation(fields: [fee_policy_id], references: [id], onDelete: Restrict)
+  eligible_users DiscountEligibleUser[]
+  redemptions    DiscountRedemption[]
+  charges        Charge[]
+
+  @@index([fee_policy_code])
+  @@index([is_active, effective_from])
+}
+
+model Charge {
+  id                 String       @id @default(cuid())
+  user_id            String
+  fee_policy_id      String
+  reference_type     String
+  reference_id       String
+  currency           String       @default("BDT")
+  base_amount        Decimal
+  final_amount       Decimal
+  discount_policy_id String?
+  discount_amount    Decimal?
+  status             ChargeStatus @default(PENDING)
+  failure_reason     String?
+  created_at         DateTime     @default(now()) @db.Timestamptz(6)
+  settled_at         DateTime?    @db.Timestamptz(6)
+  updated_at         DateTime?    @updatedAt @db.Timestamptz(6)
+
+  user                 User                 @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  fee_policy           FeePolicy            @relation(fields: [fee_policy_id], references: [id], onDelete: Restrict)
+  discount_policy      DiscountPolicy?      @relation(fields: [discount_policy_id], references: [id], onDelete: SetNull)
+  discount_redemptions DiscountRedemption[]
 
   @@index([user_id, created_at])
   @@index([reference_type, reference_id])
   @@index([status, created_at])
 }
 
-model WalletTopupRequest {
-  id                 String        @id @default(cuid())
-  wallet_account_id  String
-  provider           TopupProvider @default(BKASH)
-  status             TopupStatus   @default(PENDING)
-  requested_amount   Decimal
-  currency           String        @default("BDT")
-  external_request_id String        @unique
-  external_payment_id String?
-  external_trx_id    String?
-  provider_payload   Json?
-  failure_reason     String?
-  expires_at         DateTime?     @db.Timestamptz(6)
-  completed_at       DateTime?     @db.Timestamptz(6)
-  created_at         DateTime      @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?     @updatedAt @db.Timestamptz(6)
+model DiscountEligibleUser {
+  discount_policy_id String
+  user_id            String
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
 
-  wallet_account     WalletAccount  @relation(fields: [wallet_account_id], references: [id], onDelete: Restrict)
+  discount_policy DiscountPolicy @relation(fields: [discount_policy_id], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
-  @@index([wallet_account_id, created_at])
+  @@id([discount_policy_id, user_id])
+  @@index([user_id])
+}
+
+model DiscountRedemption {
+  id                 String   @id @default(cuid())
+  discount_policy_id String
+  user_id            String
+  charge_id          String?
+  discount_amount    Decimal
+  redeemed_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  discount_policy DiscountPolicy @relation(fields: [discount_policy_id], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  charge          Charge?        @relation(fields: [charge_id], references: [id], onDelete: SetNull)
+
+  @@index([discount_policy_id, redeemed_at])
+  @@index([user_id, redeemed_at])
+  @@index([charge_id])
+}
+
+model TopupRequest {
+  id                   String             @id @default(cuid())
+  user_id              String
+  wallet_account_id    String
+  amount               Decimal
+  bkash_number         String
+  transaction_id       String             @unique
+  status               TopupRequestStatus @default(PENDING)
+  rejection_reason     String?
+  approved_at          DateTime?          @db.Timestamptz(6)
+  approved_by_admin_id String?
+  created_at           DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?          @updatedAt @db.Timestamptz(6)
+
+  user              User          @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  wallet_account    WalletAccount @relation(fields: [wallet_account_id], references: [id], onDelete: Restrict)
+  approved_by_admin User?         @relation("TopupApprovals", fields: [approved_by_admin_id], references: [user_id], onDelete: SetNull)
+
+  @@unique([user_id, transaction_id])
+  @@index([user_id, created_at])
   @@index([status, created_at])
+  @@index([wallet_account_id, status])
 }
 
 model Listing {
@@ -503,9 +573,9 @@ model Listing {
   listing_status     ListingStatus @default(DRAFT)
   view_count         Int           @default(0)
   created_at         DateTime      @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?      @updatedAt @db.Timestamptz(6)
+  updated_at         DateTime?     @updatedAt @db.Timestamptz(6)
 
-  property        Property        @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
+  property        Property        @relation(fields: [property_id], references: [property_id], onDelete: Cascade)
   listing_unlocks ListingUnlock[]
   wishlist_items  Wishlist[]
   rental_requests RentalRequest[]
@@ -522,8 +592,8 @@ model ListingUnlock {
   unlocked_at    DateTime @default(now()) @db.Timestamptz(6)
   created_at     DateTime @default(now()) @db.Timestamptz(6)
 
-  listing         Listing  @relation(fields: [listing_id], references: [listing_id], onDelete: Restrict)
-  tenant_user     User     @relation(fields: [tenant_user_id], references: [user_id], onDelete: Restrict)
+  listing     Listing @relation(fields: [listing_id], references: [listing_id], onDelete: Cascade)
+  tenant_user User    @relation(fields: [tenant_user_id], references: [user_id], onDelete: Cascade)
 
   @@unique([listing_id, tenant_user_id])
   @@index([listing_id])
@@ -535,23 +605,23 @@ model Wishlist {
   listing_id String
   added_at   DateTime @default(now()) @db.Timestamptz(6)
 
-  tenant  TenantProfile @relation(fields: [tenant_id], references: [tenant_id], onDelete: Restrict)
-  listing Listing       @relation(fields: [listing_id], references: [listing_id], onDelete: Restrict)
+  tenant  TenantProfile @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  listing Listing       @relation(fields: [listing_id], references: [listing_id], onDelete: Cascade)
 
   @@id([tenant_id, listing_id])
 }
 
 model RentalRequest {
   rental_request_id String              @id @default(cuid())
-  listing_id         String
-  tenant_user_id     String
-  status             RentalRequestStatus @default(PENDING)
-  message            String?             @db.Text
-  created_at         DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?           @updatedAt @db.Timestamptz(6)
+  listing_id        String
+  tenant_user_id    String
+  status            RentalRequestStatus @default(PENDING)
+  message           String?             @db.Text
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?           @updatedAt @db.Timestamptz(6)
 
   listing Listing @relation(fields: [listing_id], references: [listing_id], onDelete: Cascade)
-  tenant  User    @relation("RentalRequestsTenant", fields: [tenant_user_id], references: [user_id], onDelete: Restrict)
+  tenant  User    @relation("RentalRequestsTenant", fields: [tenant_user_id], references: [user_id], onDelete: Cascade)
 
   @@index([listing_id])
   @@index([tenant_user_id])
@@ -574,18 +644,18 @@ model Notification {
 }
 
 model VerificationSubmission {
-  id                  String                       @id @default(cuid())
-  user_id             String                       @unique
-  submission_status   VerificationSubmissionStatus @default(DRAFT)
-  submitted_at        DateTime?                    @db.Timestamptz(6)
-  reviewed_at         DateTime?                    @db.Timestamptz(6)
-  reviewed_by         String?                      // admin userId
-  rejection_reason    String?
-  created_at          DateTime                     @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime?                    @updatedAt @db.Timestamptz(6)
+  id                String                       @id @default(cuid())
+  user_id           String                       @unique
+  submission_status VerificationSubmissionStatus @default(DRAFT)
+  submitted_at      DateTime?                    @db.Timestamptz(6)
+  reviewed_at       DateTime?                    @db.Timestamptz(6)
+  reviewed_by       String? // admin userId
+  rejection_reason  String?
+  created_at        DateTime                     @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?                    @updatedAt @db.Timestamptz(6)
 
-  user                User                         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  identity_documents  UserIdentityDocument[]
+  user               User                   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  identity_documents UserIdentityDocument[]
 
   @@index([user_id])
   @@index([submission_status])
@@ -593,25 +663,25 @@ model VerificationSubmission {
 }
 
 model UserIdentityDocument {
-  id                    String                    @id @default(cuid())
-  user_id               String
-  submission_id         String?
-  document_type         IdentityDocumentType
-  document_number       String?
-  file_path             String?
-  file_name             String?
-  mime_type             String?
-  file_size_bytes       Int?
-  verification_status   DocumentVerificationStatus @default(PENDING)
-  rejection_reason      String?
-  uploaded_at           DateTime                  @default(now()) @db.Timestamptz(6)
-  reviewed_at           DateTime?                 @db.Timestamptz(6)
-  reviewed_by           String?                   // admin userId
-  created_at            DateTime                  @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime?                 @updatedAt @db.Timestamptz(6)
+  id                  String                     @id @default(cuid())
+  user_id             String
+  submission_id       String?
+  document_type       IdentityDocumentType
+  document_number     String?
+  file_path           String?
+  file_name           String?
+  mime_type           String?
+  file_size_bytes     Int?
+  verification_status DocumentVerificationStatus @default(PENDING)
+  rejection_reason    String?
+  uploaded_at         DateTime                   @default(now()) @db.Timestamptz(6)
+  reviewed_at         DateTime?                  @db.Timestamptz(6)
+  reviewed_by         String? // admin userId
+  created_at          DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?                  @updatedAt @db.Timestamptz(6)
 
-  user                  User                      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  submission            VerificationSubmission?   @relation(fields: [submission_id], references: [id], onDelete: SetNull)
+  user       User                    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  submission VerificationSubmission? @relation(fields: [submission_id], references: [id], onDelete: SetNull)
 
   @@index([user_id])
   @@index([submission_id])
@@ -636,7 +706,7 @@ model PropertyImage {
 
   uploaded_at DateTime @default(now()) @db.Timestamptz(6)
 
-  property Property @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
+  property Property @relation(fields: [property_id], references: [property_id], onDelete: Cascade)
 
   @@index([property_id])
   @@index([property_id, display_order])
@@ -652,7 +722,7 @@ model Testimonial {
   createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime?         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user       User              @relation(fields: [userId], references: [user_id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [user_id], onDelete: Cascade)
 
   @@index([status, isFeatured])
 }

@@ -245,6 +245,122 @@ export async function softDeleteUser(userId: string, currentUserId: string) {
   }
 }
 
+export async function hardDeleteUser(userId: string, currentUserId: string) {
+  if (userId === currentUserId) {
+    throw new CannotModifyOwnAccountError('delete your own account');
+  }
+
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const userResult = await client.query(
+      `SELECT user_id FROM "User" WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      throw new UserNotFoundError();
+    }
+
+    const ownerResult = await client.query(
+      `SELECT owner_id FROM "OwnerProfile" WHERE user_id = $1`,
+      [userId]
+    );
+    const ownerId = ownerResult.rows[0]?.owner_id as string | undefined;
+
+    const tenantResult = await client.query(
+      `SELECT tenant_id FROM "TenantProfile" WHERE user_id = $1`,
+      [userId]
+    );
+    const tenantId = tenantResult.rows[0]?.tenant_id as string | undefined;
+
+    const walletResult = await client.query(
+      `SELECT id FROM "WalletAccount" WHERE user_id = $1`,
+      [userId]
+    );
+    const walletAccountId = walletResult.rows[0]?.id as string | undefined;
+
+    const propertyResult = ownerId
+      ? await client.query(
+          `SELECT property_id FROM "Property" WHERE owner_id = $1`,
+          [ownerId]
+        )
+      : { rows: [] as Array<{ property_id: string }> };
+    const propertyIds = propertyResult.rows.map((row) => row.property_id as string);
+
+    const listingResult = propertyIds.length
+      ? await client.query(
+          `SELECT listing_id FROM "Listing" WHERE property_id = ANY($1::text[])`,
+          [propertyIds]
+        )
+      : { rows: [] as Array<{ listing_id: string }> };
+    const listingIds = listingResult.rows.map((row) => row.listing_id as string);
+
+    if (listingIds.length > 0) {
+      await client.query(`DELETE FROM "ListingUnlock" WHERE listing_id = ANY($1::text[])`, [listingIds]);
+      await client.query(`DELETE FROM "Wishlist" WHERE listing_id = ANY($1::text[])`, [listingIds]);
+      await client.query(`DELETE FROM "RentalRequest" WHERE listing_id = ANY($1::text[])`, [listingIds]);
+      //await client.query(`DELETE FROM "TenantRequest" WHERE listing_id = ANY($1::text[])`, [listingIds]);
+      //await client.query(`DELETE FROM "Payment" WHERE listing_id = ANY($1::text[])`, [listingIds]);
+      await client.query(`DELETE FROM "PropertyImage" WHERE property_id = ANY($1::text[])`, [propertyIds]);
+      await client.query(`DELETE FROM "Listing" WHERE listing_id = ANY($1::text[])`, [listingIds]);
+    }
+
+    if (walletAccountId) {
+      await client.query(`DELETE FROM "WalletTransaction" WHERE wallet_account_id = $1`, [walletAccountId]);
+      await client.query(`DELETE FROM "TopupRequest" WHERE wallet_account_id = $1`, [walletAccountId]);
+      await client.query(`DELETE FROM "WalletAccount" WHERE id = $1`, [walletAccountId]);
+    }
+
+    //await client.query(`DELETE FROM "Session" WHERE user_id = $1`, [userId]);
+    //await client.query(`DELETE FROM "LoginAttempt" WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM "Credentials" WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM "OAuthAccount" WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM "Notification" WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM "VerificationSubmission" WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM "UserIdentityDocument" WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM "Charge" WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM "RentalRequest" WHERE tenant_user_id = $1`, [userId]);
+    await client.query(`DELETE FROM "ListingUnlock" WHERE tenant_user_id = $1`, [userId]);
+    //await client.query(`DELETE FROM "Payment" WHERE user_id = $1`, [userId]);
+    //await client.query(`DELETE FROM "Penalty" WHERE user_id = $1`, [userId]);
+
+    if (tenantId) {
+      await client.query(`DELETE FROM "Wishlist" WHERE tenant_id = $1`, [tenantId]);
+      //await client.query(`DELETE FROM "TenantRequest" WHERE tenant_id = $1`, [tenantId]);
+      await client.query(`DELETE FROM "RentalRequest" WHERE tenant_user_id = $1`, [userId]);
+      await client.query(`DELETE FROM "TenantProfile" WHERE tenant_id = $1`, [tenantId]);
+    }
+
+    if (ownerId) {
+      await client.query(`DELETE FROM "Property" WHERE owner_id = $1`, [ownerId]);
+      await client.query(`DELETE FROM "OwnerProfile" WHERE owner_id = $1`, [ownerId]);
+    }
+
+    await client.query(`DELETE FROM "BaseUserProfile" WHERE user_id = $1`, [userId]);
+
+    const result = await client.query(
+      `DELETE FROM "User" WHERE user_id = $1 RETURNING user_id`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new UserNotFoundError();
+    }
+
+    await client.query('COMMIT');
+
+    return { success: true, message: 'User permanently deleted' };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function restoreUser(userId: string) {
   const result = await db.query(
     `UPDATE "User"
@@ -265,8 +381,11 @@ export async function restoreUser(userId: string) {
 export async function forceKycStatus(userId: string, status: string, reason: string) {
   const result = await db.query(
     `UPDATE "User"
-     SET kyc_verification_status = $1, 
-         onboarding_status = CASE WHEN $1 = 'APPROVED' THEN 'COMPLETED' ELSE onboarding_status END,
+     SET kyc_verification_status = $1::"KycVerificationStatus",
+         onboarding_status = CASE
+           WHEN $1::text = 'APPROVED' THEN 'COMPLETED'::"OnboardingStatus"
+           ELSE onboarding_status
+         END,
          updated_at = NOW()
      WHERE user_id = $2
      RETURNING kyc_verification_status, onboarding_status`,

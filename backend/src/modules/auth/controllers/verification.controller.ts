@@ -4,12 +4,27 @@
  */
 
 import type { OpenAPIHono } from '@hono/zod-openapi';
-import { verifyEmail, verifyPhone, resendVerification } from '../services';
 import {
+  bootstrapPhoneVerification,
+  changePhoneVerification,
+  getPendingPhoneVerificationStatus,
+  resendPendingPhoneVerification,
+  verifyEmail,
+  verifyPhone,
+  resendVerification,
+  startPhoneVerification,
+} from '../services';
+import {
+  bootstrapPhoneVerificationRoute,
+  changePhoneVerificationRoute,
+  pendingPhoneVerificationRoute,
+  resendPhoneVerificationRoute,
   verifyEmailRoute,
   verifyPhoneRoute,
   resendVerificationRoute,
+  startPhoneVerificationRoute,
 } from '../routes';
+import { requireAuth } from '@/security';
 
 /**
  * Register verification routes
@@ -31,9 +46,11 @@ export function registerVerificationRoutes(app: OpenAPIHono) {
   });
 
   // POST /auth/verify-phone
+  app.use('/verify-phone', requireAuth);
   app.openapi(verifyPhoneRoute, async (c) => {
+    const user = c.get('user');
     const { token } = c.req.valid('json');
-    const result = await verifyPhone(token);
+    const result = await verifyPhone(user.userId, token);
 
     return c.json(
       {
@@ -54,6 +71,117 @@ export function registerVerificationRoutes(app: OpenAPIHono) {
       {
         success: true,
         data: { sent: true },
+        message: result.message,
+      },
+      200
+    );
+  });
+
+  // POST /auth/phone/start
+  app.use('/phone/start', requireAuth);
+  app.openapi(startPhoneVerificationRoute, async (c) => {
+    const user = c.get('user');
+    const { phone } = c.req.valid('json');
+    const result = await startPhoneVerification(user.userId, phone);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          sent: !result.alreadySent,
+          phone: result.phone,
+          alreadySent: result.alreadySent,
+          otpTtlSeconds: result.otpTtlSeconds,
+          rateResetSeconds: result.rateResetSeconds,
+        },
+        message: result.message,
+      },
+      200
+    );
+  });
+
+  // POST /auth/phone/change
+  app.use('/phone/change', requireAuth);
+  app.openapi(changePhoneVerificationRoute, async (c) => {
+    const user = c.get('user');
+    const { phone } = c.req.valid('json');
+    const result = await changePhoneVerification(user.userId, phone);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          sent: !result.alreadySent,
+          phone: result.phone,
+          alreadySent: result.alreadySent,
+          otpTtlSeconds: result.otpTtlSeconds,
+          rateResetSeconds: result.rateResetSeconds,
+        },
+        message: result.message,
+      },
+      200
+    );
+  });
+
+  // GET /auth/phone/pending
+  app.use('/phone/pending', requireAuth);
+  app.openapi(pendingPhoneVerificationRoute, async (c) => {
+    const user = c.get('user');
+    const pending = await getPendingPhoneVerificationStatus(user.userId);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          exists: pending.exists,
+          phone: pending.phone || null,
+          otpTtlSeconds: pending.otpTtlSeconds,
+          rateResetSeconds: pending.rateResetSeconds,
+        },
+        message: pending.exists ? 'Pending phone verification found' : 'No pending phone verification',
+      },
+      200
+    );
+  });
+
+  // POST /auth/phone/bootstrap
+  app.use('/phone/bootstrap', requireAuth);
+  app.openapi(bootstrapPhoneVerificationRoute, async (c) => {
+    const user = c.get('user');
+    const result = await bootstrapPhoneVerification(user.userId);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          sent: !result.alreadySent,
+          phone: result.phone,
+          alreadySent: result.alreadySent,
+          otpTtlSeconds: result.otpTtlSeconds,
+          rateResetSeconds: result.rateResetSeconds,
+        },
+        message: result.message,
+      },
+      200
+    );
+  });
+
+  // POST /auth/phone/resend
+  app.use('/phone/resend', requireAuth);
+  app.openapi(resendPhoneVerificationRoute, async (c) => {
+    const user = c.get('user');
+    const result = await resendPendingPhoneVerification(user.userId);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          sent: !result.alreadySent,
+          phone: result.phone,
+          alreadySent: result.alreadySent,
+          otpTtlSeconds: result.otpTtlSeconds,
+          rateResetSeconds: result.rateResetSeconds,
+        },
         message: result.message,
       },
       200

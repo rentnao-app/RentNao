@@ -1,8 +1,7 @@
 export {
   getWalletRoute,
   getTransactionsRoute,
-  createTopupRoute,
-  getTopupRoute,
   getChargesRoute,
-  bkashWebhookRoute,
+  createTopupRoute,
+  getUserTopupRequestsRoute,
 } from './wallet.routes';

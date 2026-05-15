@@ -82,6 +82,27 @@ export const resendVerificationSchema = z
 export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
 
 // ============================================================================
+// Start Phone Verification (Authenticated)
+// ============================================================================
+
+export const startPhoneVerificationSchema = z
+  .object({
+    phone: z.string().trim().openapi({
+      example: '+8801712345678',
+      description: 'Bangladesh phone number to bind and verify',
+    }),
+  })
+  .refine((data) => isValidBDPhone(data.phone), {
+    message: 'Invalid Bangladesh phone number. Use format: +8801XXXXXXXXX, 8801XXXXXXXXX, or 01XXXXXXXXX',
+    path: ['phone'],
+  })
+  .transform((data) => ({
+    phone: normalizeBDPhone(data.phone),
+  }));
+
+export type StartPhoneVerificationInput = z.infer<typeof startPhoneVerificationSchema>;
+
+// ============================================================================
 // Verification Response Schemas
 // ============================================================================
 
@@ -103,4 +124,29 @@ export const resendVerificationResponseSchema = z.object({
   message: z.string().openapi({
     example: 'Verification email sent successfully',
   }),
+});
+
+export const startPhoneVerificationResponseSchema = z.object({
+  success: z.boolean().openapi({ example: true }),
+  data: z.object({
+    sent: z.boolean().openapi({ example: true }),
+    phone: z.string().openapi({ example: '+8801712345678' }),
+    alreadySent: z.boolean().optional().openapi({ example: false }),
+    otpTtlSeconds: z.number().int().min(0).optional().openapi({ example: 900 }),
+    rateResetSeconds: z.number().int().min(0).optional().openapi({ example: 300 }),
+  }),
+  message: z.string().openapi({
+    example: 'Verification SMS sent successfully',
+  }),
+});
+
+export const pendingPhoneVerificationResponseSchema = z.object({
+  success: z.boolean().openapi({ example: true }),
+  data: z.object({
+    exists: z.boolean().openapi({ example: true }),
+    phone: z.string().nullable().optional().openapi({ example: '+8801712345678' }),
+    otpTtlSeconds: z.number().int().min(0).optional().openapi({ example: 900 }),
+    rateResetSeconds: z.number().int().min(0).optional().openapi({ example: 300 }),
+  }),
+  message: z.string().optional().openapi({ example: 'Pending phone verification found' }),
 });

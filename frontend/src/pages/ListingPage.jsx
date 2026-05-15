@@ -1,16 +1,48 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
-import SearchFilterPanel from '../components/SearchFilterPanel';
+import PropertySearchBar from '../components/PropertySearchBar';
+import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
+import { buildListingsQuery, expandAreasForQuery } from '../lib/listingSearchQuery';
 import { toggleWishlist } from '../lib/wishlist';
 import toast from 'react-hot-toast';
+
+const VALID_MAX_TIERS = new Set(['20000', '35000', '50000', '80000', '100000', '200000']);
+
+function parseFiltersFromSearchParams(searchParams) {
+  const areas = [];
+  const fromRepeated = searchParams.getAll('areaName').filter(Boolean);
+  if (fromRepeated.length) areas.push(...fromRepeated.map((a) => String(a).trim().toUpperCase()));
+  const csv = searchParams.get('areas');
+  if (csv) areas.push(...csv.split(',').map((s) => String(s).trim().toUpperCase()).filter(Boolean));
+  const single = searchParams.get('area');
+  if (single && areas.length === 0) areas.push(String(single).trim().toUpperCase());
+  const uniqueAreas = [...new Set(areas)];
+
+  const rawCat = (searchParams.get('category') || '').toUpperCase();
+  const category = rawCat === 'COMMERCIAL' || rawCat === 'RESIDENTIAL' ? rawCat : '';
+
+  let maxRentKey = '';
+  const minR = searchParams.get('minRent');
+  const maxR = searchParams.get('maxRent');
+  if (minR === '200000' && !maxR) maxRentKey = '200K_PLUS';
+  else if (maxR && VALID_MAX_TIERS.has(String(maxR))) maxRentKey = String(maxR);
+
+  const mr = searchParams.get('minRooms');
+  const minRooms = ['1', '2', '3', '4', '5'].includes(mr) ? mr : '';
+
+  const sortRaw = searchParams.get('sort') || searchParams.get('sort_by') || 'newest';
+  const sort_by = ['newest', 'price_asc', 'price_desc'].includes(sortRaw) ? sortRaw : 'newest';
+
+  return { areas: uniqueAreas, category, maxRentKey, minRooms, sort_by };
+}
 
 function ListingCard({ item, canWishlist, isWishlisted, onToggleWishlist }) {
   const firstImage = item?.primaryImageUrl || null;
   const area = item.areaName ? String(item.areaName).replaceAll('_', ' ') : 'Unknown area';
   const title = item.title
-    ? `${item.title.slice(0, 56)}${item.title.length > 56 ? '…' : ''}`
-    : `Apartment · ${item.roomCount ?? '?'} beds`;
+    ? `${item.title.slice(0, 56)}${item.title.length > 56 ? '...' : ''}`
+    : `Apartment - ${item.roomCount ?? '?'} beds`;
   const rent = Number(item.rent || 0).toLocaleString();
 
   return (
@@ -58,7 +90,7 @@ function ListingCard({ item, canWishlist, isWishlisted, onToggleWishlist }) {
 }
 
 export default function ListingsPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -86,26 +118,15 @@ export default function ListingsPage() {
   }, []);
 
   useEffect(() => {
-    void refreshWishlistIds();
+    queueMicrotask(() => {
+      void refreshWishlistIds();
+    });
   }, [refreshWishlistIds]);
 
-  const initialAreas = (() => {
-    const explicitAreas = searchParams.getAll('areaName').filter(Boolean);
-    if (explicitAreas.length > 0) return explicitAreas.map((item) => String(item).toUpperCase());
-    const areasCsv = searchParams.get('areas');
-    if (areasCsv) return areasCsv.split(',').map((item) => String(item).trim().toUpperCase()).filter(Boolean);
-    const singleArea = searchParams.get('area');
-    return singleArea ? [String(singleArea).trim().toUpperCase()] : [];
-  })();
+  const paramsKey = useMemo(() => searchParams.toString(), [searchParams]);
+  const filters = useMemo(() => parseFiltersFromSearchParams(searchParams), [searchParams]);
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
 
-  const [filters, setFilters] = useState(() => ({
-    areas: initialAreas,
-    min_rent: searchParams.get('min_rent') || '',
-    max_rent: searchParams.get('max_rent') || '',
-    room_count: searchParams.get('room_count') || '',
-    rent_ranges: [],
-    sort_by: searchParams.get('sort_by') || 'newest',
-  }));
   const loggedIn = isLoggedIn();
   const currentUser = getCurrentUser();
   const viewerRole = currentUser?.role || currentUser?.userRole;
@@ -137,16 +158,8 @@ export default function ListingsPage() {
       try {
         setLoading(true);
         setError('');
-        const selectedAreas = filters.areas?.length ? filters.areas : [null];
-        const selectedRanges = filters.rent_ranges?.length ? filters.rent_ranges : [null];
-
-        const rangeMap = {
-          '15-40K': { minRent: 15000, maxRent: 40000 },
-          '40-60K': { minRent: 40000, maxRent: 60000 },
-          '60-100K': { minRent: 60000, maxRent: 100000 },
-          '100-200K': { minRent: 100000, maxRent: 200000 },
-          '200K+': { minRent: 200000, maxRent: null },
-        };
+        const normalizedAreas = expandAreasForQuery(filters.areas);
+        const selectedAreas = normalizedAreas.length ? normalizedAreas : [null];
 
         const sortMap = {
           newest: ['createdAt', 'desc'],
@@ -155,32 +168,19 @@ export default function ListingsPage() {
         };
         const [sortBy, sortDir] = sortMap[filters.sort_by] || sortMap.newest;
 
-        const requestCombos = [];
-        selectedAreas.forEach((area) => {
-          selectedRanges.forEach((rangeKey) => {
-            requestCombos.push({ area, rangeKey });
-          });
-        });
-
         const responses = await Promise.all(
-          requestCombos.map(async ({ area, rangeKey }) => {
+          selectedAreas.map(async (area) => {
             const q = new URLSearchParams();
             q.set('page', '1');
             q.set('limit', '100');
             q.set('sortBy', sortBy);
             q.set('sortDir', sortDir);
             if (area) q.set('areaName', String(area).toUpperCase());
+            if (filters.category) q.set('propertyCategory', filters.category);
+            if (filters.maxRentKey === '200K_PLUS') q.set('minRent', '200000');
+            else if (filters.maxRentKey) q.set('maxRent', String(filters.maxRentKey));
+            if (filters.minRooms) q.set('minRoomCount', String(filters.minRooms));
 
-            if (rangeKey && rangeMap[rangeKey]) {
-              const selectedRange = rangeMap[rangeKey];
-              if (selectedRange.minRent != null) q.set('minRent', String(selectedRange.minRent));
-              if (selectedRange.maxRent != null) q.set('maxRent', String(selectedRange.maxRent));
-            } else {
-              if (filters.min_rent) q.set('minRent', String(filters.min_rent));
-              if (filters.max_rent) q.set('maxRent', String(filters.max_rent));
-            }
-
-            if (filters.room_count) q.set('roomCount', String(filters.room_count));
             const res = await apiFetch(`/properties/public/listings?${q.toString()}`);
             const body = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(body?.error || body?.message || 'Failed to load listings');
@@ -211,7 +211,15 @@ export default function ListingsPage() {
       }
     };
     load();
-  }, [filters]);
+    // filtersKey serializes URL-derived filters; avoids refetch when unrelated parent re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
+
+  const handleSearchSubmit = (payload) => {
+    const qs = buildListingsQuery(payload);
+    if (qs) setSearchParams(new URLSearchParams(qs));
+    else setSearchParams({});
+  };
 
   const handleToggleWishlist = async (item) => {
     const id = String(item?.listingId || '');
@@ -231,26 +239,10 @@ export default function ListingsPage() {
     <div className="min-h-screen bg-[#f2f7f3] text-slate-800">
       <header className="sticky top-0 z-30 border-b border-emerald-100/90 bg-white/95 shadow-sm backdrop-blur-sm">
         <div className="mx-auto flex max-w-[1500px] items-center gap-2 px-3 py-3 sm:gap-3 sm:px-5 lg:px-6">
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
-            aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
-            onClick={() => setMobileNavOpen((v) => !v)}
-          >
-            {mobileNavOpen ? (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
-          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2" onClick={() => setMobileNavOpen(false)}>
-            <img src="/logo.jpg" alt="" className="h-9 w-9 rounded-lg border border-emerald-100 object-cover" />
-            <span className="truncate text-lg font-semibold tracking-tight text-[#2f8444] sm:text-xl">Rent Nao</span>
-          </Link>
+          <BrandLogoLink
+            className="min-w-0 shrink-0"
+            onClick={() => setMobileNavOpen(false)}
+          />
           <nav className="mx-auto hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex">
             {topNavItems.map((item) => (
               <Link
@@ -262,7 +254,7 @@ export default function ListingsPage() {
               </Link>
             ))}
           </nav>
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="ml-auto hidden lg:flex shrink-0 items-center gap-1.5 sm:gap-2">
             {loggedIn ? (
               <Link
                 to={dashboardPath}
@@ -284,31 +276,116 @@ export default function ListingsPage() {
               </>
             )}
           </div>
+          <button
+            type="button"
+            className="ml-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+            aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMobileNavOpen((v) => !v)}
+          >
+            {mobileNavOpen ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
-        {mobileNavOpen ? (
-          <div className="border-t border-emerald-100 bg-white px-3 py-3 lg:hidden">
-            <nav className="flex flex-col gap-1">
+      </header>
+
+      {mobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
+            aria-label="Close menu"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <aside
+            id="listing-mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="listing-mobile-nav-title"
+            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <BrandLogoLink
+                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
+                  onClick={() => setMobileNavOpen(false)}
+                />
+                <span id="listing-mobile-nav-title" className="sr-only">
+                  Main menu
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
+                aria-label="Close menu"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
               {topNavItems.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-emerald-50"
+                  className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   {item.label}
                 </Link>
               ))}
+
+              {loggedIn ? (
+                <Link
+                  to={dashboardPath}
+                  onClick={() => setMobileNavOpen(false)}
+                  className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
+                  >
+                    Sign up
+                  </Link>
+                </>
+              )}
             </nav>
-          </div>
-        ) : null}
-      </header>
+          </aside>
+        </div>
+      )}
 
       <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-5 sm:py-6 lg:px-6 lg:py-8">
         <section className="mb-5 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Available Listings</h1>
           <p className="mt-1 text-sm text-slate-500">Browse verified properties with flexible filters and quick actions.</p>
           <div className="mt-4">
-            <SearchFilterPanel initialValues={filters} onSubmit={setFilters} />
+            <PropertySearchBar
+              key={paramsKey}
+              showSort
+              initialValues={filters}
+              onSubmit={handleSearchSubmit}
+            />
           </div>
         </section>
 
@@ -342,3 +419,4 @@ export default function ListingsPage() {
     </div>
   );
 }
+

@@ -41,8 +41,10 @@ export const statsOverviewResponseSchema = z.object({
       ADMIN: z.number(),
     }),
     usersByOnboarding: z.object({
-      AUTH_PENDING: z.number(),
+      PHONE_REQUIRED: z.number(),
+      PHONE_VERIFICATION_PENDING: z.number(),
       PROFILE_PENDING: z.number(),
+      UNDER_REVIEW: z.number(),
       COMPLETED: z.number(),
     }),
     recentRegistrations: z.object({

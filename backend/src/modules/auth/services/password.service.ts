@@ -7,7 +7,14 @@ import { db } from '@/db/client';
 import { AppError } from '@/middlewares/error-handler';
 import { hashPassword } from '../utils/password';
 import { generateVerificationToken, generateOTP } from '../utils/token-generator';
-import { verifyToken, deleteVerificationToken, storeVerificationToken } from './token-storage.service';
+import {
+  deleteVerificationToken,
+  getVerificationTokenTTL,
+  storeVerificationToken,
+  verifyToken,
+} from './token-storage.service';
+import { registerOtpRequest } from './otp-cache.service';
+import { sendPhoneOtp } from './sms.service';
 import { TOKEN_TTL } from '../config/token-ttl';
 import type { IdentifierTypeType, VerificationTokenTypeType } from '@/types/enums';
 
@@ -51,6 +58,25 @@ export async function requestPasswordReset(
     };
   }
 
+  if (type === 'PHONE') {
+    const existingTtl = await getVerificationTokenTTL(identifier, tokenType);
+    if (existingTtl > 0) {
+      return {
+        success: true,
+        message: 'If an account exists with this identifier, password reset instructions have been sent',
+      };
+    }
+
+    const rateLimit = await registerOtpRequest(credential.user_id);
+    if (!rateLimit.allowed) {
+      console.log(`Password reset OTP rate limit reached for user: ${credential.user_id}`);
+      return {
+        success: true,
+        message: 'If an account exists with this identifier, password reset instructions have been sent',
+      };
+    }
+  }
+
   // Delete old password reset token from Redis (if exists)
   await deleteVerificationToken(identifier, tokenType);
 
@@ -60,8 +86,17 @@ export async function requestPasswordReset(
   // Store new token in Redis with 1-hour TTL
   await storeVerificationToken(identifier, resetToken, tokenType, TOKEN_TTL.PASSWORD_RESET);
 
-  // TODO: Send password reset email/SMS
-  console.log(`Password reset ${type}: ${resetToken}`);
+  if (type === 'PHONE') {
+    await sendPhoneOtp({
+      identifier,
+      otp: resetToken,
+      purpose: 'PASSWORD_RESET',
+      ttlSeconds: TOKEN_TTL.PASSWORD_RESET,
+    });
+  } else {
+    // TODO: Send password reset email
+    console.log(`Password reset email token: ${resetToken}`);
+  }
 
   return {
     success: true,

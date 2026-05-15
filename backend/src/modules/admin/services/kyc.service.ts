@@ -1,7 +1,18 @@
 import { db } from '@/db/client';
+import { storage } from '@/db/s3';
 import { UserNotFoundError } from '@/errors';
 import { AppError } from '@/errors/base';
 import type { PaginationMeta } from '@/types/common';
+
+async function presignDocumentUrl(filePath: string | null | undefined): Promise<string | null> {
+  if (!filePath) return null;
+
+  try {
+    return await storage.presignDownload(filePath, 3600);
+  } catch {
+    return null;
+  }
+}
 
 export async function listKycSubmissions(query: any, currentUserId: string) {
   const { page = 1, limit = 10, status, role, sortBy = 'submittedAt', sortDir = 'desc' } = query;
@@ -83,9 +94,11 @@ export async function listKycSubmissions(query: any, currentUserId: string) {
 export async function getKycSubmissionDetail(submissionId: string) {
   const submissionResult = await db.query(
     `SELECT vs.id, vs.user_id, vs.submission_status, vs.submitted_at, vs.reviewed_at, 
-            vs.rejection_reason, u.contact_email, u.role
+            vs.rejection_reason, u.contact_email, u.contact_phone, u.role,
+            bp.first_name, bp.last_name, bp.profile_picture_path
      FROM "VerificationSubmission" vs
      JOIN "User" u ON vs.user_id = u.user_id
+     LEFT JOIN "BaseUserProfile" bp ON bp.user_id = u.user_id
      WHERE vs.id = $1`,
     [submissionId]
   );
@@ -97,7 +110,7 @@ export async function getKycSubmissionDetail(submissionId: string) {
   const submission = submissionResult.rows[0];
 
   const docsResult = await db.query(
-    `SELECT id, document_type, document_number, file_name, mime_type, file_size_bytes,
+    `SELECT id, document_type, document_number, file_name, mime_type, file_size_bytes, file_path,
             uploaded_at, verification_status, rejection_reason, reviewed_at
      FROM "UserIdentityDocument"
      WHERE submission_id = $1
@@ -105,17 +118,28 @@ export async function getKycSubmissionDetail(submissionId: string) {
     [submissionId]
   );
 
+  const displayName =
+    [submission.first_name, submission.last_name].filter(Boolean).join(' ').trim() ||
+    submission.contact_email ||
+    submission.contact_phone ||
+    submission.user_id;
+
   return {
     submissionId: submission.id,
     userId: submission.user_id,
     userEmail: submission.contact_email,
+    userPhone: submission.contact_phone,
     userRole: submission.role,
+    displayName,
+    firstName: submission.first_name || null,
+    lastName: submission.last_name || null,
+    profilePhotoUrl: await presignDocumentUrl(submission.profile_picture_path),
     status: submission.submission_status,
     submittedAt: submission.submitted_at,
     reviewedAt: submission.reviewed_at,
     rejectionReason:
       submission.submission_status === 'REJECTED' ? submission.rejection_reason : undefined,
-    documents: docsResult.rows.map((doc: any) => ({
+    documents: await Promise.all(docsResult.rows.map(async (doc: any) => ({
       documentId: doc.id,
       documentType: doc.document_type,
       documentNumber: doc.document_number,
@@ -126,7 +150,9 @@ export async function getKycSubmissionDetail(submissionId: string) {
       verificationStatus: doc.verification_status,
       reviewedAt: doc.reviewed_at,
       rejectionReason: doc.verification_status === 'REJECTED' ? doc.rejection_reason : undefined,
-    })),
+      filePath: doc.file_path || null,
+      signedUrl: await presignDocumentUrl(doc.file_path),
+    }))),
   };
 }
 

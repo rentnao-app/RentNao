@@ -1,6 +1,15 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiFetch, getApiErrorMessage, setAuthSession } from '../lib/api';
+import {
+  apiFetch,
+  fetchProfileStatus,
+  getApiErrorMessage,
+  getUserId,
+  getUserRole,
+  resolveOnboardingRoute,
+  setAuthSession,
+} from '../lib/api';
+import BrandLogoLink from '../components/BrandLogoLink';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import {
   clipPhoneInput,
@@ -66,15 +75,31 @@ export default function LogIn() {
         return;
       }
 
-      setSuccess('Login successful! Redirecting...');
       setPhone('');
       setPassword('');
 
+      const userId = getUserId(user);
+      const localRole = getUserRole(user);
+      if (!userId) {
+        setError('Login succeeded but user identifier is missing.');
+        return;
+      }
+
+      const { res: statusRes, profileStatus, role, body: statusBody } = await fetchProfileStatus(userId);
+      if (!statusRes.ok) {
+        setError('Login succeeded but profile status could not be loaded.');
+        return;
+      }
+
+      if (profileStatus === 'PHONE_VERIFICATION_PENDING') {
+        setSuccess('Verification required. Redirecting to OTP...');
+      } else {
+        setSuccess('Login successful! Redirecting...');
+      }
+
+      const target = resolveOnboardingRoute(profileStatus, role || localRole, statusBody?.data?.kycVerificationStatus || null);
       setTimeout(() => {
-        if (user.role === 'OWNER') window.location.href = '/owner-dashboard';
-        else if (user.role === 'TENANT') window.location.href = '/tenant-dashboard';
-        else if (user.role === 'ADMIN') window.location.href = '/admin-dashboard';
-        else window.location.href = '/';
+        window.location.href = target;
       }, 1000);
     } catch (err) {
       setError(err.message || 'An unexpected error occurred');
@@ -84,13 +109,11 @@ export default function LogIn() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-green-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-4 pr-14 sm:pr-16 flex items-center justify-between">
-          <Link to="/" className="text-2xl font-bold text-teal-800 tracking-tight">
-            RentNao
-          </Link>
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <BrandLogoLink />
           <nav className="flex items-center gap-4">
             <Link to="/listings" className="text-sm font-medium text-gray-600 hover:text-teal-700 transition">
               Browse
@@ -180,12 +203,6 @@ export default function LogIn() {
             Don&apos;t have an account?{' '}
             <Link to="/signup" className="text-teal-700 hover:text-teal-800 font-semibold">
               Sign Up
-            </Link>
-          </p>
-          <p className="mt-2 text-center text-gray-500 text-sm">
-            Need to verify your mobile?{' '}
-            <Link to="/auth-verification?type=PHONE" className="text-teal-700 hover:text-teal-800 font-semibold">
-              Verify now
             </Link>
           </p>
           <p className="mt-3 text-center text-xs font-medium tracking-wide text-gray-500 uppercase">

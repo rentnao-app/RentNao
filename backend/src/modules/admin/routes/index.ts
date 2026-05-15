@@ -5,6 +5,7 @@ export {
   updateRoleRoute,
   updateActiveStatusRoute,
   softDeleteUserRoute,
+  hardDeleteUserRoute,
   restoreUserRoute,
   forceKycStatusRoute,
 } from './user.routes';
@@ -27,3 +28,21 @@ export {
 } from './kyc.routes';
 
 export { listAdminListingsRoute, getAdminListingDetailRoute } from './listing.routes';
+
+export {
+  listTopupRequestsRoute,
+  approveTopupRequestRoute,
+  rejectTopupRequestRoute,
+} from './topup.routes';
+
+export {
+  listDiscountPoliciesRoute,
+  getDiscountPolicyByIdRoute,
+  createDiscountPolicyRoute,
+  updateDiscountPolicyRoute,
+  activateDiscountPolicyRoute,
+  deactivateDiscountPolicyRoute,
+  listDiscountEligibleUsersRoute,
+  addDiscountEligibleUsersRoute,
+  removeDiscountEligibleUsersRoute,
+} from './discount.routes';

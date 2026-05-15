@@ -1,5 +1,6 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, getApiErrorMessage, setAuthSession } from '../lib/api';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import { addLocalNotification } from '../lib/notifications';
@@ -81,8 +82,8 @@ export default function SignUp() {
       }
       addLocalNotification({
         title: 'Account Created',
-        message: 'Welcome! Complete your role registration to continue.',
-        url: role === 'TENANT' ? '/tenant-registration' : '/owner-registration',
+        message: 'Welcome! Verify your mobile number to continue onboarding.',
+        url: '/auth-verification?type=PHONE',
         type: 'AUTH',
       });
       setSuccess('Sign up successful! Redirecting...');
@@ -90,10 +91,8 @@ export default function SignUp() {
       setPhone('');
       setPassword('');
 
-      const regPath = role === 'TENANT' ? '/tenant-registration' : '/owner-registration';
-      const qp = new URLSearchParams({ phone: local11 });
       setTimeout(() => {
-        window.location.href = `${regPath}?${qp.toString()}`;
+        window.location.href = '/auth-verification?type=PHONE';
       }, 1500);
     } catch (err) {
       setError(err.message || 'An unexpected error occurred');
@@ -103,13 +102,11 @@ export default function SignUp() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-green-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-4 pr-14 sm:pr-16 flex items-center justify-between">
-          <Link to="/" className="text-2xl font-bold text-teal-800 tracking-tight">
-            RentNao
-          </Link>
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <BrandLogoLink />
           <nav className="flex items-center gap-4">
             <Link to="/listings" className="text-sm font-medium text-gray-600 hover:text-teal-700 transition">
               Browse
@@ -173,7 +170,7 @@ export default function SignUp() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">I want to</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Select Role</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -189,7 +186,8 @@ export default function SignUp() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
                     </div>
-                    Find a Home
+                    <div className="font-semibold">Tenant</div>
+                    <div className="mt-0.5 text-xs font-normal text-gray-500">Rent a Property</div>
                   </button>
                   <button
                     type="button"
@@ -205,7 +203,8 @@ export default function SignUp() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" />
                       </svg>
                     </div>
-                    List Property
+                    <div className="font-semibold">Owner</div>
+                    <div className="mt-0.5 text-xs font-normal text-gray-500">List your Property</div>
                   </button>
                 </div>
               </div>
@@ -232,12 +231,6 @@ export default function SignUp() {
             Already have an account?{' '}
             <Link to="/login" className="text-teal-700 hover:text-teal-800 font-semibold">
               Log In
-            </Link>
-          </p>
-          <p className="mt-2 text-center text-gray-500 text-sm">
-            Already signed up but unverified?{' '}
-            <Link to="/auth-verification?type=PHONE" className="text-teal-700 hover:text-teal-800 font-semibold">
-              Verify mobile
             </Link>
           </p>
           <p className="mt-3 text-center text-xs font-medium tracking-wide text-gray-500 uppercase">

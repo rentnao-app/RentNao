@@ -18,13 +18,13 @@ export const TOKEN_TTL = {
    * Default: 15 minutes (900 seconds)
    * Shorter duration for OTP security
    */
-  PHONE_VERIFICATION: 900,
+  PHONE_VERIFICATION: 300,
 
   /**
    * Password reset token TTL
    * Default: 1 hour (3600 seconds)
    */
-  PASSWORD_RESET: 3600,
+  PASSWORD_RESET: 300,
 
   /**
    * Magic link token TTL

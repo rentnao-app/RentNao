@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+﻿import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
 import { isLoggedIn } from '../lib/api';
 
 const offerings = [
@@ -33,14 +34,24 @@ const offerings = [
       </svg>
     ),
   },
+  {
+    title: 'In-App Wallet',
+    description:
+      'Top up your in-app wallet in BDT and pay for listing fees, unlocks, and other charges without leaving Rent Nao. Track every transaction in one place.',
+    icon: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+      </svg>
+    ),
+  },
 ];
 
 const headerNav = [
   { to: '/listings', label: 'Listings' },
   { to: '/about', label: 'About' },
   { to: '/faq', label: 'FAQ' },
-  { to: '/login', label: 'Log In' },
-  { to: '/signup', label: 'Sign Up', emphasize: true },
+  { to: '/login', label: 'Log In', authOnly: 'guest' },
+  { to: '/signup', label: 'Sign Up', emphasize: true, authOnly: 'guest' },
 ];
 
 function navLinkClass(emphasize) {
@@ -53,79 +64,143 @@ function navLinkClass(emphasize) {
 export default function ServicesPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const loggedIn = isLoggedIn();
+  const navigate = useNavigate();
+  const visibleNav = headerNav.filter((item) => !(loggedIn && item.authOnly === 'guest'));
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
+      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between gap-3 py-3 sm:py-4">
-            <Link
-              to="/"
-              className="text-xl sm:text-2xl font-bold text-teal-800 tracking-tight leading-none shrink-0 min-w-0"
-              onClick={() => setMenuOpen(false)}
-            >
-              Rent Nao
-            </Link>
+            <BrandLogoLink className="min-w-0 shrink-0" onClick={() => setMenuOpen(false)} />
 
-            <nav className="hidden sm:flex items-center justify-end gap-4 md:gap-6 text-sm shrink-0" aria-label="Main">
-              {headerNav.map(({ to, label, emphasize }) => (
-                <Link key={to} to={to} className={navLinkClass(emphasize)}>
+            {loggedIn ? (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shrink-0"
+              >
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  aria-hidden
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+              </button>
+            ) : (
+              <>
+                <nav className="hidden lg:flex items-center justify-end gap-4 md:gap-6 text-sm shrink-0" aria-label="Main">
+                  {visibleNav.map(({ to, label, emphasize }) => (
+                    <Link key={to} to={to} className={navLinkClass(emphasize)}>
+                      {label}
+                    </Link>
+                  ))}
+                </nav>
+
+                <button
+                  type="button"
+                  className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 shrink-0"
+                  aria-expanded={menuOpen}
+                  aria-controls="services-mobile-nav"
+                  aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                  onClick={() => setMenuOpen((o) => !o)}
+                >
+                  {menuOpen ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+
+        </div>
+      </header>
+
+      {!loggedIn && menuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+          />
+          <aside
+            id="services-mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="services-mobile-nav-title"
+            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <BrandLogoLink
+                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
+                  onClick={() => setMenuOpen(false)}
+                />
+                <span id="services-mobile-nav-title" className="sr-only">
+                  Main menu
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
+                aria-label="Close menu"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Main mobile">
+              {visibleNav.map(({ to, label, emphasize }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className={
+                    emphasize
+                      ? 'mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition'
+                      : 'rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition'
+                  }
+                  onClick={() => setMenuOpen(false)}
+                >
                   {label}
                 </Link>
               ))}
             </nav>
-
-            <button
-              type="button"
-              className="sm:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 dark:hover:bg-zinc-800 shrink-0"
-              aria-expanded={menuOpen}
-              aria-controls="services-mobile-nav"
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              onClick={() => setMenuOpen((o) => !o)}
-            >
-              {menuOpen ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-          </div>
-
-          {menuOpen && (
-            <div
-              id="services-mobile-nav"
-              className="sm:hidden border-t border-gray-100"
-            >
-              <nav className="flex flex-col py-2 pb-4 text-sm" aria-label="Main mobile">
-                {headerNav.map(({ to, label, emphasize }) => (
-                  <Link
-                    key={to}
-                    to={to}
-                    className={`${navLinkClass(emphasize)} px-1`}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-          )}
+          </aside>
         </div>
-      </header>
+      )}
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
         <p className="text-sm font-semibold uppercase tracking-wide text-teal-700 mb-2">What we offer</p>
         <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-4">Services</h1>
         <p className="text-base sm:text-lg text-gray-600 max-w-2xl mb-10 sm:mb-12">
-          Rent Nao helps you rent and let property with less friction—from discovery and requests to photos, listings, and
+          Rent Nao helps you rent and let property with less friction - from discovery and requests to photos, listings, and
           wallet-based fees.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 mb-12 sm:mb-14">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 mb-12 sm:mb-14">
           {offerings.map((item) => (
             <div
               key={item.title}
@@ -167,4 +242,5 @@ export default function ServicesPage() {
     </div>
   );
 }
+
 

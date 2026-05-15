@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+﻿import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
 import toast from 'react-hot-toast';
 import { apiFetch } from '../lib/api';
 import { listOwnerIncomingRequests, reviewOwnerRequest } from '../lib/requests';
@@ -71,22 +72,30 @@ export default function IncomingRequestsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/owner-dashboard" className="text-2xl font-bold text-teal-800 tracking-tight">
-            RentNao
-          </Link>
-          <button type="button" onClick={() => load()} className="text-sm font-medium text-gray-600 hover:text-gray-800">
+      <AppHeader />
+
+      <main className="max-w-5xl mx-auto px-6 py-8">
+        <Link
+          to="/owner-dashboard"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 mb-3"
+        >
+          <span aria-hidden>&larr;</span> Owner dashboard
+        </Link>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">Incoming Tenant Requests</h1>
+            <p className="text-sm text-gray-500">
+              {remoteAvailable ? 'Incoming requests synced with backend.' : 'Using local interaction fallback for requests.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => load()}
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+          >
             Refresh
           </button>
         </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Incoming Tenant Requests</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          {remoteAvailable ? 'Incoming requests synced with backend.' : 'Using local interaction fallback for requests.'}
-        </p>
 
         {loading ? (
           <div className="text-sm text-gray-500">Loading requests...</div>
@@ -185,3 +194,4 @@ export default function IncomingRequestsPage() {
     </div>
   );
 }
+

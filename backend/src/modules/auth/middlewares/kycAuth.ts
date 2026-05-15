@@ -79,7 +79,10 @@ export async function requireProfileComplete(c: Context, next: Next) {
     const { onboarding_status } = userResult.rows[0];
 
     // Allow post-registration but pre-profile
-    if (onboarding_status === 'AUTH_PENDING') {
+    if (
+      onboarding_status === 'PHONE_REQUIRED' ||
+      onboarding_status === 'PHONE_VERIFICATION_PENDING'
+    ) {
       return error(c, 'Profile completion required', 403);
     }
 

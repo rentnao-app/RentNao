@@ -9,7 +9,7 @@ type SeedConfig = {
   lastName: string;
   profession: string;
   jobCategory: string;
-  profilePhotoUrl: string;
+  profilePhotoKey: string;
   currentLat: number;
   currentLng: number;
   currentArea: string;
@@ -97,7 +97,7 @@ async function ensureUser(client: pg.PoolClient, cfg: SeedConfig) {
       cfg.lastName,
       cfg.profession,
       cfg.jobCategory,
-      cfg.profilePhotoUrl,
+      cfg.profilePhotoKey,
       cfg.currentLat,
       cfg.currentLng,
       cfg.currentArea,
@@ -203,7 +203,7 @@ async function main() {
       lastName: 'Tenant',
       profession: 'Software Engineer',
       jobCategory: 'TECHNOLOGY',
-      profilePhotoUrl: 'https://example.com/tenant.png',
+      profilePhotoKey: 'profiles/seed/tenant-avatar.png',
       currentLat: 23.7806,
       currentLng: 90.407,
       currentArea: 'Dhaka',
@@ -217,7 +217,7 @@ async function main() {
       lastName: 'Owner',
       profession: 'Business Owner',
       jobCategory: 'SELF_EMPLOYED',
-      profilePhotoUrl: 'https://example.com/owner.png',
+      profilePhotoKey: 'profiles/seed/owner-avatar.png',
       currentLat: 23.755,
       currentLng: 90.375,
       currentArea: 'Dhaka',
@@ -232,7 +232,7 @@ async function main() {
       lastName: 'OwnerThree',
       profession: 'Business Owner',
       jobCategory: 'SELF_EMPLOYED',
-      profilePhotoUrl: 'https://example.com/owner.png',
+      profilePhotoKey: 'profiles/seed/owner-avatar.png',
       currentLat: 23.755,
       currentLng: 90.375,
       currentArea: 'Dhaka',

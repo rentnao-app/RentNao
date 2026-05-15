@@ -7,7 +7,16 @@
 export { registerUser, loginUser, logoutUser } from './auth.service';
 
 // Verification services (email/phone verification)
-export { verifyEmail, verifyPhone, resendVerification } from './verification.service';
+export {
+  bootstrapPhoneVerification,
+  changePhoneVerification,
+  getPendingPhoneVerificationStatus,
+  resendPendingPhoneVerification,
+  verifyEmail,
+  verifyPhone,
+  resendVerification,
+  startPhoneVerification,
+} from './verification.service';
 
 // Password services (password reset flow)
 export {

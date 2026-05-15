@@ -34,6 +34,12 @@ const envSchema = z.object({
   REDIS_DB: z.string().default('0').transform((val) => parseInt(val, 10)),
   REDIS_MAX_RETRIES: z.string().default('3').transform((val) => parseInt(val, 10)),
   REDIS_CONNECT_TIMEOUT: z.string().default('10000').transform((val) => parseInt(val, 10)),
+  // SMS OTP provider configuration
+  SMS_OTP_ENABLED: z.string().default('false').transform((val) => val.toLowerCase() === 'true'),
+  SMS_OTP_PROVIDER: z.enum(['CONSOLE', 'BULKSMSBD']).default('CONSOLE'),
+  BULKSMSBD_API_URL: z.string().url().default('http://bulksmsbd.net/api/smsapi'),
+  BULKSMSBD_API_KEY: z.string().optional(),
+  BULKSMSBD_SENDER_ID: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

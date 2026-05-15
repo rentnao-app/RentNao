@@ -51,6 +51,10 @@ export const registerSchema = z
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   })
+  .refine((data) => data.identifierType === 'PHONE', {
+    message: 'Registration currently requires a phone number',
+    path: ['identifierType'],
+  })
   .refine(
     (data) => {
       if (data.identifierType === 'EMAIL') {

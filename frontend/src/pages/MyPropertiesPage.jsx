@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
 import { apiFetch, getApiErrorMessage, isLoggedIn } from '../lib/api';
 import toast from 'react-hot-toast';
 
@@ -117,33 +118,27 @@ export default function MyPropertiesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/owner-dashboard" className="text-2xl font-bold text-teal-800 tracking-tight">
-            RentNao
-          </Link>
-          <Link
-            to="/owner-dashboard/create-listing"
-            className="bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold px-4 sm:px-5 py-2.5 rounded-lg transition whitespace-nowrap"
-          >
-            + New Listing
-          </Link>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
           <div>
+            <Link
+              to="/owner-dashboard"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 mb-2"
+            >
+              <span aria-hidden>&larr;</span> Owner dashboard
+            </Link>
             <h1 className="text-2xl font-bold text-gray-900">My Properties</h1>
             <p className="text-sm text-gray-500 mt-1">
               Pause sets a listing to inactive (hidden from search). Delete removes the whole property permanently from the database.
             </p>
           </div>
           <Link
-            to="/owner-dashboard"
-            className="text-sm font-medium text-teal-700 hover:text-teal-800 self-start sm:self-auto"
+            to="/owner-dashboard/create-listing"
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 transition whitespace-nowrap"
           >
-            ← Owner dashboard
+            <span aria-hidden>+</span> List New Property
           </Link>
         </div>
 
@@ -169,7 +164,7 @@ export default function MyPropertiesPage() {
               return (
                 <article
                   key={property.propertyId}
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow"
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow isolate"
                 >
                   <div className="relative h-44 bg-gray-100">
                     {src ? (
@@ -184,7 +179,7 @@ export default function MyPropertiesPage() {
                       </div>
                     )}
                     {imgCount > 0 && (
-                      <span className="absolute bottom-2 right-2 rounded-full bg-black/60 text-white text-xs font-medium px-2.5 py-1">
+                      <span className="absolute bottom-2 right-2 rounded-full border border-white/30 bg-black/60 text-white text-xs font-medium px-2.5 py-1 shadow-sm">
                         {imgCount} photo{imgCount === 1 ? '' : 's'}
                       </span>
                     )}
@@ -196,9 +191,9 @@ export default function MyPropertiesPage() {
                     </h2>
                     <p className="text-sm text-gray-500 mt-1">{areaLabel(property.areaName)}</p>
                     <p className="text-xs text-gray-400 mt-2">
-                      {property.roomCount != null ? `${property.roomCount} beds` : '—'} ·{' '}
-                      {property.bathroomCount != null ? `${property.bathroomCount} baths` : '—'} ·{' '}
-                      {property.propertySizeSqft != null ? `${property.propertySizeSqft} sqft` : '—'}
+                      {property.roomCount != null ? `${property.roomCount} beds` : '-'} -{' '}
+                      {property.bathroomCount != null ? `${property.bathroomCount} baths` : '-'} -{' '}
+                      {property.propertySizeSqft != null ? `${property.propertySizeSqft} sqft` : '-'}
                     </p>
 
                     <div className="mt-4 space-y-2 flex-1">
@@ -247,7 +242,7 @@ export default function MyPropertiesPage() {
                                     }
                                     className="shrink-0 rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-900 hover:bg-amber-50 disabled:opacity-50"
                                   >
-                                    {busyPause ? 'Pausing…' : 'Pause'}
+                                    {busyPause ? 'Pausing' : 'Pause'}
                                   </button>
                                 ) : null}
                                 {canResume ? (
@@ -259,7 +254,7 @@ export default function MyPropertiesPage() {
                                     }
                                     className="shrink-0 rounded-md border border-teal-300 bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-800 hover:bg-teal-100 disabled:opacity-50"
                                   >
-                                    {busyResume ? 'Resuming…' : 'Resume'}
+                                    {busyResume ? 'Resuming...' : 'Resume'}
                                   </button>
                                 ) : null}
                               </div>
@@ -284,7 +279,7 @@ export default function MyPropertiesPage() {
                         onClick={() => handleDeleteProperty(property.propertyId)}
                         className="w-full text-sm font-semibold text-red-600 hover:text-red-700 disabled:opacity-50 py-1"
                       >
-                        {deletingId === property.propertyId ? 'Deleting…' : 'Delete property (permanent)'}
+                        {deletingId === property.propertyId ? 'Deleting' : 'Delete property (permanent)'}
                       </button>
                     </div>
                   </div>
@@ -297,4 +292,5 @@ export default function MyPropertiesPage() {
     </div>
   );
 }
+
 

@@ -16,6 +16,8 @@ import {
 import { hashPassword, verifyPassword } from '../utils/password';
 import { generateVerificationToken, generateOTP } from '../utils/token-generator';
 import { storeVerificationToken } from './token-storage.service';
+import { setPendingPhoneVerification } from './otp-cache.service';
+import { sendPhoneOtp } from './sms.service';
 import { TOKEN_TTL } from '../config/token-ttl';
 import type { RegisterInput, LoginInput } from '../schemas';
 import type { UserWithTokens } from '../types/auth.types';
@@ -25,6 +27,10 @@ import type { UserWithTokens } from '../types/auth.types';
  */
 export async function registerUser(input: RegisterInput): Promise<UserWithTokens> {
   const { identifier, identifierType, password, role } = input;
+
+  if (identifierType !== 'PHONE') {
+    throw new AppError(400, 'Registration currently requires a phone number');
+  }
 
   // Check if user already exists
   const existingCredential = await db.query(
@@ -67,7 +73,7 @@ export async function registerUser(input: RegisterInput): Promise<UserWithTokens
     // Create user
     const userResult = await client.query(
       `INSERT INTO "User" (user_id, role, onboarding_status, is_active)
-       VALUES (gen_random_uuid()::text, $1, 'AUTH_PENDING', true)
+       VALUES (gen_random_uuid()::text, $1, 'PHONE_VERIFICATION_PENDING', true)
        RETURNING user_id, role, onboarding_status, kyc_verification_status, contact_email, contact_phone, is_active, created_at`,
       [role]
     );
@@ -114,6 +120,9 @@ export async function registerUser(input: RegisterInput): Promise<UserWithTokens
 
     // Store verification token in Redis
     await storeVerificationToken(identifier, verificationToken, tokenType, ttl);
+    if (identifierType === 'PHONE') {
+      await setPendingPhoneVerification(user.user_id, identifier, ttl);
+    }
 
     // Generate JWT tokens
     const accessToken = generateAccessToken({
@@ -125,8 +134,18 @@ export async function registerUser(input: RegisterInput): Promise<UserWithTokens
 
     const refreshToken = generateRefreshToken(user.user_id);
 
-    // TODO: Send verification email/SMS
-    console.log(`Verification ${identifierType.toLowerCase()}: ${verificationToken}`);
+    // Send verification token
+    if (identifierType === 'PHONE') {
+      await sendPhoneOtp({
+        identifier,
+        otp: verificationToken,
+        purpose: 'PHONE_VERIFICATION',
+        ttlSeconds: ttl,
+      });
+    } else {
+      // TODO: Send verification email
+      console.log(`Verification email: ${verificationToken}`);
+    }
 
     return {
       user: {
@@ -188,11 +207,6 @@ export async function loginUser(input: LoginInput): Promise<UserWithTokens> {
   // Check if account is inactive
   if (!user.is_active) {
     throw new AppError(403, 'This account is inactive. Please contact support.');
-  }
-
-  // Check if credentials are verified
-  if (!user.verified_at) {
-    throw new AppError(401, 'Please verify your email or phone number before logging in.');
   }
 
   // Verify password

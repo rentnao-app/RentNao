@@ -83,6 +83,18 @@ export function registerUserManagementRoutes(admin: OpenAPIHono) {
     }, 200);
   });
 
+  admin.openapi(adminRoutes.hardDeleteUserRoute, async (c) => {
+    const { userId } = c.req.valid('param');
+    const { userId: currentUserId } = c.get('user');
+
+    const result = await adminService.hardDeleteUser(userId, currentUserId);
+
+    return c.json({
+      success: true,
+      message: result.message,
+    }, 200);
+  });
+
   admin.openapi(adminRoutes.restoreUserRoute, async (c) => {
     const { userId } = c.req.valid('param');
 

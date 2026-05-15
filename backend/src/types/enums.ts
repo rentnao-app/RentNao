@@ -12,7 +12,13 @@ import { z } from '@hono/zod-openapi';
 export const UserRole = z.enum(['TENANT', 'OWNER', 'ADMIN']);
 export type UserRoleType = z.infer<typeof UserRole>;
 
-export const OnboardingStatus = z.enum(['AUTH_PENDING', 'PROFILE_PENDING', 'COMPLETED']);
+export const OnboardingStatus = z.enum([
+  'PHONE_REQUIRED',
+  'PHONE_VERIFICATION_PENDING',
+  'PROFILE_PENDING',
+  'UNDER_REVIEW',
+  'COMPLETED',
+]);
 export type OnboardingStatusType = z.infer<typeof OnboardingStatus>;
 
 export const Verification = z.enum(['ACCEPTED', 'REJECTED', 'PENDING']);
@@ -155,3 +161,8 @@ export type ChargeStatusType = z.infer<typeof ChargeStatus>;
 
 export const ConversationStatus = z.enum(['PENDING', 'ACCEPTED', 'CLOSED']);
 export type ConversationStatusType = z.infer<typeof ConversationStatus>;
+export const TopupRequestStatus = z.enum(['PENDING', 'APPROVED', 'REJECTED']);
+export type TopupRequestStatusType = z.infer<typeof TopupRequestStatus>;
+
+export const DiscountType = z.enum(['FIXED', 'PERCENTAGE']);
+export type DiscountTypeType = z.infer<typeof DiscountType>;

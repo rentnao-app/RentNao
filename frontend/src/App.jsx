@@ -7,6 +7,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AuthVerificationPage from './pages/AuthVerificationPage';
 import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
+import OAuthPhoneSetupPage from './pages/OAuthPhoneSetupPage';
 import TenantRegistrationPage from './pages/TenantRegistrationPage';
 import OwnerRegistrationPage from './pages/OwnerRegistrationPage';
 import VerificationPage from './pages/VerificationPage';
@@ -27,11 +28,13 @@ import AboutPage from './pages/AboutPage';
 import TermsPage from './pages/TermsPage';
 import FAQPage from './pages/FAQPage';
 import ServicesPage from './pages/ServicesPage';
+import ReviewPage from './pages/ReviewPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import ListingPage from './pages/ListingPage';
 import ListingDetailsPage from './pages/ListingDetailsPage';
 import WalletPage from './pages/WalletPage';
+import AdminTopupApprovalsPage from './pages/AdminTopupApprovalsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SiteFooter from './components/SiteFooter';
 
@@ -71,6 +74,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/auth-verification" element={<AuthVerificationPage />} />
+            <Route path="/auth/phone-setup" element={<OAuthPhoneSetupPage />} />
             <Route path="/auth/callback" element={<GoogleAuthCallbackPage />} />
             <Route path="/tenant-registration" element={<TenantRegistrationPage />} />
             <Route path="/owner-registration" element={<OwnerRegistrationPage />} />
@@ -81,6 +85,8 @@ function App() {
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/service" element={<ServicesPage />} />
             <Route path="/services" element={<ServicesPage />} />
+            <Route path="/review" element={<ReviewPage />} />
+            <Route path="/reviews" element={<ReviewPage />} />
             <Route path="/listings" element={<ListingPage />} />
             <Route path="/listings/:id" element={<ListingDetailsPage />} />
             <Route path="/profile/:userId" element={<PublicProfilePage />} />
@@ -95,6 +101,7 @@ function App() {
             <Route path="/dashboard/rentals" element={<ProtectedRoute component={MyRentalsPage} requiredRole={null} />} />
             <Route path="/notifications" element={<ProtectedRoute component={NotificationsPage} requiredRole={null} />} />
             <Route path="/admin-dashboard" element={<ProtectedRoute component={AdminDashboard} requiredRole="ADMIN" />} />
+            <Route path="/admin-dashboard/topup-approvals" element={<ProtectedRoute component={AdminTopupApprovalsPage} requiredRole="ADMIN" />} />
             <Route path="/account" element={<ProtectedRoute component={AccountSettingsPage} requiredRole={null} />} />
             <Route path="/wallet" element={<ProtectedRoute component={WalletPage} requiredRole={null} />} />
             <Route path="*" element={<NotFoundPage />} />

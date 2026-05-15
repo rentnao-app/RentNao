@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
 import {
   fetchNotifications,
   markAllNotificationsRead,
@@ -38,35 +39,33 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-2xl font-bold text-teal-800 tracking-tight">
-            RentNao
-          </Link>
-          <div className="flex items-center gap-4">
+      <AppHeader />
+
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">Notifications</h1>
+            <p className="text-sm text-gray-500">
+              {remoteAvailable ? 'Live updates from backend are active.' : 'Showing local notifications until backend notification API is available.'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             <button
               type="button"
               onClick={handleMarkAll}
-              className="text-sm font-medium text-teal-700 hover:text-teal-800"
+              className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition"
             >
               Mark all read
             </button>
             <button
               type="button"
               onClick={load}
-              className="text-sm font-medium text-gray-600 hover:text-gray-800"
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
             >
               Refresh
             </button>
           </div>
         </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Notifications</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          {remoteAvailable ? 'Live updates from backend are active.' : 'Showing local notifications until backend notification API is available.'}
-        </p>
 
         {loading ? (
           <div className="text-sm text-gray-500">Loading notifications...</div>
@@ -99,3 +98,4 @@ export default function NotificationsPage() {
     </div>
   );
 }
+

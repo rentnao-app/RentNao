@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+﻿import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
 import toast from 'react-hot-toast';
@@ -8,9 +8,10 @@ import WishlistHeartButton from '../components/WishlistHeartButton';
 import { getWishlistState } from '../lib/wishlist';
 import { getTenantRequestForListing, withdrawTenantRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
+import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
 
 function formatBdt(n) {
-  if (n == null || Number.isNaN(Number(n))) return '—';
+  if (n == null || Number.isNaN(Number(n))) return '-';
   try {
     return new Intl.NumberFormat('en-BD', {
       style: 'currency',
@@ -28,7 +29,7 @@ function areaLabel(name) {
 }
 
 function formatTenantType(v) {
-  if (!v) return '—';
+  if (!v) return '-';
   return String(v).replaceAll('_', ' ');
 }
 
@@ -225,7 +226,7 @@ export default function ListingDetailsPage() {
         <div className="text-center">
           <p className="mb-4 text-slate-600">{error || 'Listing not found.'}</p>
           <Link to="/listings" className="text-sm font-semibold text-emerald-800 hover:text-emerald-900">
-            ← Back to listings
+            Back to listings
           </Link>
         </div>
       </div>
@@ -239,27 +240,10 @@ export default function ListingDetailsPage() {
     <div className="min-h-screen bg-[#f2f7f3] text-slate-800">
       <header className="sticky top-0 z-30 border-b border-emerald-100/90 bg-white/95 shadow-sm backdrop-blur-sm">
         <div className="mx-auto flex max-w-[1500px] items-center gap-2 px-3 py-3 sm:gap-3 sm:px-5 lg:px-6">
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
-            aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
-            onClick={() => setMobileNavOpen((v) => !v)}
-          >
-            {mobileNavOpen ? (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
-
-          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2" onClick={() => setMobileNavOpen(false)}>
-            <img src="/logo.jpg" alt="" className="h-9 w-9 rounded-lg border border-emerald-100 object-cover" />
-            <span className="truncate text-lg font-semibold tracking-tight text-[#2f8444] sm:text-xl">Rent Nao</span>
-          </Link>
+          <BrandLogoLink
+            className="min-w-0 shrink-0"
+            onClick={() => setMobileNavOpen(false)}
+          />
 
           <nav className="mx-auto hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex">
             {topNavItems.map((item) => (
@@ -277,7 +261,7 @@ export default function ListingDetailsPage() {
             {loggedIn ? (
               <Link
                 to={dashboardPath}
-                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-emerald-800 sm:inline"
+                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-emerald-800 lg:inline"
               >
                 Dashboard
               </Link>
@@ -298,34 +282,88 @@ export default function ListingDetailsPage() {
               </>
             )}
           </div>
+          <button
+            type="button"
+            className="ml-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+            aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMobileNavOpen((v) => !v)}
+          >
+            {mobileNavOpen ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
 
-        {mobileNavOpen ? (
-          <div className="border-t border-emerald-100 bg-white px-3 py-3 lg:hidden">
-            <nav className="flex flex-col gap-1">
+      </header>
+
+      {mobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
+            aria-label="Close menu"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <aside
+            id="listing-details-mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="listing-details-mobile-nav-title"
+            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <BrandLogoLink
+                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
+                  onClick={() => setMobileNavOpen(false)}
+                />
+                <span id="listing-details-mobile-nav-title" className="sr-only">
+                  Main menu
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
+                aria-label="Close menu"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
               {topNavItems.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-emerald-50"
+                  className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   {item.label}
                 </Link>
               ))}
+
               {loggedIn ? (
                 <Link
                   to={dashboardPath}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-emerald-800 hover:bg-emerald-50"
                   onClick={() => setMobileNavOpen(false)}
+                  className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
                 >
                   Dashboard
                 </Link>
               ) : null}
             </nav>
-          </div>
-        ) : null}
-      </header>
+          </aside>
+        </div>
+      )}
 
       <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-5 sm:py-6 lg:px-6 lg:py-8">
         {error ? (
@@ -345,7 +383,7 @@ export default function ListingDetailsPage() {
         </nav>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-12 xl:items-start xl:gap-6">
-          {/* Left — specs */}
+          {/* Left - specs */}
           <aside className="order-2 space-y-3 xl:order-1 xl:col-span-3 xl:row-start-1">
             <div className="flex gap-2 rounded-xl border border-slate-200/80 bg-white p-1 shadow-sm">
               <span className="flex-1 rounded-lg bg-emerald-700 px-3 py-2 text-center text-xs font-semibold text-white">
@@ -356,7 +394,7 @@ export default function ListingDetailsPage() {
             <div className="space-y-2">
               <SpecRow
                 label="Bedrooms"
-                value={listing.roomCount != null ? String(listing.roomCount) : '—'}
+                value={listing.roomCount != null ? String(listing.roomCount) : '-'}
                 icon={
                   <Icon>
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -367,7 +405,7 @@ export default function ListingDetailsPage() {
               />
               <SpecRow
                 label="Bathrooms"
-                value={listing.bathroomCount != null ? String(listing.bathroomCount) : '—'}
+                value={listing.bathroomCount != null ? String(listing.bathroomCount) : '-'}
                 icon={
                   <Icon>
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -378,7 +416,7 @@ export default function ListingDetailsPage() {
               />
               <SpecRow
                 label="Size"
-                value={listing.propertySizeSqft != null ? `${listing.propertySizeSqft.toLocaleString()} sq.ft` : '—'}
+                value={listing.propertySizeSqft != null ? `${listing.propertySizeSqft.toLocaleString()} sq.ft` : '-'}
                 icon={
                   <Icon>
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -389,7 +427,7 @@ export default function ListingDetailsPage() {
               />
               <SpecRow
                 label="Building floors"
-                value={listing.buildingFloors != null ? String(listing.buildingFloors) : '—'}
+                value={listing.buildingFloors != null ? String(listing.buildingFloors) : '-'}
                 icon={
                   <Icon>
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -400,7 +438,7 @@ export default function ListingDetailsPage() {
               />
               <SpecRow
                 label="Facing"
-                value={listing.buildingFacing ? formatTenantType(listing.buildingFacing) : '—'}
+                value={listing.buildingFacing ? formatTenantType(listing.buildingFacing) : '-'}
                 icon={
                   <Icon>
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -429,7 +467,7 @@ export default function ListingDetailsPage() {
             </div>
           </aside>
 
-          {/* Center — gallery + copy + related */}
+          {/* Center - gallery + copy + related */}
           <div className="order-1 space-y-5 xl:order-2 xl:col-span-6 xl:col-start-4 xl:row-start-1">
             <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -496,7 +534,7 @@ export default function ListingDetailsPage() {
                 </p>
                 <p>
                   <span className="text-slate-400">Balconies:</span>{' '}
-                  <span className="font-medium text-slate-800">{listing.balconyCount ?? '—'}</span>
+                  <span className="font-medium text-slate-800">{listing.balconyCount ?? '-'}</span>
                 </p>
                 <p>
                   <span className="text-slate-400">Lift:</span>{' '}
@@ -559,7 +597,7 @@ export default function ListingDetailsPage() {
             ) : null}
           </div>
 
-          {/* Right — price, terms, actions */}
+          {/* Right - price, terms, actions */}
           <aside className="order-3 space-y-4 xl:col-span-3 xl:col-start-10 xl:row-start-1">
             <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
               <p className="text-2xl font-bold tracking-tight text-emerald-800 sm:text-3xl">{formatBdt(listing.rent)}</p>
@@ -574,7 +612,7 @@ export default function ListingDetailsPage() {
               <div className="mt-5 space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-sm">
                 <div className="flex justify-between gap-3 border-b border-slate-100 pb-2">
                   <span className="text-slate-500">Security deposit</span>
-                  <span className="font-semibold text-slate-900">—</span>
+                  <span className="font-semibold text-slate-900">-</span>
                 </div>
                 <div className="flex justify-between gap-3 border-b border-slate-100 pb-2">
                   <span className="text-slate-500">Minimum lease</span>
@@ -622,7 +660,7 @@ export default function ListingDetailsPage() {
                     <div className="rounded-xl bg-amber-50 px-3 py-3 text-sm text-amber-950 ring-1 ring-amber-100">
                       <p className="font-medium">Request pending</p>
                       <Link to="/tenant-dashboard/applications" className="mt-2 inline-block text-xs font-semibold text-emerald-800 hover:underline">
-                        View my requests →
+                        View my requests {'->'}
                       </Link>
                       <button
                         type="button"
@@ -646,7 +684,7 @@ export default function ListingDetailsPage() {
                         }}
                         className="mt-3 w-full rounded-lg bg-white py-2 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-50"
                       >
-                        {requestLoading ? 'Working…' : 'Withdraw request'}
+                        {requestLoading ? 'Working...' : 'Withdraw request'}
                       </button>
                     </div>
                   ) : requestRecord?.requestStatus === 'ACCEPTED' ? (
@@ -669,7 +707,7 @@ export default function ListingDetailsPage() {
                         onChange={(e) => setRequestMessage(e.target.value)}
                         maxLength={2000}
                         rows={3}
-                        placeholder="Introduce yourself or ask a question…"
+                        placeholder="Introduce yourself or ask a question"
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                       />
                       <button
@@ -700,7 +738,7 @@ export default function ListingDetailsPage() {
                         }}
                         className="w-full rounded-xl bg-emerald-700 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"
                       >
-                        {sendingRequest ? 'Sending…' : 'Send rental request'}
+                        {sendingRequest ? 'Sending...' : 'Send rental request'}
                       </button>
                     </>
                   )}
@@ -730,7 +768,7 @@ export default function ListingDetailsPage() {
                     }}
                     className="mt-3 w-full rounded-xl bg-emerald-700 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"
                   >
-                    {unlocking ? 'Unlocking…' : 'Unlock listing'}
+                    {unlocking ? 'Unlocking...' : 'Unlock listing'}
                   </button>
                 </div>
               ) : null}
@@ -741,11 +779,11 @@ export default function ListingDetailsPage() {
                   <div className="mt-2 space-y-1 text-sm">
                     <p>
                       <span className="text-slate-500">Email:</span>{' '}
-                      <span className="font-medium">{listing.ownerContact?.email || '—'}</span>
+                      <span className="font-medium">{listing.ownerContact?.email || '-'}</span>
                     </p>
                     <p>
                       <span className="text-slate-500">Phone:</span>{' '}
-                      <span className="font-medium">{listing.ownerContact?.phone || '—'}</span>
+                      <span className="font-medium">{listing.ownerContact?.phone || '-'}</span>
                     </p>
                   </div>
                 ) : (
@@ -759,4 +797,5 @@ export default function ListingDetailsPage() {
     </div>
   );
 }
+
 

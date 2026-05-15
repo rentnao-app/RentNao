@@ -114,6 +114,22 @@ export const softDeleteUserRoute = createRoute({
   security: [{ bearerAuth: [] }],
 });
 
+export const hardDeleteUserRoute = createRoute({
+  method: 'delete',
+  path: '/users/{userId}/hard-delete',
+  tags: ['Admin - User Management'],
+  summary: 'Hard delete user',
+  description: 'Permanently delete user account and dependent records. Cannot delete own account.',
+  request: { params: userIdParamSchema },
+  responses: {
+    200: { description: 'User permanently deleted', content: { 'application/json': { schema: successMessageResponseSchema } } },
+    400: { description: 'Cannot delete own account', content: { 'application/json': { schema: errorResponseSchema } } },
+    404: { description: 'User not found', content: { 'application/json': { schema: errorResponseSchema } } },
+    403: { description: 'Forbidden - Admin access required', content: { 'application/json': { schema: errorResponseSchema } } },
+  },
+  security: [{ bearerAuth: [] }],
+});
+
 export const restoreUserRoute = createRoute({
   method: 'post',
   path: '/users/{userId}/restore',

@@ -26,11 +26,15 @@ export {
   verifyEmailSchema,
   verifyPhoneSchema,
   resendVerificationSchema,
+  startPhoneVerificationSchema,
   verificationResponseSchema,
   resendVerificationResponseSchema,
+  startPhoneVerificationResponseSchema,
+  pendingPhoneVerificationResponseSchema,
   type VerifyEmailInput,
   type VerifyPhoneInput,
   type ResendVerificationInput,
+  type StartPhoneVerificationInput,
 } from './verification.schemas';
 
 // Password reset schemas

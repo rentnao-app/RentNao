@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
 import { apiFetch, getApiErrorMessage, getCurrentUser, getUserId, getUserRole, isLoggedIn } from '../lib/api';
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
+import { getAcceptValue, isAllowedFileByMimeAndExtension, PROFILE_PHOTO_MIMES } from '../lib/fileValidation';
 
 const INCOME_RANGES = ['BELOW_20K', 'RANGE_20K_40K', 'RANGE_40K_60K', 'RANGE_60K_100K', 'RANGE_100K_200K', 'ABOVE_200K'];
 const INCOME_RANGE_LABELS = {
@@ -61,6 +63,9 @@ export default function AccountSettingsPage() {
   const [success, setSuccess] = useState('');
   const [statusData, setStatusData] = useState(null);
   const [user, setUser] = useState(null);
+  const [profilePhotoFile, setProfilePhotoFile] = useState(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState('');
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const [profileForm, setProfileForm] = useState({
     firstName: '',
     lastName: '',
@@ -69,7 +74,7 @@ export default function AccountSettingsPage() {
     religion: '',
     profession: '',
     jobCategory: '',
-    profilePhotoUrl: '',
+    profilePhotoKey: '',
     currentArea: '',
     incomeRange: '',
     employmentStatus: '',
@@ -81,6 +86,22 @@ export default function AccountSettingsPage() {
   const [localUser] = useState(() => getCurrentUser());
   const localUserId = getLocalUserId(localUser);
   const role = statusData?.role || getUserRole(localUser);
+
+  const loadProfilePhotoUrl = async (profileKey) => {
+    if (!profileKey || !localUserId) {
+      setProfilePhotoUrl('');
+      return;
+    }
+
+    const res = await apiFetch(`/users/${localUserId}/profile-photo/download-url`);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setProfilePhotoUrl('');
+      return;
+    }
+
+    setProfilePhotoUrl(body?.data?.downloadUrl || '');
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -104,6 +125,7 @@ export default function AccountSettingsPage() {
         if (!statusRes.ok) throw new Error(getApiErrorMessage(statusBody, 'Failed to load profile status'));
         setStatusData(statusBody?.data || null);
         const profile = statusBody?.data?.profile || {};
+        await loadProfilePhotoUrl(profile?.profilePhotoKey);
         savePublicProfileSnapshot({
           userId: localUserId,
           name: `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || localUser?.username || 'User',
@@ -147,6 +169,28 @@ export default function AccountSettingsPage() {
     setProfileForm((prev) => ({ ...prev, familySize: String(next) }));
   };
 
+  const handleProfilePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Profile photo must be less than 5MB.');
+      return;
+    }
+
+    if (!isAllowedFileByMimeAndExtension(file, PROFILE_PHOTO_MIMES)) {
+      setError('Only JPG, JPEG, PNG, or WebP profile photos are allowed, and the file extension must match the file type.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => setProfilePhotoPreview(String(reader.result || ''));
+    reader.readAsDataURL(file);
+    setProfilePhotoFile(file);
+    setError('');
+  };
+
   const saveProfile = async (e) => {
     e.preventDefault();
     setSavingProfile(true);
@@ -165,6 +209,31 @@ export default function AccountSettingsPage() {
         }
         payload[key] = value;
       });
+
+      if (profilePhotoFile) {
+        const uploadRes = await apiFetch(`/users/${localUserId}/profile-photo/upload-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: profilePhotoFile.name,
+            mimeType: profilePhotoFile.type,
+          }),
+        });
+        const uploadBody = await uploadRes.json().catch(() => ({}));
+        if (!uploadRes.ok) throw new Error(getApiErrorMessage(uploadBody, 'Failed to prepare profile photo upload'));
+
+        const { uploadUrl, fileKey } = uploadBody?.data || {};
+        if (!uploadUrl || !fileKey) throw new Error('Invalid profile photo upload response.');
+
+        const putRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': profilePhotoFile.type },
+          body: profilePhotoFile,
+        });
+        if (!putRes.ok) throw new Error('Failed to upload profile photo.');
+
+        payload.profilePhotoKey = fileKey;
+      }
 
       // Explicit role helps backend pick the right validation branch.
       if (role === 'TENANT' || role === 'OWNER') {
@@ -189,6 +258,7 @@ export default function AccountSettingsPage() {
       if (statusRes.ok) {
         setStatusData(statusBody?.data || null);
         const profile = statusBody?.data?.profile || {};
+        await loadProfilePhotoUrl(profile?.profilePhotoKey);
         savePublicProfileSnapshot({
           userId: localUserId,
           name: `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || user?.username || 'User',
@@ -208,6 +278,8 @@ export default function AccountSettingsPage() {
         type: 'PROFILE',
       });
       setSuccess(body?.message || 'Profile updated successfully.');
+      setProfilePhotoFile(null);
+      setProfilePhotoPreview('');
       setProfileForm({
         firstName: '',
         lastName: '',
@@ -216,7 +288,7 @@ export default function AccountSettingsPage() {
         religion: '',
         profession: '',
         jobCategory: '',
-        profilePhotoUrl: '',
+        profilePhotoKey: '',
         currentArea: '',
         incomeRange: '',
         employmentStatus: '',
@@ -254,19 +326,16 @@ export default function AccountSettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
-          <div className="flex items-center gap-4">
-            <Link to="/wallet" className="text-teal-700 hover:text-teal-800 text-sm font-semibold">Wallet</Link>
-            <Link to={dashboardPath} className="text-blue-600 hover:text-blue-800 text-sm font-semibold">
-              Back to dashboard
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <Link
+          to={dashboardPath}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 mb-3"
+        >
+          <span aria-hidden>&larr;</span> Back to dashboard
+        </Link>
+        <h1 className="mb-6 text-xl font-bold text-gray-900 md:text-2xl lg:text-3xl">Account Settings</h1>
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
@@ -352,7 +421,51 @@ export default function AccountSettingsPage() {
               <option value="">Select job category</option>
               {JOB_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
-            <input type="url" placeholder="Profile photo URL" value={profileForm.profilePhotoUrl} onChange={(e) => onChange('profilePhotoUrl', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <div className="md:col-span-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="h-20 w-20 rounded-full border border-gray-200 bg-white overflow-hidden flex items-center justify-center shrink-0">
+                  {profilePhotoPreview || profilePhotoUrl ? (
+                    <img
+                      src={profilePhotoPreview || profilePhotoUrl}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xs text-gray-400 text-center px-2">No image selected</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900">Profile photo</p>
+                  <p className="text-sm text-gray-600 mt-1">Upload a JPG, PNG, or WebP image. We will store it as your avatar.</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <label className="inline-flex items-center justify-center rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 cursor-pointer transition">
+                      <input
+                        type="file"
+                        accept={getAcceptValue(PROFILE_PHOTO_MIMES)}
+                        className="hidden"
+                        onChange={handleProfilePhotoChange}
+                      />
+                      Choose image
+                    </label>
+                    {profilePhotoFile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfilePhotoFile(null);
+                          setProfilePhotoPreview('');
+                        }}
+                        className="text-sm font-semibold text-rose-600 hover:text-rose-700"
+                      >
+                        Remove image
+                      </button>
+                    )}
+                  </div>
+                  {profilePhotoFile && (
+                    <p className="mt-2 text-xs text-gray-500 break-all">Selected: {profilePhotoFile.name}</p>
+                  )}
+                </div>
+              </div>
+            </div>
             <select value={profileForm.currentArea} onChange={(e) => onChange('currentArea', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg md:col-span-2">
               <option value="">Select current area</option>
               {AREA_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
@@ -424,3 +537,4 @@ export default function AccountSettingsPage() {
     </div>
   );
 }
+

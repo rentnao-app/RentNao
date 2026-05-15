@@ -1,40 +1,47 @@
 import { useEffect, useRef } from 'react';
+import { loadLeaflet, normalizeLatLng } from '../lib/leaflet';
 
 export default function MapView({ lat, lng, height = '200px' }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
+  const markerRef = useRef(null);
 
   useEffect(() => {
-    if (!containerRef.current || lat == null || lng == null) return;
-    let L = window.L;
-    if (!L) {
-      import('leaflet').then((mod) => {
-        L = mod.default;
-        window.L = L;
-        initMap(L);
-      });
-    } else {
-      initMap(L);
-    }
+    const position = normalizeLatLng({ lat, lng });
+    if (!containerRef.current || !position) return;
+    let cancelled = false;
 
-    function initMap(L) {
-      const map = L.map(containerRef.current).setView([lat, lng], 15);
+    loadLeaflet().then((L) => {
+      if (!L || cancelled || !containerRef.current) return;
+      if (mapRef.current) {
+        markerRef.current?.setLatLng([position.lat, position.lng]);
+        mapRef.current.setView([position.lat, position.lng], mapRef.current.getZoom());
+        return;
+      }
+      initMap(L, position);
+    });
+
+    function initMap(L, position) {
+      const map = L.map(containerRef.current).setView([position.lat, position.lng], 15);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
       }).addTo(map);
-      L.marker([lat, lng]).addTo(map);
+      markerRef.current = L.marker([position.lat, position.lng]).addTo(map);
       mapRef.current = map;
+      window.requestAnimationFrame(() => map.invalidateSize());
     }
 
     return () => {
+      cancelled = true;
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        markerRef.current = null;
       }
     };
   }, [lat, lng]);
 
-  if (lat == null || lng == null) return null;
+  if (!normalizeLatLng({ lat, lng })) return null;
 
   return (
     <div

@@ -35,9 +35,25 @@ export const createFeePolicySchema = z.object({
     example: 'BDT',
     description: 'Currency code',
   }),
-  baseAmount: z.coerce.number().positive().openapi({
+  fixedAmount: z.coerce.number().nonnegative().optional().openapi({
     example: 500,
-    description: 'Base fee amount',
+    description: 'Fixed fee component',
+  }),
+  percentage: z.coerce.number().nonnegative().optional().openapi({
+    example: 2.5,
+    description: 'Percentage fee component',
+  }),
+  percentBaseField: z.string().trim().min(1).max(50).optional().openapi({
+    example: 'rent',
+    description: 'Field key used to calculate percentage component',
+  }),
+  minAmount: z.coerce.number().nonnegative().optional().openapi({
+    example: 100,
+    description: 'Minimum final fee amount',
+  }),
+  maxAmount: z.coerce.number().nonnegative().optional().openapi({
+    example: 5000,
+    description: 'Maximum final fee amount',
   }),
   effectiveFrom: z.string().datetime().openapi({
     example: '2026-04-05T00:00:00Z',
@@ -51,6 +67,37 @@ export const createFeePolicySchema = z.object({
     example: true,
     description: 'Whether this policy is active',
   }),
+}).superRefine((body, ctx) => {
+  const hasFixed = typeof body.fixedAmount === 'number';
+  const hasPercent = typeof body.percentage === 'number';
+
+  if (!hasFixed && !hasPercent) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'At least one fee component is required: fixedAmount or percentage',
+      path: ['fixedAmount'],
+    });
+  }
+
+  if (hasPercent && !body.percentBaseField) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'percentBaseField is required when percentage is provided',
+      path: ['percentBaseField'],
+    });
+  }
+
+  if (
+    typeof body.minAmount === 'number' &&
+    typeof body.maxAmount === 'number' &&
+    body.minAmount > body.maxAmount
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'minAmount cannot be greater than maxAmount',
+      path: ['minAmount'],
+    });
+  }
 });
 
 export type CreateFeePolicyInput = z.infer<typeof createFeePolicySchema>;
@@ -64,9 +111,25 @@ export const updateFeePolicySchema = z.object({
     example: 'BDT',
     description: 'Currency code',
   }),
-  baseAmount: z.coerce.number().positive().optional().openapi({
+  fixedAmount: z.coerce.number().nonnegative().nullable().optional().openapi({
     example: 600,
-    description: 'Base fee amount',
+    description: 'Fixed fee component',
+  }),
+  percentage: z.coerce.number().nonnegative().nullable().optional().openapi({
+    example: 2,
+    description: 'Percentage fee component',
+  }),
+  percentBaseField: z.string().trim().min(1).max(50).nullable().optional().openapi({
+    example: 'rent',
+    description: 'Field key used to calculate percentage component',
+  }),
+  minAmount: z.coerce.number().nonnegative().nullable().optional().openapi({
+    example: 100,
+    description: 'Minimum final fee amount',
+  }),
+  maxAmount: z.coerce.number().nonnegative().nullable().optional().openapi({
+    example: 5000,
+    description: 'Maximum final fee amount',
   }),
   effectiveFrom: z.string().datetime().optional().openapi({
     example: '2026-04-10T00:00:00Z',
@@ -80,8 +143,38 @@ export const updateFeePolicySchema = z.object({
     example: false,
     description: 'Whether this policy is active',
   }),
-}).refine((body) => Object.keys(body).length > 0, {
-  message: 'At least one field is required',
+}).superRefine((body, ctx) => {
+  if (Object.keys(body).length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'At least one field is required',
+      path: [],
+    });
+    return;
+  }
+
+  const nextPercentage = body.percentage;
+  const nextPercentBase = body.percentBaseField;
+
+  if (typeof nextPercentage === 'number' && nextPercentBase === null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'percentBaseField cannot be null when percentage is provided',
+      path: ['percentBaseField'],
+    });
+  }
+
+  if (
+    typeof body.minAmount === 'number' &&
+    typeof body.maxAmount === 'number' &&
+    body.minAmount > body.maxAmount
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'minAmount cannot be greater than maxAmount',
+      path: ['minAmount'],
+    });
+  }
 });
 
 export type UpdateFeePolicyInput = z.infer<typeof updateFeePolicySchema>;
@@ -92,7 +185,11 @@ const feePolicySchema = z.object({
   version: z.number(),
   name: z.string(),
   currency: z.string(),
-  baseAmount: z.string(),
+  fixedAmount: z.string().nullable(),
+  percentage: z.string().nullable(),
+  percentBaseField: z.string().nullable(),
+  minAmount: z.string().nullable(),
+  maxAmount: z.string().nullable(),
   isActive: z.boolean(),
   effectiveFrom: z.string().datetime(),
   effectiveTo: z.string().datetime().nullable(),

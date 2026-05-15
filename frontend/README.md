@@ -2,27 +2,35 @@
 
 Rental property platform frontend built with React 19, Vite, and Tailwind CSS.
 
-## Current Handoff Docs
-
-- See `FRONTEND_HANDOFF_REMAINING_WORK.md` for the latest backend comparison, route status, and prioritized remaining work for frontend contributors.
-- See `API_GAP_REPORT.md` for endpoint-level gap matrix.
-
 ## Quick Start
 
+From the **repository root**:
+
 ```bash
-cd Prototype/frontend
+cd frontend
 npm install
-cp .env.example .env   # or create .env with VITE_API_URL
-npm run dev             # starts at http://localhost:5173
+cp .env.example .env
 ```
+
+Edit `.env` and set at least `VITE_API_URL` to your backend base URL (for example `http://localhost:3000`). For Google sign-in, set `VITE_GOOGLE_AUTH_URL` to the backend initiate route (for example `http://localhost:3000/auth/google`).
+
+```bash
+npm run dev
+```
+
+Dev server: `http://localhost:5173`
+
+Ensure Postgres/Redis/MinIO (and the API) are running per the root `README.md` before exercising full flows.
 
 ### Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_API_URL` | Yes | Backend API base URL (e.g. `http://localhost:3000`) |
+| `VITE_API_URL` | Yes | Backend API base URL (no `/api` prefix on paths) |
+| `VITE_GOOGLE_AUTH_URL` | For Google login | Backend URL that starts the OAuth flow |
 | `VITE_LISTING_ACCESS_FEE` | No | BDT amount for listing access unlock (default: 50) |
-| `VITE_BKASH_NUMBER` | No | bKash number shown in payment modal |
+
+The committed `.env.example` may contain legacy keys; the variables above are what the app relies on today.
 
 ## Tech Stack
 
@@ -35,17 +43,25 @@ npm run dev             # starts at http://localhost:5173
 
 ## Project Structure
 
-```
+```text
 src/
 ├── main.jsx                 # Entry point
 ├── App.jsx                  # Router + route definitions
 ├── index.css                # Tailwind imports + global styles
 ├── lib/
-│   └── api.js               # API client, auth token management
+│   ├── api.js               # API client, auth token management
+│   ├── phone.js             # Bangladesh phone validation / formatting
+│   ├── wishlist.js          # Wishlist helpers
+│   ├── requests.js          # Rental request helpers
+│   ├── notifications.js     # Notification helpers
+│   ├── publicProfiles.js    # Public profile helpers
+│   └── fileValidation.js    # Upload validation helpers
 ├── components/
-│   ├── ProtectedRoute.jsx   # Auth guard for protected routes
-│   ├── BkashPaymentModal.jsx
-│   ├── ChatBubble.jsx
+│   ├── ProtectedRoute.jsx
+│   ├── SiteFooter.jsx
+│   ├── GoogleAuthButton.jsx
+│   ├── FeatureUnavailablePage.jsx
+│   ├── WishlistHeartButton.jsx
 │   ├── ImageGallery.jsx
 │   ├── ImageUploader.jsx
 │   ├── MapPicker.jsx
@@ -56,31 +72,40 @@ src/
 │   ├── SearchFilterPanel.jsx
 │   └── StarRating.jsx
 └── pages/
+    ├── admin-dashboard/     # Admin dashboard sections (KYC, users, listings, fees, …)
     ├── HomePage.jsx
     ├── SignUp.jsx
     ├── LogIn.jsx
+    ├── ForgotPasswordPage.jsx
+    ├── ResetPasswordPage.jsx
+    ├── AuthVerificationPage.jsx
+    ├── GoogleAuthCallbackPage.jsx
+    ├── OAuthPhoneSetupPage.jsx
     ├── TenantRegistrationPage.jsx
     ├── OwnerRegistrationPage.jsx
     ├── VerificationPage.jsx
     ├── VerificationHoldingPage.jsx
     ├── TenantDashboard.jsx
     ├── OwnerDashboard.jsx
-    ├── AdminDashboard.jsx
+    ├── MyPropertiesPage.jsx
+    ├── OwnerPropertyEditPage.jsx
+    ├── CreateListingPage.jsx
+    ├── IncomingRequestsPage.jsx
+    ├── MyApplicationsPage.jsx
+    ├── WishlistPage.jsx
+    ├── MyRentalsPage.jsx
     ├── ListingPage.jsx
     ├── ListingDetailsPage.jsx
-    ├── CreateListingPage.jsx
-    ├── MyPropertiesPage.jsx
-    ├── MyApplicationsPage.jsx
-    ├── IncomingRequestsPage.jsx
-    ├── MyRentalsPage.jsx
-    ├── WishlistPage.jsx
-    ├── ChatPage.jsx
-    ├── NotificationsPage.jsx
     ├── PublicProfilePage.jsx
+    ├── NotificationsPage.jsx
+    ├── WalletPage.jsx
     ├── AccountSettingsPage.jsx
+    ├── AdminDashboard.jsx
+    ├── AdminTopupApprovalsPage.jsx
     ├── AboutPage.jsx
     ├── TermsPage.jsx
     ├── FAQPage.jsx
+    ├── ServicesPage.jsx
     └── NotFoundPage.jsx
 ```
 
@@ -90,29 +115,36 @@ Authentication uses JWT tokens stored in `localStorage`. The central API client 
 
 ### Key functions in `lib/api.js`
 
-- `apiFetch(path, options)` — Wrapper around `fetch` that auto-attaches the `Authorization: Bearer <token>` header. All API calls should use this.
+- `apiFetch(path, options)` — Wrapper around `fetch` that attaches `Authorization: Bearer <token>` when a session exists. Prefer this for all API calls.
 - `setAuthSession({ accessToken, refreshToken, user })` — Stores tokens after login/signup.
-- `clearAuthSession()` — Removes all stored tokens.
-- `getCurrentUser()` — Returns the stored user object (parsed from localStorage).
-- `getAccessToken()` — Returns the raw JWT string.
-- `isLoggedIn()` — Returns `true` if an access token exists.
+- `clearAuthSession()` — Removes stored session data.
+- `getCurrentUser()` — Parsed user object from storage.
+- `getAccessToken()` — Raw JWT string.
+- `isLoggedIn()` — Whether an access token is present.
 - `logout()` — Clears session and redirects to `/login`.
 
-### Auth flow
+### Auth flow (high level)
 
-1. User signs up via `POST /auth/register` or logs in via `POST /auth/login`
-2. Backend returns `{ accessToken, refreshToken, user }`
-3. Frontend stores these via `setAuthSession()`
-4. All subsequent API calls go through `apiFetch()` which attaches the token
-5. `ProtectedRoute` component checks auth + role before rendering protected pages
+1. User registers or logs in (email, phone, or Google, depending on flow).
+2. Backend returns `{ accessToken, refreshToken, user }` (shape may vary by endpoint).
+3. Frontend stores the session via `setAuthSession()`.
+4. Subsequent calls use `apiFetch()`.
+5. `ProtectedRoute` enforces authentication and, where configured, role checks.
 
 ## Route Map
 
-| Path | Component | Auth | Role |
-|------|-----------|------|------|
+Routes are defined in `App.jsx`. `ProtectedRoute` takes `requiredRole` of `TENANT`, `OWNER`, `ADMIN`, or `null` (any authenticated user).
+
+| Path | Component | Protected | Role |
+|------|-----------|-----------|------|
 | `/` | HomePage | No | — |
 | `/signup` | SignUp | No | — |
 | `/login` | LogIn | No | — |
+| `/forgot-password` | ForgotPasswordPage | No | — |
+| `/reset-password` | ResetPasswordPage | No | — |
+| `/auth-verification` | AuthVerificationPage | No | — |
+| `/auth/phone-setup` | OAuthPhoneSetupPage | No | — |
+| `/auth/callback` | GoogleAuthCallbackPage | No | — |
 | `/tenant-registration` | TenantRegistrationPage | No | — |
 | `/owner-registration` | OwnerRegistrationPage | No | — |
 | `/verification` | VerificationPage | No | — |
@@ -120,6 +152,7 @@ Authentication uses JWT tokens stored in `localStorage`. The central API client 
 | `/about` | AboutPage | No | — |
 | `/terms` | TermsPage | No | — |
 | `/faq` | FAQPage | No | — |
+| `/service`, `/services` | ServicesPage | No | — |
 | `/listings` | ListingPage | No | — |
 | `/listings/:id` | ListingDetailsPage | No | — |
 | `/profile/:userId` | PublicProfilePage | No | — |
@@ -128,104 +161,56 @@ Authentication uses JWT tokens stored in `localStorage`. The central API client 
 | `/tenant-dashboard/wishlist` | WishlistPage | Yes | TENANT |
 | `/owner-dashboard` | OwnerDashboard | Yes | OWNER |
 | `/owner-dashboard/my-properties` | MyPropertiesPage | Yes | OWNER |
+| `/owner-dashboard/my-properties/:propertyId/edit` | OwnerPropertyEditPage | Yes | OWNER |
 | `/owner-dashboard/create-listing` | CreateListingPage | Yes | OWNER |
 | `/owner-dashboard/requests` | IncomingRequestsPage | Yes | OWNER |
 | `/dashboard/rentals` | MyRentalsPage | Yes | Any |
-| `/chat` | ChatPage | Yes | Any |
-| `/chat/:conversationId` | ChatPage | Yes | Any |
 | `/notifications` | NotificationsPage | Yes | Any |
 | `/admin-dashboard` | AdminDashboard | Yes | ADMIN |
+| `/admin-dashboard/topup-approvals` | AdminTopupApprovalsPage | Yes | ADMIN |
 | `/account` | AccountSettingsPage | Yes | Any |
+| `/wallet` | WalletPage | Yes | Any |
 | `*` | NotFoundPage | No | — |
 
-## Backend API Endpoints
+## Backend API
 
-All API calls go to `VITE_API_URL` without any `/api` prefix (e.g. `apiFetch('/auth/login')`).
+All requests use `VITE_API_URL` as the origin; paths are appended without an `/api` prefix (for example `apiFetch('/auth/login', …)`).
 
-### Implemented in Backend (working)
-
-- `POST /auth/register` — Sign up
-- `POST /auth/login` — Sign in
-- `POST /auth/logout` — Sign out
-- `POST /auth/verify-email` — Email verification
-- `POST /auth/verify-phone` — Phone verification
-- `POST /auth/resend-verification` — Resend verification
-- `POST /auth/password-reset/request` — Request password reset
-- `POST /auth/password-reset/confirm` — Confirm password reset
-- `GET /admin/stats` — Dashboard statistics
-- `GET /admin/users` — List users (with optional role filter)
-- `GET /admin/users/:userId` — User details + documents
-- `POST /admin/users/:userId/approve` — Approve user
-- `POST /admin/users/:userId/reject` — Reject user
-- `POST /admin/documents/:documentId/accept` — Accept document
-- `POST /admin/documents/:documentId/reject` — Reject document
-- `PATCH /users/:userId/profile` — Create/update profile
-- `GET /users/:userId/profile-status` — Check profile completion
-- `POST /users/:userId/verification/upload-url` — Get presigned upload URL
-- `POST /users/:userId/verification/submit` — Submit verification documents
-- `GET /users/:userId/verification/submission-status` — Check verification status
-
-### Pending Backend Implementation (frontend is ready, will show empty states)
-
-These endpoints are called by the frontend but do not exist in the backend yet. The frontend handles 404s gracefully — pages render with empty data or show appropriate messages.
-
-- `GET /listings` — Browse listings with filters
-- `GET /listings/:id` — Single listing details
-- `POST /users/owner/listings` — Create a listing
-- `GET /users/owner/properties` — Owner's properties
-- `GET/POST/DELETE /wishlists` — Wishlist management
-- `GET /payments/check-access/:listingId` — Check listing access
-- `POST /payments/listing-access` — Submit bKash payment
-- `GET/POST /admin/payments/pending` — Admin payment management
-- `POST /admin/payments/:id/confirm|reject` — Admin payment actions
-- `GET/POST /conversations` — Chat conversations
-- `GET/POST /conversations/:id/messages` — Chat messages
-- `GET/POST /requests` — Tenant request management
-- `POST /requests/:id/accept|reject|withdraw` — Request actions
-- `GET /rentals/mine` — User's rentals
-- `POST /rentals/:id/complete|confirm` — Rental actions
-- `GET/POST /reviews` — Reviews
-- `GET /reviews/rental/:id` — Reviews for a rental
-- `GET /notifications` — User notifications
-- `GET /notifications/unread-count` — Unread count
-- `PATCH /notifications/read-all` — Mark all read
-- `GET /auth/me` — Current user info
-- `PATCH /auth/profile` — Update user profile
-- `GET/PATCH /users/owner-profile` — Owner profile
-- `GET/PATCH /users/tenant-profile` — Tenant profile
-- `POST/DELETE /properties/:id/images` — Property image management
-- `GET /users/:userId/profile` — Public profile
+Authoritative route and schema documentation for the backend lives at **`/docs`** (Scalar) and **`/openapi.json`** when the API is running—for example `http://localhost:3000/docs` in local development.
 
 ## Components Reference
 
 | Component | Purpose |
 |-----------|---------|
-| `ProtectedRoute` | HOC that checks JWT validity and user role before rendering |
-| `SearchFilterPanel` | Filter bar for listings (area, rent range, rooms, type, sort) |
-| `ImageGallery` | Displays property images with thumbnail navigation |
-| `ImageUploader` | Upload/delete property images (used after creating a listing) |
-| `MapPicker` | Interactive Leaflet map for selecting coordinates |
-| `MapView` | Read-only Leaflet map showing a single marker |
-| `BkashPaymentModal` | Modal for bKash payment flow (listing access) |
-| `NotificationBell` | Header bell icon with dropdown, polls every 30s |
-| `ChatBubble` | Single message bubble (left/right based on sender) |
-| `ReviewForm` | Star rating + text form for submitting reviews |
-| `ReviewCard` | Display a single review with stars and metadata |
-| `StarRating` | Reusable star display (read-only or interactive) |
+| `ProtectedRoute` | Guards routes by session and optional `requiredRole` |
+| `SiteFooter` | Global footer (contact and links) |
+| `GoogleAuthButton` | Starts Google OAuth via configured backend URL |
+| `FeatureUnavailablePage` | Placeholder when a feature is not wired up |
+| `WishlistHeartButton` | Toggle wishlist state on a listing |
+| `SearchFilterPanel` | Filters for listing browse (area, rent, rooms, type, sort) |
+| `ImageGallery` | Property images with thumbnail navigation |
+| `ImageUploader` | Upload flow for property images |
+| `MapPicker` | Interactive map for choosing coordinates |
+| `MapView` | Read-only map with a marker |
+| `NotificationBell` | Header bell with dropdown |
+| `ReviewForm` / `ReviewCard` / `StarRating` | Reviews UI |
 
 ## Development Notes
 
-- **No Supabase dependency** — The project previously used Supabase for auth. It has been fully migrated to a custom JWT backend. The `@supabase/supabase-js` package has been removed.
-- **Chat polling** — Real-time chat uses 5-second polling instead of WebSockets. This is a temporary solution; the backend should implement WebSocket support in the future.
-- **Notification polling** — NotificationBell polls every 30 seconds. Same WebSocket note applies.
-- **Graceful degradation** — Pages calling unimplemented backend endpoints will show empty states rather than crashing. Check the browser console/network tab if data isn't appearing.
+- **JWT backend** — Auth targets the Hono API; use `api.js` for all authenticated calls.
+- **Polling** — Some UI (for example notifications) may poll the API; prefer tightening intervals or moving to push only when the backend supports it.
+- **Empty or error states** — Many pages handle failed or empty API responses without crashing; use the network tab when debugging missing data.
 
 ## Scripts
 
 ```bash
-npm run dev       # Start dev server (port 5173)
+npm run dev       # Dev server (port 5173)
 npm run build     # Production build to dist/
 npm run preview   # Preview production build
-npm run lint      # Run ESLint
+npm run lint      # ESLint
 ```
-aaaaaa
+
+## Further reading
+
+- Root overview and Docker workflow: `../README.md`
+- Manual test ideas: `TESTING_GUIDE.md`

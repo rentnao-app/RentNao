@@ -1,0 +1,47 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE}
+    container_name: rentnao-backend
+    restart: always
+    env_file:
+      - .env.app
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+    expose:
+      - "3000"
+    networks:
+      - rentnao
+
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    container_name: rentnao-frontend
+    restart: always
+    expose:
+      - "80"
+    networks:
+      - rentnao
+
+  caddy:
+    image: caddy:2
+    container_name: rentnao-caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - rentnao
+
+volumes:
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+
+networks:
+  rentnao:
+    name: rentnao

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
 import { apiFetch, getCurrentUser, splitName } from '../lib/api';
 import {
   clearPendingSignupPhone,
@@ -25,33 +26,54 @@ const LOCATION_OPTIONS = [
 
 const RELIGION_OPTIONS = ['Islam', 'Hinduism', 'Christianity', 'Buddhism', 'Other'];
 
-const PROFESSION_OPTIONS = [
-  'Property Owner',
-  'Real Estate / Broker',
-  'Business',
-  'Engineer',
-  'Doctor',
-  'Lawyer',
-  'Government Service',
-  'Teacher',
-  'Finance / Banking',
-  'Retired',
-  'Other',
+const BLOOD_GROUP_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+/** Backend `EmploymentStatus` (same enum family as tenant profiles) — drives profession choices. */
+const EMPLOYMENT_STATUS_OPTIONS = [
+  { value: 'EMPLOYED', label: 'Employed' },
+  { value: 'SELF_EMPLOYED', label: 'Self-employed' },
+  { value: 'UNEMPLOYED', label: 'Unemployed' },
+  { value: 'STUDENT', label: 'Student' },
+  { value: 'RETIRED', label: 'Retired' },
 ];
 
-/** Backend `JobCategory` enum */
-const JOB_CATEGORY_OPTIONS = [
-  { value: 'TECHNOLOGY', label: 'Technology' },
-  { value: 'HEALTHCARE', label: 'Healthcare' },
-  { value: 'EDUCATION', label: 'Education' },
-  { value: 'FINANCE', label: 'Finance' },
-  { value: 'CONSTRUCTION', label: 'Construction' },
-  { value: 'HOSPITALITY', label: 'Hospitality' },
-  { value: 'RETAIL', label: 'Retail' },
-  { value: 'GOVERNMENT', label: 'Government' },
-  { value: 'SELF_EMPLOYED', label: 'Self-employed' },
-  { value: 'OTHER', label: 'Other' },
-];
+/**
+ * Profession lines per employment; each maps to backend `JobCategory` + a short `profession` string for the API.
+ * Owner create profile only accepts `profession` (string) + `jobCategory` (enum) — we derive both from these rows.
+ */
+const PROFESSION_ROWS_BY_EMPLOYMENT = {
+  EMPLOYED: [
+    { label: 'Engineer / technologist', jobCategory: 'TECHNOLOGY' },
+    { label: 'Doctor / healthcare worker', jobCategory: 'HEALTHCARE' },
+    { label: 'Teacher / academic', jobCategory: 'EDUCATION' },
+    { label: 'Finance / banking', jobCategory: 'FINANCE' },
+    { label: 'Construction / development', jobCategory: 'CONSTRUCTION' },
+    { label: 'Hospitality / tourism', jobCategory: 'HOSPITALITY' },
+    { label: 'Retail / sales', jobCategory: 'RETAIL' },
+    { label: 'Government service', jobCategory: 'GOVERNMENT' },
+    { label: 'Property / facilities manager (employed)', jobCategory: 'OTHER' },
+    { label: 'Other employed role', jobCategory: 'OTHER' },
+  ],
+  SELF_EMPLOYED: [
+    { label: 'Property owner / landlord', jobCategory: 'SELF_EMPLOYED' },
+    { label: 'Real estate broker / agent', jobCategory: 'SELF_EMPLOYED' },
+    { label: 'Business owner (general)', jobCategory: 'OTHER' },
+    { label: 'Consultant / freelancer', jobCategory: 'OTHER' },
+    { label: 'Other self-employed', jobCategory: 'OTHER' },
+  ],
+  UNEMPLOYED: [
+    { label: 'Not currently working', jobCategory: 'OTHER' },
+    { label: 'Looking for work', jobCategory: 'OTHER' },
+  ],
+  STUDENT: [
+    { label: 'Full-time student', jobCategory: 'OTHER' },
+    { label: 'Student with part-time work', jobCategory: 'RETAIL' },
+  ],
+  RETIRED: [
+    { label: 'Retired', jobCategory: 'OTHER' },
+    { label: 'Retired — previously in property / real estate', jobCategory: 'SELF_EMPLOYED' },
+  ],
+};
 
 const SIDE_IMAGE = '/side-image.jpg';
 
@@ -83,12 +105,15 @@ export default function OwnerRegistrationPage() {
     dateOfBirth: '',
     gender: 'male',
     religion: '',
-    profession: '',
-    jobCategory: '',
+    bloodGroup: '',
+    employmentStatus: '',
+    /** `jobCategory|roleLabel` — roleLabel has no `|` */
+    workSelection: '',
     currentLocation: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const fromQuery = searchParams.get('phone');
@@ -100,12 +125,42 @@ export default function OwnerRegistrationPage() {
     const local11 = toLocal11Digits(clipPhoneInput(raw));
     if (!local11 || !isValidBdMobileLocal11(local11)) return;
     const after = local11ToAfter880(local11);
-    setForm((prev) => ({ ...prev, phoneAfter880: after }));
+    startTransition(() => {
+      setForm((prev) => ({ ...prev, phoneAfter880: after }));
+    });
   }, [searchParams]);
 
   const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    if (name === 'employmentStatus') {
+      setForm((prev) => ({ ...prev, employmentStatus: value, workSelection: '' }));
+      return;
+    }
+    if (name === 'workSelection') {
+      const [employmentFromSelection] = String(value).split('|');
+      setForm((prev) => ({
+        ...prev,
+        employmentStatus: prev.employmentStatus || employmentFromSelection || prev.employmentStatus,
+        workSelection: value,
+      }));
+      return;
+    }
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
+
+  const professionRows =
+    form.employmentStatus && PROFESSION_ROWS_BY_EMPLOYMENT[form.employmentStatus]
+      ? PROFESSION_ROWS_BY_EMPLOYMENT[form.employmentStatus]
+      : [];
+
+  function parseWorkSelection(raw) {
+    const parts = String(raw || '').split('|');
+    if (parts.length < 3) return null;
+    const [, jobCategory, ...labelParts] = parts;
+    const roleLabel = labelParts.join('|');
+    if (!jobCategory || !roleLabel) return null;
+    return { jobCategory, roleLabel };
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -131,8 +186,14 @@ export default function OwnerRegistrationPage() {
         setError('Please select your date of birth.');
         return;
       }
-      if (!form.religion || !form.profession || !form.jobCategory || !form.currentLocation) {
+      if (!form.religion || !form.employmentStatus || !form.workSelection || !form.currentLocation) {
         setError('Please complete all required fields.');
+        return;
+      }
+
+      const parsed = parseWorkSelection(form.workSelection);
+      if (!parsed?.jobCategory || !parsed?.roleLabel) {
+        setError('Please select your role or profession for your employment type.');
         return;
       }
 
@@ -141,6 +202,11 @@ export default function OwnerRegistrationPage() {
         setError('Please enter your full name (at least 2 characters for your first name).');
         return;
       }
+
+      const empLabel =
+        EMPLOYMENT_STATUS_OPTIONS.find((o) => o.value === form.employmentStatus)?.label ||
+        form.employmentStatus;
+      const professionPayload = `${empLabel}: ${parsed.roleLabel}`.slice(0, 100);
 
       const ownerCategory = 'RESIDENTIAL';
 
@@ -155,9 +221,8 @@ export default function OwnerRegistrationPage() {
           dateOfBirth: form.dateOfBirth,
           gender: mapGender[form.gender] || 'OTHER',
           religion: form.religion,
-          profession: form.profession,
-          jobCategory: form.jobCategory,
-          profilePhotoUrl: 'https://example.com/profile.jpg',
+          profession: professionPayload,
+          jobCategory: parsed.jobCategory,
           currentLat: 23.8103,
           currentLng: 90.4125,
           currentArea: form.currentLocation,
@@ -187,10 +252,7 @@ export default function OwnerRegistrationPage() {
     <div className="min-h-screen bg-[#f4f7f5]">
       <header className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <img src="/logo.jpg" alt="Rent Nao" className="h-10 w-10 rounded-md object-cover border border-emerald-100" />
-            <span className="text-3xl font-extrabold text-emerald-800 tracking-tight">Rent Nao</span>
-          </Link>
+          <BrandLogoLink />
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
             <Link to="/" className="text-gray-700 hover:text-emerald-700 transition">
@@ -207,22 +269,126 @@ export default function OwnerRegistrationPage() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2.5 sm:gap-3 shrink-0">
             <Link
               to="/login"
-              className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+              className="px-3 sm:px-5 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
             >
               Login
             </Link>
             <Link
               to="/signup"
-              className="px-5 py-2 rounded-xl bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition"
+              className="px-3 sm:px-5 py-2 rounded-xl bg-emerald-700 text-white text-xs sm:text-sm font-semibold hover:bg-emerald-800 transition"
             >
               Sign Up
             </Link>
           </div>
+
+          <button
+            type="button"
+            className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-800 shadow-sm hover:bg-emerald-50 transition"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="owner-mobile-nav"
+          >
+            {mobileMenuOpen ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </header>
+
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
+            aria-label="Close menu"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <aside
+            id="owner-mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="owner-mobile-nav-title"
+            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <BrandLogoLink
+                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
+                  onClick={() => setMobileMenuOpen(false)}
+                />
+                <span id="owner-mobile-nav-title" className="sr-only">
+                  Main menu
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
+                aria-label="Close menu"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
+              <Link
+                to="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-[#2f8444] bg-[#eef7ef]"
+              >
+                Home
+              </Link>
+              <Link
+                to="/listings"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                Find Property
+              </Link>
+              <Link
+                to="/owner-dashboard/create-listing"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                List Property
+              </Link>
+              <Link
+                to="/services"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                Services
+              </Link>
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
+              >
+                Sign Up
+              </Link>
+            </nav>
+          </aside>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10">
         <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-10">
@@ -329,21 +495,14 @@ export default function OwnerRegistrationPage() {
 
                 <div>
                   <label className={labelClass}>Date of birth</label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="dateOfBirth"
-                      value={form.dateOfBirth}
-                      onChange={handleChange}
-                      className={inputClass}
-                      required
-                    />
-                    <Icon>
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7 2h2v2h6V2h2v2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3V2zm13 8H4v10h16V10z" />
-                      </svg>
-                    </Icon>
-                  </div>
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={form.dateOfBirth}
+                    onChange={handleChange}
+                    className={`${inputClass} [color-scheme:light]`}
+                    required
+                  />
                 </div>
 
                 <div>
@@ -378,69 +537,102 @@ export default function OwnerRegistrationPage() {
                 </div>
 
                 <div>
-                  <label className={labelClass}>Profession</label>
-                  <select name="profession" value={form.profession} onChange={handleChange} className={inputClass} required>
-                    <option value="">Select profession</option>
-                    {PROFESSION_OPTIONS.map((item) => (
+                  <label className={labelClass}>Blood group</label>
+                  <select name="bloodGroup" value={form.bloodGroup} onChange={handleChange} className={inputClass}>
+                    <option value="">Select blood group (optional)</option>
+                    {BLOOD_GROUP_OPTIONS.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Same field as tenant onboarding; owner API does not store it yet.
+                  </p>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Employment</label>
+                  <select
+                    name="employmentStatus"
+                    value={form.employmentStatus}
+                    onChange={handleChange}
+                    className={inputClass}
+                    required
+                  >
+                    <option value="">Select employment status</option>
+                    {EMPLOYMENT_STATUS_OPTIONS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Uses the same <span className="font-medium text-gray-700">EmploymentStatus</span> idea as tenants;
+                    we then map your answer to <span className="font-medium text-gray-700">profession</span> +{' '}
+                    <span className="font-medium text-gray-700">jobCategory</span> for the owner profile API.
+                  </p>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Role / profession</label>
+                  <select
+                    name="workSelection"
+                    value={form.workSelection}
+                    onChange={handleChange}
+                    className={inputClass}
+                    required
+                  >
+                    <option value="">
+                      {form.employmentStatus ? 'Select the option that best describes you' : 'Choose employment first'}
+                    </option>
+                    {professionRows.map((row) => (
+                      <option
+                        key={`${form.employmentStatus}-${row.jobCategory}-${row.label}`}
+                        value={`${form.employmentStatus}|${row.jobCategory}|${row.label}`}
+                      >
+                        {row.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Each option sets the backend <span className="font-medium text-gray-700">jobCategory</span> enum and
+                    a clear <span className="font-medium text-gray-700">profession</span> string.
+                  </p>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Primary area (current)</label>
+                  <select
+                    name="currentLocation"
+                    value={form.currentLocation}
+                    onChange={handleChange}
+                    className={inputClass}
+                    required
+                  >
+                    <option value="">Where are you based?</option>
+                    {LOCATION_OPTIONS.map((item) => (
                       <option key={item} value={item}>
                         {item}
                       </option>
                     ))}
                   </select>
                 </div>
-
-                <div>
-                  <label className={labelClass}>Job category</label>
-                  <select name="jobCategory" value={form.jobCategory} onChange={handleChange} className={inputClass} required>
-                    <option value="">Select category</option>
-                    {JOB_CATEGORY_OPTIONS.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">Used for analytics; pick the closest match.</p>
-                </div>
-
-                <div>
-                  <label className={labelClass}>Primary area (current)</label>
-                  <div className="relative">
-                    <select
-                      name="currentLocation"
-                      value={form.currentLocation}
-                      onChange={handleChange}
-                      className={inputClass}
-                      required
-                    >
-                      <option value="">Where are you based?</option>
-                      {LOCATION_OPTIONS.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                    <Icon>
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z" />
-                      </svg>
-                    </Icon>
-                  </div>
-                </div>
               </div>
 
-              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="pt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Link
                   to="/signup"
-                  className="h-11 px-6 rounded-xl border border-gray-200 bg-white text-gray-600 font-semibold flex items-center justify-center hover:bg-gray-50 transition"
+                  className="h-11 w-full rounded-xl border border-gray-200 bg-white text-gray-600 font-semibold flex items-center justify-center hover:bg-gray-50 transition"
                 >
-                  ← Back
+                  Back
                 </Link>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="h-11 px-8 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-11 w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Saving...' : 'Continue →'}
+                  {loading ? 'Saving...' : 'Continue'}
                 </button>
               </div>
 
@@ -457,3 +649,4 @@ export default function OwnerRegistrationPage() {
     </div>
   );
 }
+

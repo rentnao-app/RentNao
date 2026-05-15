@@ -65,6 +65,8 @@ const documentDetailSchema = z.object({
   verificationStatus: DocumentVerificationStatus,
   reviewedAt: z.string().datetime().optional(),
   reviewerNotes: z.string().optional(),
+  filePath: z.string().nullable().optional(),
+  signedUrl: z.string().url().nullable().optional(),
 });
 
 export const kycSubmissionDetailResponseSchema = z.object({
@@ -73,7 +75,12 @@ export const kycSubmissionDetailResponseSchema = z.object({
     submissionId: z.string(),
     userId: z.string(),
     userEmail: z.string().email(),
+    userPhone: z.string().nullable().optional(),
     userRole: UserRole,
+    displayName: z.string(),
+    firstName: z.string().nullable().optional(),
+    lastName: z.string().nullable().optional(),
+    profilePhotoUrl: z.string().url().nullable().optional(),
     status: VerificationSubmissionStatus,
     submittedAt: z.string().datetime(),
     reviewedAt: z.string().datetime().optional(),

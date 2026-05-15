@@ -16,6 +16,22 @@ type GoogleStatePayload = {
   nonce: string;
 };
 
+type UserRow = {
+  user_id: string;
+  role: string;
+  onboarding_status: string;
+  kyc_verification_status: string;
+  contact_email: string | null;
+  contact_phone: string | null;
+  is_active: boolean;
+  created_at: Date | string;
+};
+
+type UserMatchResult = {
+  user: UserRow;
+  matchedBy: 'provider' | 'email';
+};
+
 function buildRedirect(url: string, params: Record<string, string | undefined | null>) {
   const u = new URL(url);
   for (const [k, v] of Object.entries(params)) {
@@ -96,7 +112,13 @@ async function verifyGoogleIdToken(idToken: string) {
   };
 }
 
-async function findUserForGoogle(sub: string, email?: string) {
+function normalizeRequestedRole(role: string) {
+  const r = String(role || '').toUpperCase();
+  if (r === 'OWNER' || r === 'TENANT') return r;
+  return null;
+}
+
+async function findUserForGoogle(sub: string, email?: string): Promise<UserMatchResult | null> {
   const byProviderUserId = await db.query(
     `SELECT u.user_id, u.role, u.onboarding_status, u.kyc_verification_status, u.contact_email, u.contact_phone, u.is_active, u.created_at
      FROM "OAuthAccount" oa
@@ -105,7 +127,9 @@ async function findUserForGoogle(sub: string, email?: string) {
      LIMIT 1`,
     [sub]
   );
-  if (byProviderUserId.rows[0]) return byProviderUserId.rows[0];
+  if (byProviderUserId.rows[0]) {
+    return { user: byProviderUserId.rows[0] as UserRow, matchedBy: 'provider' };
+  }
 
   if (!email) return null;
 
@@ -116,7 +140,27 @@ async function findUserForGoogle(sub: string, email?: string) {
      LIMIT 1`,
     [email]
   );
-  return byEmail.rows[0] || null;
+  if (!byEmail.rows[0]) return null;
+  return { user: byEmail.rows[0] as UserRow, matchedBy: 'email' };
+}
+
+async function canSwitchRoleForGoogleSignup(userId: string) {
+  const [ownerProfileRes, tenantProfileRes] = await Promise.all([
+    db.query(`SELECT 1 FROM "OwnerProfile" WHERE user_id = $1 LIMIT 1`, [userId]),
+    db.query(`SELECT 1 FROM "TenantProfile" WHERE user_id = $1 LIMIT 1`, [userId]),
+  ]);
+  return ownerProfileRes.rowCount === 0 && tenantProfileRes.rowCount === 0;
+}
+
+async function switchUserRole(userId: string, targetRole: 'OWNER' | 'TENANT') {
+  const res = await db.query(
+    `UPDATE "User"
+     SET role = $2, updated_at = NOW()
+     WHERE user_id = $1
+     RETURNING user_id, role, onboarding_status, kyc_verification_status, contact_email, contact_phone, is_active, created_at`,
+    [userId, targetRole]
+  );
+  return (res.rows[0] as UserRow | undefined) || null;
 }
 
 async function upsertGoogleAccount(args: {
@@ -172,7 +216,7 @@ async function createUserFromGoogle(args: { email: string; role: string }) {
 
     const userResult = await client.query(
       `INSERT INTO "User" (user_id, role, onboarding_status, kyc_verification_status, contact_email, is_active)
-       VALUES (gen_random_uuid()::text, $1, 'PROFILE_PENDING', 'PENDING', $2, true)
+       VALUES (gen_random_uuid()::text, $1, 'PHONE_REQUIRED', 'PENDING', $2, true)
        RETURNING user_id, role, onboarding_status, kyc_verification_status, contact_email, contact_phone, is_active, created_at`,
       [role, args.email]
     );
@@ -336,13 +380,35 @@ export function registerGoogleOAuthRoutes(app: OpenAPIHono) {
       );
     }
 
-    let userRow = await findUserForGoogle(idClaims.sub, idClaims.email);
+    const found = await findUserForGoogle(idClaims.sub, idClaims.email);
+    let userRow = found?.user || null;
 
     if (!userRow) {
       userRow = await createUserFromGoogle({
         email: idClaims.email,
         role: state.role,
       });
+    } else if (state.mode === 'signup') {
+      const requestedRole = normalizeRequestedRole(state.role);
+      if (requestedRole && userRow.role !== requestedRole) {
+        const safeToSwitch = await canSwitchRoleForGoogleSignup(userRow.user_id);
+        if (!safeToSwitch) {
+          return c.redirect(
+            buildRedirect(state.redirectUri, {
+              error: 'role_mismatch',
+              message:
+                'This Google account is already linked to a different role. Please continue with the existing account role.',
+            }),
+            302
+          );
+        }
+        const switched = await switchUserRole(userRow.user_id, requestedRole);
+        if (switched) userRow = switched;
+      }
+    }
+
+    if (!userRow) {
+      throw new AppError(500, 'Failed to resolve or create user for Google OAuth');
     }
 
     if (!userRow.is_active) {
