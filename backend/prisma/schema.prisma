@@ -232,22 +232,26 @@ model User {
   last_login_at DateTime? @db.Timestamptz(6)
 
   // Relations
-  credentials              Credentials[]
-  oauth_accounts           OAuthAccount[]
-  base_profile             BaseUserProfile?
-  owner_profile            OwnerProfile?
-  tenant_profile           TenantProfile?
-  wallet_account           WalletAccount?
-  charges                  Charge[]
-  listing_unlocks          ListingUnlock[]
-  identity_documents       UserIdentityDocument[]
-  verification_submissions VerificationSubmission?
-  rental_requests_as_tenant RentalRequest[] @relation("RentalRequestsTenant")
-  notifications            Notification[]
-  testimonials             Testimonial[]
-  conversations_as_tenant  Conversation[] @relation("ConversationsTenant")
-  conversations_as_owner   Conversation[] @relation("ConversationsOwner")
-  sent_messages            Message[]      @relation("MessagesSender")
+  credentials               Credentials[]
+  oauth_accounts            OAuthAccount[]
+  base_profile              BaseUserProfile?
+  owner_profile             OwnerProfile?
+  tenant_profile            TenantProfile?
+  wallet_account            WalletAccount?
+  charges                   Charge[]
+  listing_unlocks           ListingUnlock[]
+  identity_documents        UserIdentityDocument[]
+  verification_submissions  VerificationSubmission?
+  rental_requests_as_tenant RentalRequest[]         @relation("RentalRequestsTenant")
+  notifications             Notification[]
+  testimonials              Testimonial[]
+  conversations_as_tenant   Conversation[]          @relation("ConversationsTenant")
+  conversations_as_owner    Conversation[]          @relation("ConversationsOwner")
+  sent_messages             Message[]               @relation("MessagesSender")
+  discount_eligibilities    DiscountEligibleUser[]
+  discount_redemptions      DiscountRedemption[]
+  topup_requests            TopupRequest[]
+  approved_topup_requests   TopupRequest[]          @relation("TopupApprovals")
 }
 
 model Credentials {
@@ -385,9 +389,9 @@ model Property {
 
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  owner    OwnerProfile    @relation(fields: [owner_id], references: [owner_id], onDelete: Cascade)
-  listings Listing[]
-  images   PropertyImage[]
+  owner         OwnerProfile    @relation(fields: [owner_id], references: [owner_id], onDelete: Cascade)
+  listings      Listing[]
+  images        PropertyImage[]
   conversations Conversation[]
 
   @@index([owner_id])
@@ -739,10 +743,10 @@ model Conversation {
   closed_at      DateTime?          @db.Timestamptz(6)
   closed_by      String?
 
-  property       Property           @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
-  tenant         User               @relation("ConversationsTenant", fields: [tenant_user_id], references: [user_id], onDelete: Restrict)
-  owner          User               @relation("ConversationsOwner", fields: [owner_user_id], references: [user_id], onDelete: Restrict)
-  messages       Message[]
+  property Property  @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
+  tenant   User      @relation("ConversationsTenant", fields: [tenant_user_id], references: [user_id], onDelete: Restrict)
+  owner    User      @relation("ConversationsOwner", fields: [owner_user_id], references: [user_id], onDelete: Restrict)
+  messages Message[]
 
   @@unique([property_id, tenant_user_id])
   @@index([tenant_user_id, status])
@@ -751,14 +755,14 @@ model Conversation {
 }
 
 model Message {
-  id              String       @id @default(cuid())
+  id              String   @id @default(cuid())
   conversation_id String
   sender_user_id  String
-  content         String       @db.Text
-  created_at      DateTime     @default(now()) @db.Timestamptz(6)
+  content         String   @db.Text
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
 
-  conversation    Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
-  sender          User         @relation("MessagesSender", fields: [sender_user_id], references: [user_id], onDelete: Restrict)
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessagesSender", fields: [sender_user_id], references: [user_id], onDelete: Restrict)
 
   @@index([conversation_id, created_at])
   @@index([sender_user_id])
