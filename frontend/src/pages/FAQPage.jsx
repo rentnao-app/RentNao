@@ -1,5 +1,6 @@
-﻿import { Link } from 'react-router-dom';
+﻿import { Link, useNavigate } from 'react-router-dom';
 import BrandLogoLink from '../components/BrandLogoLink';
+import { isLoggedIn } from '../lib/api';
 
 const FAQ = [
   {
@@ -85,15 +86,46 @@ const FAQ = [
 ];
 
 export default function FAQPage() {
+  const navigate = useNavigate();
+  const loggedIn = isLoggedIn();
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <BrandLogoLink />
-          <nav className="flex gap-6">
-            <Link to="/about" className="text-sm text-gray-600 hover:text-teal-700">About</Link>
-            <Link to="/terms" className="text-sm text-gray-600 hover:text-teal-700">Terms</Link>
-          </nav>
+          {loggedIn ? (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+            >
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                aria-hidden
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+          ) : (
+            <nav className="flex gap-6">
+              <Link to="/about" className="text-sm text-gray-600 hover:text-teal-700">About</Link>
+              <Link to="/terms" className="text-sm text-gray-600 hover:text-teal-700">Terms</Link>
+            </nav>
+          )}
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-6 py-12">

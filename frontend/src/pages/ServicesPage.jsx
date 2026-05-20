@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
 import { isLoggedIn } from '../lib/api';
 
@@ -34,14 +34,24 @@ const offerings = [
       </svg>
     ),
   },
+  {
+    title: 'In-App Wallet',
+    description:
+      'Top up your in-app wallet in BDT and pay for listing fees, unlocks, and other charges without leaving Rent Nao. Track every transaction in one place.',
+    icon: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+      </svg>
+    ),
+  },
 ];
 
 const headerNav = [
   { to: '/listings', label: 'Listings' },
   { to: '/about', label: 'About' },
   { to: '/faq', label: 'FAQ' },
-  { to: '/login', label: 'Log In' },
-  { to: '/signup', label: 'Sign Up', emphasize: true },
+  { to: '/login', label: 'Log In', authOnly: 'guest' },
+  { to: '/signup', label: 'Sign Up', emphasize: true, authOnly: 'guest' },
 ];
 
 function navLinkClass(emphasize) {
@@ -54,6 +64,16 @@ function navLinkClass(emphasize) {
 export default function ServicesPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const loggedIn = isLoggedIn();
+  const navigate = useNavigate();
+  const visibleNav = headerNav.filter((item) => !(loggedIn && item.authOnly === 'guest'));
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -62,38 +82,60 @@ export default function ServicesPage() {
           <div className="flex items-center justify-between gap-3 py-3 sm:py-4">
             <BrandLogoLink className="min-w-0 shrink-0" onClick={() => setMenuOpen(false)} />
 
-            <nav className="hidden lg:flex items-center justify-end gap-4 md:gap-6 text-sm shrink-0" aria-label="Main">
-              {headerNav.map(({ to, label, emphasize }) => (
-                <Link key={to} to={to} className={navLinkClass(emphasize)}>
-                  {label}
-                </Link>
-              ))}
-            </nav>
+            {loggedIn ? (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shrink-0"
+              >
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  aria-hidden
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+              </button>
+            ) : (
+              <>
+                <nav className="hidden lg:flex items-center justify-end gap-4 md:gap-6 text-sm shrink-0" aria-label="Main">
+                  {visibleNav.map(({ to, label, emphasize }) => (
+                    <Link key={to} to={to} className={navLinkClass(emphasize)}>
+                      {label}
+                    </Link>
+                  ))}
+                </nav>
 
-            <button
-              type="button"
-              className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 shrink-0"
-              aria-expanded={menuOpen}
-              aria-controls="services-mobile-nav"
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              onClick={() => setMenuOpen((o) => !o)}
-            >
-              {menuOpen ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
+                <button
+                  type="button"
+                  className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 shrink-0"
+                  aria-expanded={menuOpen}
+                  aria-controls="services-mobile-nav"
+                  aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                  onClick={() => setMenuOpen((o) => !o)}
+                >
+                  {menuOpen ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  )}
+                </button>
+              </>
+            )}
           </div>
 
         </div>
       </header>
 
-      {menuOpen && (
+      {!loggedIn && menuOpen && (
         <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
           <button
             type="button"
@@ -131,7 +173,7 @@ export default function ServicesPage() {
             </div>
 
             <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Main mobile">
-              {headerNav.map(({ to, label, emphasize }) => (
+              {visibleNav.map(({ to, label, emphasize }) => (
                 <Link
                   key={to}
                   to={to}
@@ -158,7 +200,7 @@ export default function ServicesPage() {
           wallet-based fees.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 mb-12 sm:mb-14">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 mb-12 sm:mb-14">
           {offerings.map((item) => (
             <div
               key={item.title}

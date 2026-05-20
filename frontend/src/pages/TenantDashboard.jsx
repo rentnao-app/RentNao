@@ -1,8 +1,17 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { apiFetch, getCurrentUser, logout } from "../lib/api";
+import {
+  apiFetch,
+  getCurrentUser,
+  getUserDisplayName,
+  getUserInitials,
+  getUserRole,
+  logout,
+} from "../lib/api";
 import NotificationBell from "../components/NotificationBell";
+import UserMenu from "../components/UserMenu";
 import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from "../components/BrandLogoLink";
+import { useProfilePhotoDownloadUrl } from "../hooks/useProfilePhotoDownloadUrl";
 import { listTenantRequests } from "../lib/requests";
 import { fetchNotifications } from "../lib/notifications";
 
@@ -275,7 +284,9 @@ export default function TenantDashboard() {
     return budgetFromIncomeRange(incomeRangeFromProfile);
   }, [incomeRangeFromProfile]);
 
-  const avatarInitial = welcomeName?.slice(0, 1)?.toUpperCase() || "T";
+  const displayUser = user || getCurrentUser();
+  const profileAvatarUrl = useProfilePhotoDownloadUrl(displayUser);
+
   const pendingRequests = useMemo(
     () => tenantRequests.filter((item) => item?.requestStatus === "PENDING"),
     [tenantRequests]
@@ -315,9 +326,18 @@ export default function TenantDashboard() {
               </Link>
             </nav>
             <NotificationBell />
-            <div className="h-9 w-9 rounded-full bg-emerald-700 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
-              {avatarInitial}
-            </div>
+            <UserMenu
+              name={getUserDisplayName(displayUser)}
+              email={
+                displayUser?.contactEmail ||
+                displayUser?.contact_email ||
+                displayUser?.email ||
+                ''
+              }
+              role={getUserRole(displayUser) || 'TENANT'}
+              initials={getUserInitials(displayUser)}
+              avatarUrl={profileAvatarUrl}
+            />
             <button
               type="button"
               className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition"
