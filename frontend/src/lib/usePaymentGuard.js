@@ -25,7 +25,7 @@ export function usePaymentGuard({ feeCode, enabled = true, percentBaseValue } = 
 
   const returnTo = `${location.pathname}${location.search || ""}`;
   const requiredAmount =
-    fee?.amount || insufficientDetails?.requiredAmount || "";
+    fee?.amount ?? insufficientDetails?.requiredAmount ?? "";
   const availableBalance =
     wallet?.availableBalance || insufficientDetails?.availableBalance || "";
   const currency =

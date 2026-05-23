@@ -974,15 +974,20 @@ export default function CreateListingPage() {
                   {!createdPropertyId && (
                     <div className="rounded-xl border border-teal-100 bg-teal-50/70 px-4 py-3 text-sm text-teal-900">
                       <p className="font-semibold">
-                        Payment required before publishing
+                        {createListingPayment.fee &&
+                        Number(createListingPayment.requiredAmount) === 0
+                          ? "No listing fee required"
+                          : "Payment required before publishing"}
                       </p>
                       <p className="mt-1">
                         Listing creation fee:{" "}
-                        {createListingPayment.requiredAmount
-                          ? formatMoney(
-                            createListingPayment.requiredAmount,
-                            createListingPayment.currency,
-                          )
+                        {createListingPayment.fee
+                          ? Number(createListingPayment.requiredAmount) === 0
+                            ? formatMoney(0, createListingPayment.currency)
+                            : formatMoney(
+                                createListingPayment.requiredAmount,
+                                createListingPayment.currency,
+                              )
                           : "Loading payment amount..."}
                       </p>
                       {createListingPayment.availableBalance ? (
@@ -1036,7 +1041,7 @@ export default function CreateListingPage() {
                   disabled={
                     loading ||
                     createListingPayment.loading ||
-                    !createListingPayment.requiredAmount
+                    !createListingPayment.fee
                   }
                   className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >

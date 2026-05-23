@@ -36,8 +36,8 @@ export interface PaidActionInput {
 }
 
 export interface PaidActionResult {
-  chargeId: string;
-  walletTransactionId: string;
+  chargeId: string | null;
+  walletTransactionId: string | null;
   debitedAmount: string;
   currency: string;
 }
@@ -91,24 +91,39 @@ function resolveFeePolicyAmount(
   percentBaseValue?: number
 ): number {
   let amount = 0;
+  let hasComponent = false;
 
-  const fixed = row.fixed_amount != null ? Number(row.fixed_amount) : 0;
-  if (Number.isFinite(fixed) && fixed > 0) {
-    amount += fixed;
-  }
-
-  const pct = row.percentage != null ? Number(row.percentage) : 0;
-  if (Number.isFinite(pct) && pct > 0) {
-    if (percentBaseValue == null || !Number.isFinite(percentBaseValue)) {
-      throw new AppError(
-        400,
-        'Fee policy uses a percentage component; a base amount is required to calculate the fee'
-      );
+  if (row.fixed_amount != null) {
+    const fixed = Number(row.fixed_amount);
+    if (!Number.isFinite(fixed) || fixed < 0) {
+      throw new AppError(500, 'Fee policy fixed_amount is invalid');
     }
-    amount += (percentBaseValue * pct) / 100;
+    amount += fixed;
+    hasComponent = true;
   }
 
-  if (!Number.isFinite(amount) || amount <= 0) {
+  if (row.percentage != null) {
+    const pct = Number(row.percentage);
+    if (!Number.isFinite(pct) || pct < 0) {
+      throw new AppError(500, 'Fee policy percentage is invalid');
+    }
+    if (pct > 0) {
+      if (percentBaseValue == null || !Number.isFinite(percentBaseValue)) {
+        throw new AppError(
+          400,
+          'Fee policy uses a percentage component; a base amount is required to calculate the fee'
+        );
+      }
+      amount += (percentBaseValue * pct) / 100;
+    }
+    hasComponent = true;
+  }
+
+  if (!hasComponent) {
+    throw new AppError(500, 'Fee policy has no calculable amount');
+  }
+
+  if (!Number.isFinite(amount) || amount < 0) {
     throw new AppError(500, 'Fee policy has no calculable amount');
   }
 
@@ -150,6 +165,15 @@ export async function assertPaidActionAndDebit(
   const feePolicy = await fetchActiveFeePolicyRow(input.feeCode, client);
   const requiredAmount = resolveFeePolicyAmount(feePolicy, input.percentBaseValue);
   const chargeAmount = requiredAmount.toFixed(2);
+
+  if (requiredAmount === 0) {
+    return {
+      chargeId: null,
+      walletTransactionId: null,
+      debitedAmount: chargeAmount,
+      currency: feePolicy.currency,
+    };
+  }
 
   const walletResult = await client.query(
     `SELECT id, status, currency, available_balance

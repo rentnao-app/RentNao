@@ -849,11 +849,11 @@ export default function ListingDetailsPage() {
                     <span className="font-semibold text-slate-900">
                       Unlock fee:
                     </span>{" "}
-                    {unlockPayment.requiredAmount
+                    {unlockPayment.fee
                       ? formatMoney(
-                        unlockPayment.requiredAmount,
-                        unlockPayment.currency,
-                      )
+                          unlockPayment.requiredAmount,
+                          unlockPayment.currency,
+                        )
                       : "Loading payment amount..."}
                   </p>
                   {unlockPayment.availableBalance ? (
@@ -876,7 +876,7 @@ export default function ListingDetailsPage() {
                   disabled={
                     unlocking ||
                     unlockPayment.loading ||
-                    !unlockPayment.requiredAmount
+                    !unlockPayment.fee
                   }
                   onClick={async () => {
                     setUnlocking(true);
