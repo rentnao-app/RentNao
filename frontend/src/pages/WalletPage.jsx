@@ -9,6 +9,7 @@ import {
 } from "../lib/api";
 import { addLocalNotification } from "../lib/notifications";
 import toast from "react-hot-toast";
+import AppHeader from "../components/AppHeader";
 
 function getLocalUserRole(user) {
   return getUserRole(user);
@@ -270,19 +271,18 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <AppHeader />
+
+      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-gray-900">Wallet</h1>
           <Link
             to={returnTo || dashboardPath}
-            className="text-sm font-medium text-teal-700 hover:text-teal-800"
+            className="text-sm font-medium text-emerald-800 hover:text-emerald-900"
           >
             {returnTo ? "Back to payment flow" : "Back to dashboard"}
           </Link>
         </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         <section className="bg-white rounded-xl border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Balance</h2>
           {wallet ? (

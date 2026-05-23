@@ -1,17 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  apiFetch,
-  getCurrentUser,
-  getUserDisplayName,
-  getUserInitials,
-  getUserRole,
-  logout,
-} from "../lib/api";
-import NotificationBell from "../components/NotificationBell";
-import UserMenu from "../components/UserMenu";
-import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from "../components/BrandLogoLink";
-import { useProfilePhotoDownloadUrl } from "../hooks/useProfilePhotoDownloadUrl";
+import { apiFetch, getCurrentUser, logout } from "../lib/api";
+import AppHeader from "../components/AppHeader";
 import { listTenantRequests } from "../lib/requests";
 import { fetchNotifications } from "../lib/notifications";
 
@@ -100,7 +90,6 @@ export default function TenantDashboard() {
   const [tenantRequests, setTenantRequests] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const menuItems = [
     {
@@ -167,28 +156,6 @@ export default function TenantDashboard() {
       ),
     },
   ];
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (!mobileMenuOpen) return undefined;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [mobileMenuOpen]);
-
-  useEffect(() => {
-    if (!mobileMenuOpen) return undefined;
-    const onKey = (e) => {
-      if (e.key === "Escape") setMobileMenuOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [mobileMenuOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -284,9 +251,6 @@ export default function TenantDashboard() {
     return budgetFromIncomeRange(incomeRangeFromProfile);
   }, [incomeRangeFromProfile]);
 
-  const displayUser = user || getCurrentUser();
-  const profileAvatarUrl = useProfilePhotoDownloadUrl(displayUser);
-
   const pendingRequests = useMemo(
     () => tenantRequests.filter((item) => item?.requestStatus === "PENDING"),
     [tenantRequests]
@@ -305,162 +269,10 @@ export default function TenantDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f2f7f3] text-gray-800">
-      {/* Top header */}
-      <header className="bg-white border-b border-emerald-100 sticky top-0 z-20 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-        <div className="max-w-[1500px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
-          <BrandLogoLink className="min-w-0 shrink-0" />
-
-          <div className="ml-auto flex items-center gap-4 sm:gap-5 shrink-0">
-            <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
-              <Link to="/listings" className="text-gray-700 hover:text-emerald-700 transition">
-                Find Property
-              </Link>
-              <Link
-                to="/tenant-dashboard/wishlist"
-                className="text-sm font-medium text-gray-700 hover:text-emerald-700 transition"
-              >
-                Wishlist
-              </Link>
-              <Link to="/wallet" className="text-sm font-medium text-gray-700 hover:text-emerald-700 transition">
-                Wallet
-              </Link>
-            </nav>
-            <NotificationBell />
-            <UserMenu
-              name={getUserDisplayName(displayUser)}
-              email={
-                displayUser?.contactEmail ||
-                displayUser?.contact_email ||
-                displayUser?.email ||
-                ''
-              }
-              role={getUserRole(displayUser) || 'TENANT'}
-              initials={getUserInitials(displayUser)}
-              avatarUrl={profileAvatarUrl}
-            />
-            <button
-              type="button"
-              className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition"
-              aria-label="Open menu"
-              aria-expanded={mobileMenuOpen}
-              aria-controls="tenant-mobile-nav"
-              onClick={() => setMobileMenuOpen((open) => !open)}
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
-          <button
-            type="button"
-            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
-            aria-label="Close menu"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          <aside
-            id="tenant-mobile-nav"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="tenant-mobile-nav-title"
-            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] animate-mobile-nav-drawer motion-reduce:animate-none motion-reduce:translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <BrandLogoLink
-                  imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT}
-                  onClick={() => setMobileMenuOpen(false)}
-                />
-                <div className="min-w-0">
-                  <span id="tenant-mobile-nav-title" className="sr-only">
-                    Main menu
-                  </span>
-                  <p className="truncate text-xs text-gray-500">Tenant</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
-                aria-label="Close menu"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1">
-              <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Dashboard</p>
-              <nav className="flex flex-col gap-1" aria-label="Tenant dashboard">
-                {menuItems.map((item) => {
-                  const isActive =
-                    location.pathname === item.to ||
-                    (item.to !== "/" && location.pathname.startsWith(item.to));
-                  return (
-                    <SidebarItem
-                      key={item.label}
-                      to={item.to}
-                      label={item.label}
-                      icon={item.icon}
-                      active={isActive}
-                      onNavigate={() => setMobileMenuOpen(false)}
-                    />
-                  );
-                })}
-              </nav>
-
-              <div className="mt-4 pt-4 border-t border-[#eef4ef] px-1 space-y-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    logout();
-                  }}
-                  className="w-full rounded-xl bg-red-50 text-red-600 border border-red-100 py-3 text-sm font-semibold hover:bg-red-100 transition"
-                >
-                  Logout
-                </button>
-                <div className="rounded-2xl border border-emerald-100 bg-[#f9fcf9] p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Profile Status</p>
-                  <p className="mt-1 text-sm font-medium text-gray-800">{toLabel(user?.kycVerificationStatus)}</p>
-                  <div className="mt-3 h-2 rounded-full bg-emerald-100">
-                    <div className="h-2 w-2/3 rounded-full bg-emerald-600" />
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500">Keep profile updated for better matches.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-[#eef4ef] px-4 py-3 bg-[#fafdfb]">
-              <p className="text-xs text-center text-gray-500">
-                <Link to="/" className="font-medium text-[#2f8444] hover:underline" onClick={() => setMobileMenuOpen(false)}>
-                  Home
-                </Link>
-                <span className="mx-2 text-gray-300">-</span>
-                <Link to="/listings" className="font-medium text-[#2f8444] hover:underline" onClick={() => setMobileMenuOpen(false)}>
-                  Find Property
-                </Link>
-                <span className="mx-2 text-gray-300">-</span>
-                <Link to="/services" className="font-medium text-[#2f8444] hover:underline" onClick={() => setMobileMenuOpen(false)}>
-                  Services
-                </Link>
-              </p>
-            </div>
-          </aside>
-        </div>
-      )}
+      <AppHeader variant="wide" />
 
       <div className="mx-auto max-w-[1500px] lg:flex">
-        {/* Sidebar - desktop only; mobile uses header hamburger drawer */}
+        {/* Sidebar - desktop only; primary nav is in AppHeader on smaller screens */}
         <aside className="hidden lg:block lg:w-72 shrink-0 border-r border-emerald-100 bg-[#f4f8f5]">
           <nav className="p-4 space-y-1.5">
             {menuItems.map((item) => {
