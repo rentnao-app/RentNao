@@ -1,4 +1,4 @@
-﻿import { useRef, useState } from "react";
+﻿import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch, isLoggedIn } from "../lib/api";
 import MapPicker from "../components/MapPicker";
@@ -360,9 +360,15 @@ export default function CreateListingPage() {
   const showWizard = !createdPropertyId || isCommercialFlow;
   const currentStepConfig = FORM_STEPS[currentStep];
   const isLastStep = currentStep === FORM_STEPS.length - 1;
+  const listingRentForFee = useMemo(() => {
+    const rent = Number(form.rent);
+    return Number.isFinite(rent) && rent > 0 ? rent : undefined;
+  }, [form.rent]);
+
   const createListingPayment = usePaymentGuard({
     feeCode: "LISTING_CREATE",
     enabled: !createdPropertyId,
+    percentBaseValue: listingRentForFee,
   });
 
   const handleChange = (e) => {

@@ -14,6 +14,7 @@ import type {
   WalletTopupRequestType,
   ChargeType,
 } from '../schemas';
+import { resolveFeePolicyCodes } from '../fee-codes';
 
 function createId() {
   return crypto.randomUUID();
@@ -30,6 +31,8 @@ export interface PaidActionInput {
   referenceId: string;
   walletTxnType: 'TOPUP' | 'LISTING_FEE' | 'REFUND' | 'ADJUSTMENT' | 'REVERSAL';
   description?: string;
+  /** Used when the fee policy includes a percentage of rent (listing create). */
+  percentBaseValue?: number;
 }
 
 export interface PaidActionResult {
@@ -39,15 +42,43 @@ export interface PaidActionResult {
   currency: string;
 }
 
-const ACTIVE_FEE_POLICY_SQL = `
-  SELECT id, code, name, currency, fixed_amount, percentage, min_amount, max_amount
-  FROM "FeePolicy"
-  WHERE code = $1
-    AND is_active = true
-    AND effective_from <= NOW()
-    AND (effective_to IS NULL OR effective_to > NOW())
-  ORDER BY version DESC
-  LIMIT 1`;
+type FeePolicyRow = {
+  id: string;
+  code: string;
+  name: string;
+  currency: string;
+  fixed_amount?: string | number | null;
+  percentage?: string | number | null;
+  min_amount?: string | number | null;
+  max_amount?: string | number | null;
+};
+
+async function fetchActiveFeePolicyRow(
+  feeCode: string,
+  executor: Queryable = db
+): Promise<FeePolicyRow> {
+  const codes = resolveFeePolicyCodes(feeCode);
+  const result = await executor.query(
+    `SELECT id, code, name, currency, fixed_amount, percentage, min_amount, max_amount
+     FROM "FeePolicy"
+     WHERE code = ANY($1::text[])
+       AND is_active = true
+       AND effective_from <= NOW()
+       AND (effective_to IS NULL OR effective_to > NOW())
+     ORDER BY array_position($1::text[], code), version DESC
+     LIMIT 1`,
+    [codes]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError(
+      404,
+      `Fee policy not configured for code: ${feeCode} (also checked: ${codes.join(', ')})`
+    );
+  }
+
+  return result.rows[0];
+}
 
 /** Resolve billable amount from flexible FeePolicy columns (base_amount was removed). */
 function resolveFeePolicyAmount(
@@ -93,15 +124,12 @@ function resolveFeePolicyAmount(
   return amount;
 }
 
-export async function getActiveFeePolicy(feeCode: string): Promise<ActiveFeePolicyType> {
-  const result = await db.query(ACTIVE_FEE_POLICY_SQL, [feeCode]);
-
-  if (result.rows.length === 0) {
-    throw new AppError(404, `Fee policy not configured for code: ${feeCode}`);
-  }
-
-  const row = result.rows[0];
-  const amount = resolveFeePolicyAmount(row);
+export async function getActiveFeePolicy(
+  feeCode: string,
+  options?: { percentBaseValue?: number }
+): Promise<ActiveFeePolicyType> {
+  const row = await fetchActiveFeePolicyRow(feeCode);
+  const amount = resolveFeePolicyAmount(row, options?.percentBaseValue);
 
   return {
     code: row.code,
@@ -119,14 +147,8 @@ export async function assertPaidActionAndDebit(
   client: Queryable,
   input: PaidActionInput
 ): Promise<PaidActionResult> {
-  const feePolicyResult = await client.query(ACTIVE_FEE_POLICY_SQL, [input.feeCode]);
-
-  if (feePolicyResult.rows.length === 0) {
-    throw new AppError(409, `Fee policy not configured for code: ${input.feeCode}`);
-  }
-
-  const feePolicy = feePolicyResult.rows[0];
-  const requiredAmount = resolveFeePolicyAmount(feePolicy);
+  const feePolicy = await fetchActiveFeePolicyRow(input.feeCode, client);
+  const requiredAmount = resolveFeePolicyAmount(feePolicy, input.percentBaseValue);
   const chargeAmount = requiredAmount.toFixed(2);
 
   const walletResult = await client.query(
