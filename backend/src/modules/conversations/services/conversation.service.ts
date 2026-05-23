@@ -364,7 +364,7 @@ export async function sendMessage(
   conversationId: string,
   content: string
 ): Promise<MessageType> {
-  // Content filter (run BEFORE acquiring locks to fail fast)
+  // Content filter
   const filterResult = detectBlockedContent(content);
   if (filterResult.blocked) {
     throw new AppError(400, filterResult.reason || 'Message contains blocked content');
@@ -382,7 +382,6 @@ export async function sendMessage(
   }
 
   // Use a transaction with row-level lock to prevent race conditions
-  // (especially the one-message gate bypass via rapid parallel requests)
   const client = await db.connect();
   try {
     await client.query('BEGIN');
@@ -430,7 +429,7 @@ export async function sendMessage(
       throw new AppError(403, 'This conversation has expired');
     }
 
-    // One-message gate for PENDING conversations (now race-safe due to FOR UPDATE lock)
+    // One-message gate for PENDING conversations
     if (conv.status === 'PENDING') {
       // Only tenant can send the first message
       if (userId !== conv.tenant_user_id) {
@@ -472,8 +471,7 @@ export async function sendMessage(
       createdAt: msg.created_at.toISOString(),
     };
   } catch (err) {
-    // Only rollback if it's not already committed/rolled back
-    try { await client.query('ROLLBACK'); } catch { /* already done */ }
+    try { await client.query('ROLLBACK'); } catch {  }
     throw err;
   } finally {
     client.release();

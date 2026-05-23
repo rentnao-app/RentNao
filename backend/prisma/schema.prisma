@@ -239,19 +239,20 @@ model User {
   tenant_profile            TenantProfile?
   wallet_account            WalletAccount?
   charges                   Charge[]
+  topup_requests            TopupRequest[]
   listing_unlocks           ListingUnlock[]
   identity_documents        UserIdentityDocument[]
   verification_submissions  VerificationSubmission?
   rental_requests_as_tenant RentalRequest[]         @relation("RentalRequestsTenant")
-  notifications             Notification[]
-  testimonials              Testimonial[]
   conversations_as_tenant   Conversation[]          @relation("ConversationsTenant")
   conversations_as_owner    Conversation[]          @relation("ConversationsOwner")
   sent_messages             Message[]               @relation("MessagesSender")
-  discount_eligibilities    DiscountEligibleUser[]
-  discount_redemptions      DiscountRedemption[]
-  topup_requests            TopupRequest[]
   approved_topup_requests   TopupRequest[]          @relation("TopupApprovals")
+  topup_approvals           TopupRequest[]          @relation("TopupApprovals")
+  notifications             Notification[]
+  discount_redemptions      DiscountRedemption[]
+  discount_eligibilities    DiscountEligibleUser[]
+  testimonials              Testimonial[]
 }
 
 model Credentials {

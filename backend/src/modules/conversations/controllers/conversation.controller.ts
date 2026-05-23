@@ -1,8 +1,3 @@
-/**
- * Conversation REST controller
- * Binds OpenAPI routes to service functions
- */
-
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { requireAuth } from '@/security/middlewares/auth';
 import * as routes from '../routes/conversation.routes';

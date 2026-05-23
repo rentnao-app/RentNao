@@ -4,10 +4,9 @@ export {
   getUserCharges,
   assertPaidActionAndDebit,
   createTopupRequest,
-  getUserTopupRequests,
-  getAdminTopupRequests,
-  approveTopupRequest,
-  rejectTopupRequest,
+  getTopupRequest,
+  getActiveFeePolicy,
+  handleBKashCallback,
 } from './wallet.service';
 
 export type {
