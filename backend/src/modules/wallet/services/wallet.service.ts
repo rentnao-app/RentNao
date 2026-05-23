@@ -39,28 +39,74 @@ export interface PaidActionResult {
   currency: string;
 }
 
+const ACTIVE_FEE_POLICY_SQL = `
+  SELECT id, code, name, currency, fixed_amount, percentage, min_amount, max_amount
+  FROM "FeePolicy"
+  WHERE code = $1
+    AND is_active = true
+    AND effective_from <= NOW()
+    AND (effective_to IS NULL OR effective_to > NOW())
+  ORDER BY version DESC
+  LIMIT 1`;
+
+/** Resolve billable amount from flexible FeePolicy columns (base_amount was removed). */
+function resolveFeePolicyAmount(
+  row: {
+    fixed_amount?: string | number | null;
+    percentage?: string | number | null;
+    min_amount?: string | number | null;
+    max_amount?: string | number | null;
+  },
+  percentBaseValue?: number
+): number {
+  let amount = 0;
+
+  const fixed = row.fixed_amount != null ? Number(row.fixed_amount) : 0;
+  if (Number.isFinite(fixed) && fixed > 0) {
+    amount += fixed;
+  }
+
+  const pct = row.percentage != null ? Number(row.percentage) : 0;
+  if (Number.isFinite(pct) && pct > 0) {
+    if (percentBaseValue == null || !Number.isFinite(percentBaseValue)) {
+      throw new AppError(
+        400,
+        'Fee policy uses a percentage component; a base amount is required to calculate the fee'
+      );
+    }
+    amount += (percentBaseValue * pct) / 100;
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new AppError(500, 'Fee policy has no calculable amount');
+  }
+
+  const min = row.min_amount != null ? Number(row.min_amount) : null;
+  const max = row.max_amount != null ? Number(row.max_amount) : null;
+  if (min != null && Number.isFinite(min)) {
+    amount = Math.max(amount, min);
+  }
+  if (max != null && Number.isFinite(max)) {
+    amount = Math.min(amount, max);
+  }
+
+  return amount;
+}
+
 export async function getActiveFeePolicy(feeCode: string): Promise<ActiveFeePolicyType> {
-  const result = await db.query(
-    `SELECT code, name, currency, base_amount
-     FROM "FeePolicy"
-     WHERE code = $1
-       AND is_active = true
-       AND effective_from <= NOW()
-       AND (effective_to IS NULL OR effective_to > NOW())
-     ORDER BY version DESC
-     LIMIT 1`,
-    [feeCode]
-  );
+  const result = await db.query(ACTIVE_FEE_POLICY_SQL, [feeCode]);
 
   if (result.rows.length === 0) {
     throw new AppError(404, `Fee policy not configured for code: ${feeCode}`);
   }
 
   const row = result.rows[0];
+  const amount = resolveFeePolicyAmount(row);
+
   return {
     code: row.code,
     name: row.name,
-    amount: Number(row.base_amount).toFixed(2),
+    amount: amount.toFixed(2),
     currency: row.currency,
   };
 }
@@ -73,24 +119,15 @@ export async function assertPaidActionAndDebit(
   client: Queryable,
   input: PaidActionInput
 ): Promise<PaidActionResult> {
-  const feePolicyResult = await client.query(
-    `SELECT id, code, currency, base_amount
-     FROM "FeePolicy"
-     WHERE code = $1
-       AND is_active = true
-       AND effective_from <= NOW()
-       AND (effective_to IS NULL OR effective_to > NOW())
-     ORDER BY version DESC
-     LIMIT 1`,
-    [input.feeCode]
-  );
+  const feePolicyResult = await client.query(ACTIVE_FEE_POLICY_SQL, [input.feeCode]);
 
   if (feePolicyResult.rows.length === 0) {
     throw new AppError(409, `Fee policy not configured for code: ${input.feeCode}`);
   }
 
   const feePolicy = feePolicyResult.rows[0];
-  const requiredAmount = Number(feePolicy.base_amount);
+  const requiredAmount = resolveFeePolicyAmount(feePolicy);
+  const chargeAmount = requiredAmount.toFixed(2);
 
   const walletResult = await client.query(
     `SELECT id, status, currency, available_balance
@@ -137,8 +174,8 @@ export async function assertPaidActionAndDebit(
       input.referenceType,
       input.referenceId,
       feePolicy.currency,
-      feePolicy.base_amount,
-      feePolicy.base_amount,
+      chargeAmount,
+      chargeAmount,
     ]
   );
 
@@ -147,7 +184,7 @@ export async function assertPaidActionAndDebit(
      SET available_balance = available_balance - $1,
          updated_at = NOW()
      WHERE id = $2`,
-    [feePolicy.base_amount, wallet.id]
+    [chargeAmount, wallet.id]
   );
 
   const walletTransactionId = createId();
@@ -165,7 +202,7 @@ export async function assertPaidActionAndDebit(
       walletTransactionId,
       wallet.id,
       input.walletTxnType,
-      feePolicy.base_amount,
+      chargeAmount,
       feePolicy.currency,
       input.description || `Charge applied for ${input.feeCode}`,
       input.referenceType,
@@ -183,7 +220,7 @@ export async function assertPaidActionAndDebit(
   return {
     chargeId,
     walletTransactionId,
-    debitedAmount: String(feePolicy.base_amount),
+    debitedAmount: chargeAmount,
     currency: feePolicy.currency,
   };
 }
