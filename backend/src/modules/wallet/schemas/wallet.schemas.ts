@@ -1,107 +1,50 @@
 import { z } from '@hono/zod-openapi';
-import { WalletStatus, WalletTxnDirection, WalletTxnType, WalletTxnStatus, ChargeStatus, TopupRequestStatus } from '@/types/enums';
+import {
+  WalletStatus,
+  WalletTxnDirection,
+  WalletTxnType,
+  WalletTxnStatus,
+  TopupProvider,
+  TopupStatus,
+  ChargeStatus,
+} from '@/types/enums';
 
 // ============================================================================
 // Wallet Account Schemas
 // ============================================================================
-
-export const walletAccountSchema = z.object({
-  walletId: z.string().openapi({
-    example: 'cm4wallet123xyz',
-    description: 'Wallet account ID',
-  }),
-  userId: z.string().openapi({
-    example: 'cm4user123xyz',
-    description: 'User ID',
-  }),
-  status: WalletStatus.openapi({
-    example: 'ACTIVE',
-    description: 'Wallet status',
-  }),
-  currency: z.string().openapi({
-    example: 'BDT',
-    description: 'Currency code',
-  }),
-  availableBalance: z.string().openapi({
-    example: '5000.00',
-    description: 'Available balance as decimal string',
-  }),
-  createdAt: z.string().datetime().openapi({
-    example: '2026-04-03T12:00:00Z',
-    description: 'Wallet creation timestamp',
-  }),
-  updatedAt: z.string().datetime().nullable().openapi({
-    example: '2026-04-03T13:00:00Z',
-    description: 'Last update timestamp',
+description: 'Request completion timestamp',
   }),
 });
 
-export type WalletAccountType = z.infer<typeof walletAccountSchema>;
+export type WalletTopupRequestType = z.infer<typeof walletTopupRequestSchema>;
 
-// ============================================================================
-// Wallet Transaction Schemas
-// ============================================================================
+export const createTopupResponseSchema = z.object({
+  success: z.boolean().openapi({ example: true }),
+  data: walletTopupRequestSchema,
+  message: z.string().openapi({ example: 'Topup request initiated' }),
+});
 
-export const walletTransactionSchema = z.object({
-  transactionId: z.string().openapi({
-    example: 'cm4txn123xyz',
-    description: 'Transaction ID',
+export type CreateTopupResponseType = z.infer<typeof createTopupResponseSchema>;
+
+export const bkashCallbackQuerySchema = z.object({
+  paymentID: z.string().min(1).openapi({
+    example: 'TR0011ABCDEF',
+    description: 'bKash payment ID used for execute verification',
   }),
-  direction: WalletTxnDirection.openapi({
-    example: 'CREDIT',
-    description: 'Transaction direction (CREDIT/DEBIT)',
-  }),
-  type: WalletTxnType.openapi({
-    example: 'LISTING_FEE',
-    description: 'Transaction type',
-  }),
-  status: WalletTxnStatus.openapi({
-    example: 'POSTED',
-    description: 'Transaction status',
-  }),
-  amount: z.string().openapi({
-    example: '5000.00',
-    description: 'Transaction amount as decimal string',
-  }),
-  currency: z.string().openapi({
-    example: 'BDT',
-    description: 'Currency code',
-  }),
-  description: z.string().nullable().openapi({
-    example: 'Listing fee debit',
-    description: 'Transaction description',
-  }),
-  referenceType: z.string().nullable().openapi({
-    example: 'LISTING',
-    description: 'Type of referenced record (e.g., LISTING, CHARGE)',
-  }),
-  referenceId: z.string().nullable().openapi({
-    example: 'cm4listing123xyz',
-    description: 'ID of the referenced record',
-  }),
-  createdAt: z.string().datetime().openapi({
-    example: '2026-04-03T12:30:00Z',
-    description: 'Transaction creation timestamp',
-  }),
-  postedAt: z.string().datetime().nullable().openapi({
-    example: '2026-04-03T12:31:00Z',
-    description: 'Post timestamp (when transaction settled)',
+  status: z.string().optional().openapi({
+    example: 'success',
+    description: 'Optional callback status from bKash',
   }),
 });
 
-export type WalletTransactionType = z.infer<typeof walletTransactionSchema>;
+export type BKashCallbackQueryType = z.infer<typeof bkashCallbackQuerySchema>;
 
-export const walletTransactionsResponseSchema = z.object({
-  transactions: z.array(walletTransactionSchema),
-  pagination: z.object({
-    page: z.number().openapi({ example: 1 }),
-    limit: z.number().openapi({ example: 20 }),
-    total: z.number().openapi({ example: 150 }),
-    totalPages: z.number().openapi({ example: 8 }),
-  }),
+export const bkashCallbackResponseSchema = z.object({
+  success: z.boolean().openapi({ example: true }),
+  message: z.string().openapi({ example: 'Webhook processed' }),
 });
 
-export type WalletTransactionsResponseType = z.infer<typeof walletTransactionsResponseSchema>;
+export type BKashCallbackResponseType = z.infer<typeof bkashCallbackResponseSchema>;
 
 // ============================================================================
 // Charge Schemas
@@ -135,14 +78,6 @@ export const chargeSchema = z.object({
   finalAmount: z.string().openapi({
     example: '500.00',
     description: 'Final charge amount (after adjustments) as decimal string',
-  }),
-  discountPolicyId: z.string().nullable().openapi({
-    example: 'cm4discount123xyz',
-    description: 'Applied discount policy ID (if any)',
-  }),
-  discountAmount: z.string().nullable().openapi({
-    example: '50.00',
-    description: 'Applied discount amount as decimal string',
   }),
   currency: z.string().openapi({
     example: 'BDT',
@@ -181,100 +116,40 @@ export const chargesResponseSchema = z.object({
 export type ChargesResponseType = z.infer<typeof chargesResponseSchema>;
 
 // ============================================================================
-// Topup Request Schemas
+// Fee Policy Schemas
 // ============================================================================
 
-export const createTopupRequestSchema = z.object({
-  amount: z.number().positive().openapi({
-    example: 5000,
-    description: 'Topup amount in major units (BDT)',
-  }),
-  bkashNumber: z.string().length(11).openapi({
-    example: '01712345678',
-    description: 'bKash number (11 digits)',
-  }),
-  transactionId: z.string().min(1).openapi({
-    example: 'txn_abc123def456',
-    description: 'bKash transaction ID from payment receipt',
-  }),
+export const feePolicyCodeParamSchema = z.object({
+  feeCode: z
+    .string()
+    .min(1)
+    .openapi({
+      param: { name: 'feeCode', in: 'path' },
+      example: 'LISTING_UNLOCK',
+      description: 'Fee policy code',
+    }),
 });
 
-export type CreateTopupRequestType = z.infer<typeof createTopupRequestSchema>;
-
-export const topupRequestSchema = z.object({
-  topupRequestId: z.string().openapi({
-    example: 'cm4topup123xyz',
-    description: 'Topup request ID',
+export const activeFeePolicySchema = z.object({
+  code: z.string().openapi({
+    example: 'LISTING_UNLOCK',
+    description: 'Fee policy code',
   }),
-  userId: z.string().openapi({
-    example: 'cm4user123xyz',
-    description: 'User ID',
+  name: z.string().openapi({
+    example: 'Listing Unlock Fee',
+    description: 'Fee policy display name',
   }),
   amount: z.string().openapi({
-    example: '5000.00',
-    description: 'Topup amount as decimal string',
+    example: '50.00',
+    description: 'Required payment amount as decimal string',
   }),
-  bkashNumber: z.string().openapi({
-    example: '01712345678',
-    description: 'bKash number',
-  }),
-  transactionId: z.string().openapi({
-    example: 'txn_abc123def456',
-    description: 'bKash transaction ID',
-  }),
-  status: TopupRequestStatus.openapi({
-    example: 'PENDING',
-    description: 'Topup request status',
-  }),
-  rejectionReason: z.string().nullable().openapi({
-    example: 'Transaction ID not found on bKash',
-    description: 'Reason for rejection if status is REJECTED',
-  }),
-  approvedAt: z.string().datetime().nullable().openapi({
-    example: '2026-04-03T14:00:00Z',
-    description: 'Approval timestamp',
-  }),
-  createdAt: z.string().datetime().openapi({
-    example: '2026-04-03T12:00:00Z',
-    description: 'Request creation timestamp',
+  currency: z.string().openapi({
+    example: 'BDT',
+    description: 'Currency code',
   }),
 });
 
-export type TopupRequestType = z.infer<typeof topupRequestSchema>;
-
-export const topupRequestsListResponseSchema = z.object({
-  topupRequests: z.array(topupRequestSchema),
-  pagination: z.object({
-    page: z.number().openapi({ example: 1 }),
-    limit: z.number().openapi({ example: 20 }),
-    total: z.number().openapi({ example: 15 }),
-    totalPages: z.number().openapi({ example: 1 }),
-  }),
-});
-
-export type TopupRequestsListResponseType = z.infer<typeof topupRequestsListResponseSchema>;
-
-export const approveTopupRequestSchema = z.object({
-  topupRequestId: z.string().openapi({
-    example: 'cm4topup123xyz',
-    description: 'Topup request ID to approve',
-  }),
-});
-
-export type ApproveTopupRequestType = z.infer<typeof approveTopupRequestSchema>;
-
-export const rejectTopupRequestSchema = z.object({
-  topupRequestId: z.string().openapi({
-    example: 'cm4topup123xyz',
-    description: 'Topup request ID to reject',
-  }),
-  rejectionReason: z.string().min(1).openapi({
-    example: 'Transaction ID not verified',
-    description: 'Reason for rejection',
-  }),
-});
-
-export type RejectTopupRequestType = z.infer<typeof rejectTopupRequestSchema>;
+export type ActiveFeePolicyType = z.infer<typeof activeFeePolicySchema>;
 
 // ============================================================================
 // Error Response Schema

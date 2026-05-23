@@ -1,12 +1,13 @@
 /**
  * Wallet routes - OpenAPI definitions
- * 
+ *
  * Routes:
  *   GET    /wallet                  - Get wallet account
  *   GET    /wallet/transactions     - Get wallet transactions
- *   GET    /wallet/charges          - Get charges/fees
  *   POST   /wallet/topup            - Create topup request
- *   GET    /wallet/topup            - Get user's topup requests
+ *   GET    /wallet/topup/:topupId   - Get topup request status
+ *   GET    /wallet/charges          - Get charges/fees
+ *   GET    /wallet/fees/:feeCode    - Get active fee amount
  */
 
 import { createRoute } from '@hono/zod-openapi';
@@ -83,6 +84,83 @@ export const getTransactionsRoute = createRoute({
   security: [{ bearerAuth: [] }],
 });
 
+// ============================================================================
+// Create Topup Request
+// ============================================================================
+
+export const createTopupRoute = createRoute({
+  method: 'post',
+  path: '/topup',
+  tags: ['Wallet'],
+  summary: 'Process wallet topup',
+  description: 'Processes bKash topup using create, execute, and query flow in a single request',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: schemas.createTopupRequestSchema,
+          examples: {
+            bkash: {
+              summary: 'bKash topup',
+              value: {
+                amount: 500,
+                provider: 'BKASH',
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Topup request processed',
+      content: {
+        'application/json': {
+          schema: schemas.createTopupResponseSchema,
+        },
+      },
+    },
+  },
+  security: [{ bearerAuth: [] }],
+});
+
+// ============================================================================
+// Get Topup Request Status
+// ============================================================================
+
+const topupIdParamSchema = z.object({
+  topupId: z.string().openapi({
+    param: { name: 'topupId', in: 'path' },
+    example: 'cm4topup123xyz',
+    description: 'Topup request ID',
+  }),
+});
+
+export const getTopupRoute = createRoute({
+  method: 'get',
+  path: '/topup/{topupId}',
+  tags: ['Wallet'],
+  summary: 'Get topup request status',
+  description: 'Check the status of a topup request initiated previously',
+  request: {
+    params: topupIdParamSchema,
+  },
+  responses: {
+    200: {
+      description: 'Topup request details retrieved',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: schemas.walletTopupRequestSchema,
+          }),
+        },
+      },
+    },
+  },
+  security: [{ bearerAuth: [] }],
+});
 
 // ============================================================================
 // Get Charges
@@ -114,32 +192,26 @@ export const getChargesRoute = createRoute({
 });
 
 // ============================================================================
-// Create Topup Request
+// Get Active Fee Amount
 // ============================================================================
 
-export const createTopupRoute = createRoute({
-  method: 'post',
-  path: '/topup',
+export const getActiveFeeRoute = createRoute({
+  method: 'get',
+  path: '/fees/{feeCode}',
   tags: ['Wallet'],
-  summary: 'Request wallet topup',
-  description: 'Submit a topup request with bKash transaction details for admin approval',
+  summary: 'Get active fee amount',
+  description: 'Retrieve the currently active amount for a wallet-debited action.',
   request: {
-    body: {
-      content: {
-        'application/json': {
-          schema: schemas.createTopupRequestSchema,
-        },
-      },
-    },
+    params: schemas.feePolicyCodeParamSchema,
   },
   responses: {
-    201: {
-      description: 'Topup request created',
+    200: {
+      description: 'Active fee amount retrieved',
       content: {
         'application/json': {
           schema: z.object({
             success: z.boolean(),
-            data: schemas.topupRequestSchema,
+            data: schemas.activeFeePolicySchema,
           }),
         },
       },
@@ -149,31 +221,28 @@ export const createTopupRoute = createRoute({
 });
 
 // ============================================================================
-// Get User's Topup Requests
+// Webhook: bKash Payment Callback
 // ============================================================================
 
-export const getUserTopupRequestsRoute = createRoute({
+export const bkashWebhookRoute = createRoute({
   method: 'get',
-  path: '/topup',
+  path: '/webhooks/bkash',
   tags: ['Wallet'],
-  summary: 'Get user topup requests',
-  description: 'Retrieve user topup request history (paginated)',
+  summary: 'bKash payment callback webhook',
+  description:
+    'Callback endpoint for bKash; validates query and then executes payment to verify final status before any wallet credit.',
   request: {
-    query: paginationParamsSchema,
+    query: schemas.bkashCallbackQuerySchema,
   },
   responses: {
     200: {
-      description: 'User topup requests retrieved',
+      description: 'Callback processed successfully',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: schemas.topupRequestsListResponseSchema,
-          }),
+          schema: schemas.bkashCallbackResponseSchema,
         },
       },
     },
   },
-  security: [{ bearerAuth: [] }],
 });
 

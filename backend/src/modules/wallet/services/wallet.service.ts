@@ -1,11 +1,19 @@
 /**
  * Wallet service
- * Handles wallet account, transactions, and charges
+ * Handles wallet account, transactions, topups, and charges
  */
 
 import { db } from '@/db/client';
 import { AppError } from '@/errors/base';
-import type { WalletAccountType, WalletTransactionType, ChargeType, TopupRequestType } from '../schemas';
+import { createPaymentIntent, executePayment, queryPayment } from './bkash.service';
+import type {
+  ActiveFeePolicyType,
+  CreateTopupRequestInput,
+  WalletAccountType,
+  WalletTransactionType,
+  WalletTopupRequestType,
+  ChargeType,
+} from '../schemas';
 
 function createId() {
   return crypto.randomUUID();
@@ -20,9 +28,8 @@ export interface PaidActionInput {
   feeCode: string;
   referenceType: string;
   referenceId: string;
-  walletTxnType: 'LISTING_FEE' | 'REFUND' | 'ADJUSTMENT' | 'REVERSAL';
+  walletTxnType: 'TOPUP' | 'LISTING_FEE' | 'REFUND' | 'ADJUSTMENT' | 'REVERSAL';
   description?: string;
-  referenceData?: Record<string, number>; // e.g., { rent: 10000 } to calculate percentage on
 }
 
 export interface PaidActionResult {
@@ -32,63 +39,30 @@ export interface PaidActionResult {
   currency: string;
 }
 
-/**
- * Calculate final fee amount from flexible fee policy
- * Supports fixed amount, percentage (of reference field), min/max bounds
- */
-function calculateFeeAmount(
-  feePolicy: any,
-  referenceData?: Record<string, number>
-): number {
-  let amount = 0;
+export async function getActiveFeePolicy(feeCode: string): Promise<ActiveFeePolicyType> {
+  const result = await db.query(
+    `SELECT code, name, currency, base_amount
+     FROM "FeePolicy"
+     WHERE code = $1
+       AND is_active = true
+       AND effective_from <= NOW()
+       AND (effective_to IS NULL OR effective_to > NOW())
+     ORDER BY version DESC
+     LIMIT 1`,
+    [feeCode]
+  );
 
-  // Add fixed component
-  if (feePolicy.fixed_amount) {
-    amount += Number(feePolicy.fixed_amount);
+  if (result.rows.length === 0) {
+    throw new AppError(404, `Fee policy not configured for code: ${feeCode}`);
   }
 
-  // Add percentage component
-  if (feePolicy.percentage && feePolicy.percent_base_field && referenceData) {
-    const baseValue = referenceData[feePolicy.percent_base_field];
-    if (baseValue !== undefined) {
-      amount += (baseValue * Number(feePolicy.percentage)) / 100;
-    }
-  }
-
-  // Apply min/max bounds
-  if (feePolicy.min_amount && amount < Number(feePolicy.min_amount)) {
-    amount = Number(feePolicy.min_amount);
-  }
-  if (feePolicy.max_amount && amount > Number(feePolicy.max_amount)) {
-    amount = Number(feePolicy.max_amount);
-  }
-
-  return amount;
-}
-
-function calculateDiscountAmount(discountPolicy: any, baseAmount: number): number {
-  let amount = 0;
-
-  if (discountPolicy.discount_type === 'FIXED') {
-    amount = discountPolicy.fixed_amount ? Number(discountPolicy.fixed_amount) : 0;
-  } else if (discountPolicy.discount_type === 'PERCENTAGE') {
-    amount = discountPolicy.percentage
-      ? (baseAmount * Number(discountPolicy.percentage)) / 100
-      : 0;
-  }
-
-  if (discountPolicy.min_amount && amount < Number(discountPolicy.min_amount)) {
-    amount = Number(discountPolicy.min_amount);
-  }
-  if (discountPolicy.max_amount && amount > Number(discountPolicy.max_amount)) {
-    amount = Number(discountPolicy.max_amount);
-  }
-
-  if (amount > baseAmount) {
-    amount = baseAmount;
-  }
-
-  return amount;
+  const row = result.rows[0];
+  return {
+    code: row.code,
+    name: row.name,
+    amount: Number(row.base_amount).toFixed(2),
+    currency: row.currency,
+  };
 }
 
 /**
@@ -99,19 +73,8 @@ export async function assertPaidActionAndDebit(
   client: Queryable,
   input: PaidActionInput
 ): Promise<PaidActionResult> {
-  const userRoleResult = await client.query(
-    `SELECT role FROM "User" WHERE user_id = $1`,
-    [input.userId]
-  );
-
-  if (userRoleResult.rows.length === 0) {
-    throw new AppError(404, 'User not found');
-  }
-
-  const userRole = userRoleResult.rows[0].role as string;
-
   const feePolicyResult = await client.query(
-    `SELECT id, code, currency, fixed_amount, percentage, percent_base_field, min_amount, max_amount
+    `SELECT id, code, currency, base_amount
      FROM "FeePolicy"
      WHERE code = $1
        AND is_active = true
@@ -127,78 +90,7 @@ export async function assertPaidActionAndDebit(
   }
 
   const feePolicy = feePolicyResult.rows[0];
-  const requiredAmount = calculateFeeAmount(feePolicy, input.referenceData);
-
-  if (requiredAmount < 0) {
-    throw new AppError(400, `Fee policy ${input.feeCode} does not calculate a valid amount`);
-  }
-
-  const discountCandidatesResult = await client.query(
-    `SELECT
-        dp.id,
-        dp.code,
-        dp.discount_type,
-        dp.fixed_amount,
-        dp.percentage,
-        dp.min_amount,
-        dp.max_amount,
-        dp.max_redemptions_total,
-        dp.max_redemptions_per_user,
-        dp.eligible_role,
-        dp.effective_from,
-        dp.effective_to,
-        dp.is_active,
-        (SELECT COUNT(*) FROM "DiscountRedemption" dr WHERE dr.discount_policy_id = dp.id) AS total_redemptions,
-        (SELECT COUNT(*) FROM "DiscountRedemption" dr WHERE dr.discount_policy_id = dp.id AND dr.user_id = $2) AS user_redemptions,
-        (SELECT COUNT(*) FROM "DiscountEligibleUser" eu WHERE eu.discount_policy_id = dp.id) AS eligible_user_count,
-        (SELECT COUNT(*) FROM "DiscountEligibleUser" eu WHERE eu.discount_policy_id = dp.id AND eu.user_id = $2) AS is_user_eligible
-     FROM "DiscountPolicy" dp
-     WHERE dp.fee_policy_code = $1
-       AND dp.is_active = true
-       AND dp.effective_from <= NOW()
-       AND (dp.effective_to IS NULL OR dp.effective_to > NOW())
-       AND (dp.eligible_role IS NULL OR dp.eligible_role = $3)
-     ORDER BY dp.effective_from DESC`,
-    [feePolicy.code, input.userId, userRole]
-  );
-
-  let selectedDiscount: any = null;
-  let selectedDiscountAmount = 0;
-
-  for (const candidate of discountCandidatesResult.rows) {
-    const eligibleUserCount = Number(candidate.eligible_user_count || 0);
-    const isUserEligible = Number(candidate.is_user_eligible || 0) > 0;
-    const totalRedemptions = Number(candidate.total_redemptions || 0);
-    const userRedemptions = Number(candidate.user_redemptions || 0);
-
-    if (eligibleUserCount > 0 && !isUserEligible) {
-      continue;
-    }
-    if (
-      candidate.max_redemptions_total !== null &&
-      totalRedemptions >= Number(candidate.max_redemptions_total)
-    ) {
-      continue;
-    }
-    if (
-      candidate.max_redemptions_per_user !== null &&
-      userRedemptions >= Number(candidate.max_redemptions_per_user)
-    ) {
-      continue;
-    }
-
-    const discountAmount = calculateDiscountAmount(candidate, requiredAmount);
-    if (discountAmount <= 0) {
-      continue;
-    }
-
-    if (discountAmount > selectedDiscountAmount) {
-      selectedDiscount = candidate;
-      selectedDiscountAmount = discountAmount;
-    }
-  }
-
-  const finalAmount = Math.max(0, requiredAmount - selectedDiscountAmount);
+  const requiredAmount = Number(feePolicy.base_amount);
 
   const walletResult = await client.query(
     `SELECT id, status, currency, available_balance
@@ -222,28 +114,22 @@ export async function assertPaidActionAndDebit(
   }
 
   const availableBalance = Number(wallet.available_balance);
-  if (availableBalance < finalAmount) {
-    throw new AppError(
-      402,
-      `Payment required for ${input.feeCode}`,
-      true,
-      {
-        code: 'PAYMENT_REQUIRED',
-        feeCode: input.feeCode,
-        requiredAmount: finalAmount.toFixed(2),
-        availableBalance: availableBalance.toFixed(2),
-        currency: feePolicy.currency,
-      }
-    );
+  if (availableBalance < requiredAmount) {
+    throw new AppError(402, `Payment required for ${input.feeCode}`, true, {
+      code: 'PAYMENT_REQUIRED',
+      feeCode: input.feeCode,
+      requiredAmount: requiredAmount.toFixed(2),
+      availableBalance: availableBalance.toFixed(2),
+      currency: feePolicy.currency,
+    });
   }
 
   const chargeId = createId();
   await client.query(
     `INSERT INTO "Charge" (
       id, user_id, fee_policy_id, reference_type, reference_id,
-      currency, base_amount, final_amount, discount_policy_id, discount_amount,
-      status, created_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING', NOW())`,
+      currency, base_amount, final_amount, status, created_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING', NOW())`,
     [
       chargeId,
       input.userId,
@@ -251,35 +137,17 @@ export async function assertPaidActionAndDebit(
       input.referenceType,
       input.referenceId,
       feePolicy.currency,
-      requiredAmount,
-      finalAmount,
-      selectedDiscount ? selectedDiscount.id : null,
-      selectedDiscount ? selectedDiscountAmount : null,
+      feePolicy.base_amount,
+      feePolicy.base_amount,
     ]
   );
-
-  if (selectedDiscount) {
-    const discountRedemptionId = createId();
-    await client.query(
-      `INSERT INTO "DiscountRedemption" (
-        id, discount_policy_id, user_id, charge_id, discount_amount, redeemed_at
-      ) VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [
-        discountRedemptionId,
-        selectedDiscount.id,
-        input.userId,
-        chargeId,
-        selectedDiscountAmount,
-      ]
-    );
-  }
 
   await client.query(
     `UPDATE "WalletAccount"
      SET available_balance = available_balance - $1,
          updated_at = NOW()
      WHERE id = $2`,
-    [finalAmount, wallet.id]
+    [feePolicy.base_amount, wallet.id]
   );
 
   const walletTransactionId = createId();
@@ -297,7 +165,7 @@ export async function assertPaidActionAndDebit(
       walletTransactionId,
       wallet.id,
       input.walletTxnType,
-      finalAmount,
+      feePolicy.base_amount,
       feePolicy.currency,
       input.description || `Charge applied for ${input.feeCode}`,
       input.referenceType,
@@ -315,7 +183,7 @@ export async function assertPaidActionAndDebit(
   return {
     chargeId,
     walletTransactionId,
-    debitedAmount: finalAmount.toFixed(2),
+    debitedAmount: String(feePolicy.base_amount),
     currency: feePolicy.currency,
   };
 }
@@ -366,10 +234,9 @@ export async function getWalletTransactions(
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }> {
   // Get wallet ID
-  const walletResult = await db.query(
-    `SELECT id FROM "WalletAccount" WHERE user_id = $1`,
-    [userId]
-  );
+  const walletResult = await db.query(`SELECT id FROM "WalletAccount" WHERE user_id = $1`, [
+    userId,
+  ]);
 
   if (walletResult.rows.length === 0) {
     throw new AppError(404, 'Wallet not found');
@@ -432,6 +299,192 @@ export async function getWalletTransactions(
   };
 }
 
+/**
+ * Create a topup request (initiates bKash payment flow)
+ */
+export async function createTopupRequest(
+  userId: string,
+  input: CreateTopupRequestInput
+): Promise<WalletTopupRequestType> {
+  // Get wallet
+  const walletResult = await db.query(`SELECT id FROM "WalletAccount" WHERE user_id = $1`, [
+    userId,
+  ]);
+
+  if (walletResult.rows.length === 0) {
+    throw new AppError(404, 'Wallet not found');
+  }
+
+  const walletId = walletResult.rows[0].id;
+
+  const topupId = createId();
+  const externalRequestId = `${userId.substring(0, 8)}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  const createResult = await createPaymentIntent(input.amount, topupId);
+  const paymentId = createResult.paymentId;
+  const executeResult = await executePayment(paymentId);
+  const verifyResult = await queryPayment(paymentId);
+
+  const executeStatusOk = !executeResult.statusCode || executeResult.statusCode === '0000';
+  const verifyStatusOk = !verifyResult.statusCode || verifyResult.statusCode === '0000';
+  const executeTxnStatus = executeResult.transactionStatus;
+  const verifyTxnStatus = verifyResult.transactionStatus;
+  const externalTrxId =
+    verifyResult.trxID ||
+    verifyResult.transactionID ||
+    executeResult.trxID ||
+    executeResult.transactionID ||
+    null;
+
+  let status: 'SUCCESS' | 'FAILED' = 'FAILED';
+  let failureReason: string | null = null;
+
+  if (
+    executeStatusOk &&
+    verifyStatusOk &&
+    executeTxnStatus === 'Completed' &&
+    verifyTxnStatus === 'Completed' &&
+    externalTrxId
+  ) {
+    status = 'SUCCESS';
+  } else {
+    failureReason =
+      verifyResult.statusMessage ||
+      executeResult.statusMessage ||
+      `Payment not completed (execute=${executeTxnStatus || 'unknown'}, query=${verifyTxnStatus || 'unknown'})`;
+  }
+
+  const settledAmount = Number(verifyResult.amount ?? executeResult.amount ?? input.amount);
+  const client = await db.connect();
+  let topup: any;
+
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `INSERT INTO "WalletTopupRequest" (
+        id, wallet_account_id, provider, status, requested_amount, currency,
+        external_request_id, external_payment_id, external_trx_id, provider_payload,
+        failure_reason, expires_at, completed_at, created_at
+      ) VALUES ($1, $2, $3, $4, $5, 'BDT', $6, $7, $8, $9, $10, $11, NOW(), NOW())
+       RETURNING
+        id, wallet_account_id, provider, status, requested_amount, currency,
+        external_request_id, external_payment_id, external_trx_id, failure_reason,
+        expires_at, completed_at, created_at`,
+      [
+        topupId,
+        walletId,
+        input.provider,
+        status,
+        input.amount,
+        externalRequestId,
+        paymentId,
+        externalTrxId,
+        JSON.stringify({ create: createResult, execute: executeResult, query: verifyResult }),
+        failureReason,
+        expiresAt,
+      ]
+    );
+
+    topup = result.rows[0];
+
+    if (status === 'SUCCESS') {
+      if (!Number.isFinite(settledAmount) || settledAmount <= 0) {
+        throw new AppError(400, 'Invalid amount in provider settlement response');
+      }
+
+      await client.query(
+        `UPDATE "WalletAccount"
+         SET available_balance = available_balance + $1,
+             updated_at = NOW()
+         WHERE id = $2`,
+        [settledAmount, walletId]
+      );
+
+      await client.query(
+        `INSERT INTO "WalletTransaction" (
+          id, wallet_account_id, direction, type, status,
+          amount, currency, description, reference_type, reference_id,
+          created_at, posted_at
+        ) VALUES (
+          $1, $2, 'CREDIT', 'TOPUP', 'POSTED',
+          $3, 'BDT', 'bKash topup', 'TOPUP_REQUEST', $4,
+          NOW(), NOW()
+        )`,
+        [createId(), walletId, settledAmount, topupId]
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  return {
+    topupId: topup.id,
+    status: topup.status,
+    requestedAmount: topup.requested_amount.toString(),
+    currency: topup.currency,
+    provider: topup.provider,
+    externalRequestId: topup.external_request_id,
+    externalPaymentId: topup.external_payment_id,
+    externalTrxId: topup.external_trx_id,
+    failureReason: topup.failure_reason,
+    expiresAt: topup.expires_at.toISOString(),
+    createdAt: topup.created_at.toISOString(),
+    completedAt: topup.completed_at?.toISOString() || null,
+  };
+}
+
+/**
+ * Get topup request status
+ */
+export async function getTopupRequest(
+  userId: string,
+  topupId: string
+): Promise<WalletTopupRequestType> {
+  // Verify user owns this topup
+  const result = await db.query(
+    `SELECT 
+      tr.id, tr.provider, tr.status, tr.requested_amount, tr.currency,
+      tr.external_request_id, tr.external_payment_id, tr.external_trx_id,
+      tr.failure_reason, tr.expires_at, tr.completed_at, tr.created_at,
+      wa.user_id
+     FROM "WalletTopupRequest" tr
+     JOIN "WalletAccount" wa ON tr.wallet_account_id = wa.id
+     WHERE tr.id = $1`,
+    [topupId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError(404, 'Topup request not found');
+  }
+
+  const topup = result.rows[0];
+
+  if (topup.user_id !== userId) {
+    throw new AppError(403, 'Unauthorized access to topup request');
+  }
+
+  return {
+    topupId: topup.id,
+    status: topup.status,
+    requestedAmount: topup.requested_amount.toString(),
+    currency: topup.currency,
+    provider: topup.provider,
+    externalRequestId: topup.external_request_id,
+    externalPaymentId: topup.external_payment_id,
+    externalTrxId: topup.external_trx_id,
+    failureReason: topup.failure_reason,
+    expiresAt: topup.expires_at.toISOString(),
+    createdAt: topup.created_at.toISOString(),
+    completedAt: topup.completed_at?.toISOString() || null,
+  };
+}
 
 /**
  * Get user charges (paginated)
@@ -445,10 +498,9 @@ export async function getUserCharges(
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }> {
   // Get total count
-  const countResult = await db.query(
-    `SELECT COUNT(*) as count FROM "Charge" WHERE user_id = $1`,
-    [userId]
-  );
+  const countResult = await db.query(`SELECT COUNT(*) as count FROM "Charge" WHERE user_id = $1`, [
+    userId,
+  ]);
 
   const total = parseInt(countResult.rows[0].count, 10);
   const offset = (page - 1) * limit;
@@ -463,8 +515,6 @@ export async function getUserCharges(
       reference_id,
       base_amount,
       final_amount,
-        discount_policy_id,
-        discount_amount,
       currency,
       status,
       failure_reason,
@@ -485,8 +535,6 @@ export async function getUserCharges(
     referenceId: row.reference_id,
     baseAmount: row.base_amount.toString(),
     finalAmount: row.final_amount.toString(),
-    discountPolicyId: row.discount_policy_id,
-    discountAmount: row.discount_amount != null ? row.discount_amount.toString() : null,
     currency: row.currency,
     status: row.status,
     failureReason: row.failure_reason,
@@ -506,303 +554,120 @@ export async function getUserCharges(
 }
 
 /**
- * Create a topup request (user submits request with amount, bKash number, and transaction ID)
+ * Handle bKash webhook callback for payment status
+ * Validates signature and updates topup/wallet state
  */
-export async function createTopupRequest(
-  userId: string,
-  amount: number,
-  bkashNumber: string,
-  transactionId: string
-): Promise<TopupRequestType> {
-  // Get wallet account
-  const walletResult = await db.query(
-    `SELECT id FROM "WalletAccount" WHERE user_id = $1`,
-    [userId]
-  );
+export async function handleBKashCallback(payload: Record<string, any>): Promise<void> {
+  const { paymentID } = payload;
 
-  if (walletResult.rows.length === 0) {
-    throw new AppError(404, 'Wallet not found');
+  if (!paymentID) {
+    throw new AppError(400, 'Missing paymentID in webhook');
   }
 
-  const walletId = walletResult.rows[0].id;
+  // As per callback flow: execute with provider first, then mutate wallet/topup state.
+  const executeResult = await executePayment(String(paymentID));
+  const queryResult = await queryPayment(String(paymentID));
 
-  // Check if transaction ID already exists for this user
-  const existingResult = await db.query(
-    `SELECT id FROM "TopupRequest" WHERE user_id = $1 AND transaction_id = $2`,
-    [userId, transactionId]
-  );
+  const client = await db.connect();
 
-  if (existingResult.rows.length > 0) {
-    throw new AppError(409, 'Topup request with this transaction ID already exists');
+  try {
+    await client.query('BEGIN');
+
+    const topupResult = await client.query(
+      `SELECT id, wallet_account_id, requested_amount, status
+       FROM "WalletTopupRequest"
+       WHERE external_payment_id = $1
+       FOR UPDATE`,
+      [paymentID]
+    );
+
+    if (topupResult.rows.length === 0) {
+      throw new AppError(404, 'Topup request not found');
+    }
+
+    const topup = topupResult.rows[0];
+
+    // Idempotency guard: if already successful, do not credit twice.
+    if (topup.status === 'SUCCESS') {
+      await client.query('COMMIT');
+      return;
+    }
+
+    let newStatus = 'FAILED';
+    let failureReason = null;
+    const executeStatusCode = executeResult.statusCode;
+    const executeTxnStatus = executeResult.transactionStatus;
+    const executeTrxId = executeResult.transactionID || executeResult.trxID || null;
+    const queryTxnStatus = queryResult.transactionStatus;
+    const queryTrxId = queryResult.transactionID || queryResult.trxID || null;
+    const executeStatusOk = !executeStatusCode || executeStatusCode === '0000';
+    const queryStatusOk = !queryResult.statusCode || queryResult.statusCode === '0000';
+
+    const callbackAmount = Number(
+      queryResult.amount ?? executeResult.amount ?? topup.requested_amount
+    );
+
+    if (
+      executeStatusOk &&
+      queryStatusOk &&
+      executeTxnStatus === 'Completed' &&
+      queryTxnStatus === 'Completed' &&
+      (queryTrxId || executeTrxId)
+    ) {
+      newStatus = 'SUCCESS';
+
+      if (!Number.isFinite(callbackAmount) || callbackAmount <= 0) {
+        throw new AppError(400, 'Invalid amount in execute response');
+      }
+
+      // Credit wallet on successful payment
+      await client.query(
+        `UPDATE "WalletAccount" 
+         SET available_balance = available_balance + $1, updated_at = NOW()
+         WHERE id = $2`,
+        [callbackAmount, topup.wallet_account_id]
+      );
+
+      // Create wallet transaction record
+      await client.query(
+        `INSERT INTO "WalletTransaction" (
+          id, wallet_account_id, direction, type, status, amount, 
+          currency, description, reference_type, reference_id, created_at, posted_at
+        ) VALUES ($1, $2, 'CREDIT', 'TOPUP', 'POSTED', $3, 'BDT', 
+                  'bKash topup', 'TOPUP_REQUEST', $4, NOW(), NOW())`,
+        [createId(), topup.wallet_account_id, callbackAmount, topup.id]
+      );
+    } else {
+      failureReason =
+        queryResult.statusMessage ||
+        executeResult.statusMessage ||
+        `Payment not completed (execute=${executeTxnStatus || 'unknown'}, query=${queryTxnStatus || 'unknown'})`;
+    }
+
+    // Update topup request status
+    await client.query(
+      `UPDATE "WalletTopupRequest" 
+       SET status = $1,
+           external_trx_id = $2,
+           failure_reason = $3,
+           provider_payload = $4,
+           completed_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $5`,
+      [
+        newStatus,
+        executeTrxId,
+        failureReason,
+        JSON.stringify({ callback: payload, execute: executeResult, query: queryResult }),
+        topup.id,
+      ]
+    );
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  const topupRequestId = crypto.randomUUID();
-
-  // Create topup request
-  await db.query(
-    `INSERT INTO "TopupRequest" (
-      id, user_id, wallet_account_id, amount, bkash_number, transaction_id, status, created_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', NOW())`,
-    [topupRequestId, userId, walletId, amount, bkashNumber, transactionId]
-  );
-
-  // Retrieve created request
-  const result = await db.query(
-    `SELECT 
-      id as topup_request_id,
-      user_id,
-      amount,
-      bkash_number,
-      transaction_id,
-      status,
-      rejection_reason,
-      approved_at,
-      created_at
-     FROM "TopupRequest"
-     WHERE id = $1`,
-    [topupRequestId]
-  );
-
-  const row = result.rows[0];
-  return {
-    topupRequestId: row.topup_request_id,
-    userId: row.user_id,
-    amount: row.amount.toString(),
-    bkashNumber: row.bkash_number,
-    transactionId: row.transaction_id,
-    status: row.status,
-    rejectionReason: row.rejection_reason,
-    approvedAt: row.approved_at?.toISOString() || null,
-    createdAt: row.created_at.toISOString(),
-  };
 }
-
-/**
- * Get user's topup requests
- */
-export async function getUserTopupRequests(
-  userId: string,
-  page: number = 1,
-  limit: number = 20
-): Promise<{
-  topupRequests: TopupRequestType[];
-  pagination: { page: number; limit: number; total: number; totalPages: number };
-}> {
-  // Get total count
-  const countResult = await db.query(
-    `SELECT COUNT(*) as count FROM "TopupRequest" WHERE user_id = $1`,
-    [userId]
-  );
-
-  const total = parseInt(countResult.rows[0].count, 10);
-  const offset = (page - 1) * limit;
-
-  // Get topup requests
-  const result = await db.query(
-    `SELECT 
-      id as topup_request_id,
-      user_id,
-      amount,
-      bkash_number,
-      transaction_id,
-      status,
-      rejection_reason,
-      approved_at,
-      created_at
-     FROM "TopupRequest"
-     WHERE user_id = $1
-     ORDER BY created_at DESC
-     LIMIT $2 OFFSET $3`,
-    [userId, limit, offset]
-  );
-
-  const topupRequests: TopupRequestType[] = result.rows.map((row) => ({
-    topupRequestId: row.topup_request_id,
-    userId: row.user_id,
-    amount: row.amount.toString(),
-    bkashNumber: row.bkash_number,
-    transactionId: row.transaction_id,
-    status: row.status,
-    rejectionReason: row.rejection_reason,
-    approvedAt: row.approved_at?.toISOString() || null,
-    createdAt: row.created_at.toISOString(),
-  }));
-
-  return {
-    topupRequests,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  };
-}
-
-/**
- * Get topup requests for admin (paginated, optionally filtered by status)
- */
-export async function getAdminTopupRequests(
-  status?: string,
-  page: number = 1,
-  limit: number = 20
-): Promise<{
-  topupRequests: TopupRequestType[];
-  pagination: { page: number; limit: number; total: number; totalPages: number };
-}> {
-  let countQuery = `SELECT COUNT(*) as count FROM "TopupRequest"`;
-  let dataQuery = `SELECT 
-      id as topup_request_id,
-      user_id,
-      amount,
-      bkash_number,
-      transaction_id,
-      status,
-      rejection_reason,
-      approved_at,
-      created_at
-     FROM "TopupRequest"`;
-
-  const params: any[] = [];
-
-  if (status) {
-    countQuery += ` WHERE status = $1`;
-    dataQuery += ` WHERE status = $1`;
-    params.push(status);
-  }
-
-  // Get total count
-  const countResult = await db.query(countQuery, params);
-  const total = parseInt(countResult.rows[0].count, 10);
-  const offset = (page - 1) * limit;
-
-  // Get topup requests
-  dataQuery += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-
-  const result = await db.query(dataQuery, [...params, limit, offset]);
-
-  const topupRequests: TopupRequestType[] = result.rows.map((row) => ({
-    topupRequestId: row.topup_request_id,
-    userId: row.user_id,
-    amount: row.amount.toString(),
-    bkashNumber: row.bkash_number,
-    transactionId: row.transaction_id,
-    status: row.status,
-    rejectionReason: row.rejection_reason,
-    approvedAt: row.approved_at?.toISOString() || null,
-    createdAt: row.created_at.toISOString(),
-  }));
-
-  return {
-    topupRequests,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  };
-}
-
-/**
- * Approve topup request and credit wallet
- */
-export async function approveTopupRequest(
-  topupRequestId: string,
-  approvedByAdminId: string
-): Promise<{ topupRequestId: string; walletTransactionId: string; creditedAmount: string }> {
-  // Get topup request
-  const topupResult = await db.query(
-    `SELECT user_id, wallet_account_id, amount FROM "TopupRequest" WHERE id = $1 AND status = 'PENDING'`,
-    [topupRequestId]
-  );
-
-  if (topupResult.rows.length === 0) {
-    throw new AppError(404, 'Topup request not found or already processed');
-  }
-
-  const topupRequest = topupResult.rows[0];
-
-  // Credit wallet in transaction-safe way
-  const walletResult = await db.query(
-    `SELECT id, status, currency, available_balance FROM "WalletAccount" WHERE id = $1 FOR UPDATE`,
-    [topupRequest.wallet_account_id]
-  );
-
-  if (walletResult.rows.length === 0) {
-    throw new AppError(404, 'Wallet not found');
-  }
-
-  const wallet = walletResult.rows[0];
-
-  if (wallet.status !== 'ACTIVE') {
-    throw new AppError(403, 'Wallet is not active');
-  }
-
-  // Update wallet balance
-  await db.query(
-    `UPDATE "WalletAccount" SET available_balance = available_balance + $1, updated_at = NOW() WHERE id = $2`,
-    [topupRequest.amount, wallet.id]
-  );
-
-  // Create wallet transaction (CREDIT)
-  const walletTransactionId = crypto.randomUUID();
-  await db.query(
-    `INSERT INTO "WalletTransaction" (
-      id, wallet_account_id, direction, type, status, amount, currency, description, reference_type, reference_id, created_at, posted_at
-    ) VALUES ($1, $2, 'CREDIT', 'TOPUP', 'POSTED', $3, $4, $5, 'TOPUP_REQUEST', $6, NOW(), NOW())`,
-    [
-      walletTransactionId,
-      wallet.id,
-      topupRequest.amount,
-      wallet.currency,
-      `Topup approved - Transaction ${topupRequestId}`,
-      topupRequestId,
-    ]
-  );
-
-  // Update topup request status
-  await db.query(
-    `UPDATE "TopupRequest" SET status = 'APPROVED', approved_at = NOW(), approved_by_admin_id = $1, updated_at = NOW() WHERE id = $2`,
-    [approvedByAdminId, topupRequestId]
-  );
-
-  return {
-    topupRequestId,
-    walletTransactionId,
-    creditedAmount: topupRequest.amount.toString(),
-  };
-}
-
-/**
- * Reject topup request
- */
-export async function rejectTopupRequest(
-  topupRequestId: string,
-  rejectionReason: string
-): Promise<{ topupRequestId: string }> {
-  // Get topup request
-  const topupResult = await db.query(
-    `SELECT id, status FROM "TopupRequest" WHERE id = $1`,
-    [topupRequestId]
-  );
-
-  if (topupResult.rows.length === 0) {
-    throw new AppError(404, 'Topup request not found');
-  }
-
-  const topup = topupResult.rows[0];
-
-  if (topup.status !== 'PENDING') {
-    throw new AppError(409, 'Topup request has already been processed');
-  }
-
-  // Update topup request status
-  await db.query(
-    `UPDATE "TopupRequest" SET status = 'REJECTED', rejection_reason = $1, updated_at = NOW() WHERE id = $2`,
-    [rejectionReason, topupRequestId]
-  );
-
-  return { topupRequestId };
-}
-

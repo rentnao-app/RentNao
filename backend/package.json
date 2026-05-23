@@ -17,6 +17,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.9.1",
     "@types/pg": "^8.16.0",
     "daisyui": "^5.5.19",
     "prettier": "^3.8.1",
