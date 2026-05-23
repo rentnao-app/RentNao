@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import BrandLogoLink from '../components/BrandLogoLink';
+import AppHeader from '../components/AppHeader';
 import toast from 'react-hot-toast';
 import { listTenantRequests, withdrawTenantRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
@@ -27,22 +27,19 @@ export default function MyApplicationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
-          <BrandLogoLink />
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            <Link to="/listings" className="text-xs sm:text-sm font-medium text-teal-700 hover:text-teal-800">
-              Browse Listings
-            </Link>
-            <button type="button" onClick={load} className="text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-800">
-              Refresh
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">My Applications</h1>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Applications</h1>
+          <button
+            type="button"
+            onClick={load}
+            className="text-sm font-medium text-emerald-800 hover:text-emerald-900"
+          >
+            Refresh
+          </button>
+        </div>
         <p className="text-sm text-gray-500 mb-5 sm:mb-6">
           {remoteAvailable ? 'Applications synced with backend.' : 'Using local interaction fallback for requests.'}
         </p>

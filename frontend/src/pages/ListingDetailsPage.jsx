@@ -13,6 +13,7 @@ import {
 import { addLocalNotification } from "../lib/notifications";
 import { usePaymentGuard } from "../lib/usePaymentGuard";
 import { formatMoney } from "../lib/wallet";
+import AppHeader from "../components/AppHeader";
 
 function formatBdt(n) {
   if (n == null || Number.isNaN(Number(n))) return "—";
@@ -88,33 +89,10 @@ export default function ListingDetailsPage() {
   const [sendingRequest, setSendingRequest] = useState(false);
   const [loggedIn] = useState(() => isLoggedIn());
   const [currentUser] = useState(() => getCurrentUser());
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
   const viewerRole = currentUser?.role || currentUser?.userRole;
-  const topNavItems = [
-    { to: "/", label: "Home" },
-    ...(viewerRole === "OWNER"
-      ? []
-      : [{ to: "/listings", label: "Find Property" }]),
-    ...(viewerRole === "TENANT"
-      ? []
-      : [
-        {
-          to: "/owner-dashboard/create-listing",
-          label: "List Your Property",
-        },
-      ]),
-    { to: "/services", label: "Services" },
-  ];
   const canWishlist = loggedIn && viewerRole === "TENANT";
   const isTenant = loggedIn && viewerRole === "TENANT";
   const isOwner = loggedIn && viewerRole === "OWNER";
-  const dashboardPath =
-    viewerRole === "ADMIN"
-      ? "/admin-dashboard"
-      : viewerRole === "OWNER"
-        ? "/owner-dashboard"
-        : "/tenant-dashboard";
 
   const loadListing = useCallback(async () => {
     const publicRes = await apiFetch(`/properties/public/listings/${id}`);
@@ -215,19 +193,6 @@ export default function ListingDetailsPage() {
     return () => clearTimeout(timer);
   }, [id, isTenant]);
 
-  useEffect(() => {
-    setMobileNavOpen(false);
-  }, [id]);
-
-  useEffect(() => {
-    if (!mobileNavOpen) return undefined;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [mobileNavOpen]);
-
   const isPrivilegedViewer = isOwner || viewerRole === "ADMIN";
   const hasAccess = isPrivilegedViewer || Boolean(listing?.isUnlocked);
   const listingActive =
@@ -248,23 +213,29 @@ export default function ListingDetailsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f2f7f3]">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-700 border-t-transparent" />
+      <div className="min-h-screen bg-[#f2f7f3] text-slate-800">
+        <AppHeader variant="wide" />
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-700 border-t-transparent" />
+        </div>
       </div>
     );
   }
 
   if (!listing) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f2f7f3] px-4">
-        <div className="text-center">
-          <p className="mb-4 text-slate-600">{error || "Listing not found."}</p>
-          <Link
-            to="/listings"
-            className="text-sm font-semibold text-emerald-800 hover:text-emerald-900"
-          >
-            ← Back to listings
-          </Link>
+      <div className="min-h-screen bg-[#f2f7f3] text-slate-800">
+        <AppHeader variant="wide" />
+        <div className="flex min-h-[50vh] items-center justify-center px-4">
+          <div className="text-center">
+            <p className="mb-4 text-slate-600">{error || "Listing not found."}</p>
+            <Link
+              to="/listings"
+              className="text-sm font-semibold text-emerald-800 hover:text-emerald-900"
+            >
+              ← Back to listings
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -275,131 +246,7 @@ export default function ListingDetailsPage() {
 
   return (
     <div className="min-h-screen bg-[#f2f7f3] text-slate-800">
-      <header className="sticky top-0 z-30 border-b border-emerald-100/90 bg-white/95 shadow-sm backdrop-blur-sm">
-        <div className="mx-auto flex max-w-[1500px] items-center gap-2 px-3 py-3 sm:gap-3 sm:px-5 lg:px-6">
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
-            aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMobileNavOpen((v) => !v)}
-          >
-            {mobileNavOpen ? (
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            )}
-          </button>
-
-          <Link
-            to="/"
-            className="flex min-w-0 shrink-0 items-center gap-2"
-            onClick={() => setMobileNavOpen(false)}
-          >
-            <img
-              src="/logo.jpg"
-              alt=""
-              className="h-9 w-9 rounded-lg border border-emerald-100 object-cover"
-            />
-            <span className="truncate text-lg font-semibold tracking-tight text-[#2f8444] sm:text-xl">
-              Rent Nao
-            </span>
-          </Link>
-
-          <nav className="mx-auto hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex">
-            {topNavItems.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-emerald-50/80 hover:text-emerald-900"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {loggedIn ? (
-              <Link
-                to={dashboardPath}
-                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-emerald-800 sm:inline"
-              >
-                Dashboard
-              </Link>
-            ) : (
-              <>
-                <Link
-                  to="/signup"
-                  className="hidden sm:inline rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:text-emerald-800"
-                >
-                  Register
-                </Link>
-                <Link
-                  to="/login"
-                  className="rounded-lg px-2.5 py-2 text-sm font-medium text-slate-600 hover:text-emerald-800 sm:px-3"
-                >
-                  Log in
-                </Link>
-                <Link
-                  to="/signup"
-                  className="rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 sm:px-4"
-                >
-                  Sign up
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-
-        {mobileNavOpen ? (
-          <div className="border-t border-emerald-100 bg-white px-3 py-3 lg:hidden">
-            <nav className="flex flex-col gap-1">
-              {topNavItems.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-emerald-50"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
-              {loggedIn ? (
-                <Link
-                  to={dashboardPath}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-emerald-800 hover:bg-emerald-50"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  Dashboard
-                </Link>
-              ) : null}
-            </nav>
-          </div>
-        ) : null}
-      </header>
+      <AppHeader variant="wide" />
 
       <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-5 sm:py-6 lg:px-6 lg:py-8">
         {error ? (
