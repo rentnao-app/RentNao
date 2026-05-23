@@ -4,7 +4,7 @@ import { apiFetch, isLoggedIn } from "../lib/api";
 import MapPicker from "../components/MapPicker";
 import ImageUploader from "../components/ImageUploader";
 import { addLocalNotification } from "../lib/notifications";
-import { usePaymentGuard } from "../hooks/usePaymentGuard";
+import { usePaymentGuard } from "../lib/usePaymentGuard";
 import { formatMoney } from "../lib/wallet";
 
 /** Fallback used if browser geolocation is unavailable and the user does not move the pin. */

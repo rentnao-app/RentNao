@@ -11,7 +11,7 @@ import {
   withdrawTenantRequest,
 } from "../lib/requests";
 import { addLocalNotification } from "../lib/notifications";
-import { usePaymentGuard } from "../hooks/usePaymentGuard";
+import { usePaymentGuard } from "../lib/usePaymentGuard";
 import { formatMoney } from "../lib/wallet";
 
 function formatBdt(n) {
