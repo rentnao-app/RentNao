@@ -14,7 +14,7 @@ import {
   parsePaymentRequired,
 } from "../lib/wallet";
 
-export function usePaymentGuard({ feeCode, enabled = true } = {}) {
+export function usePaymentGuard({ feeCode, enabled = true, percentBaseValue } = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const [fee, setFee] = useState(null);
@@ -38,7 +38,7 @@ export function usePaymentGuard({ feeCode, enabled = true } = {}) {
     setError("");
     try {
       const [nextFee, nextWallet] = await Promise.all([
-        fetchActiveFee(feeCode),
+        fetchActiveFee(feeCode, { percentBaseValue }),
         fetchWalletAccount(),
       ]);
       setFee(nextFee);
@@ -50,7 +50,7 @@ export function usePaymentGuard({ feeCode, enabled = true } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [enabled, feeCode]);
+  }, [enabled, feeCode, percentBaseValue]);
 
   useEffect(() => {
     if (!enabled || !feeCode) return;

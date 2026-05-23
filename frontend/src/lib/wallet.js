@@ -36,8 +36,16 @@ export async function fetchWalletAccount() {
   return body?.data || null;
 }
 
-export async function fetchActiveFee(feeCode) {
-  const res = await apiFetch(`/wallet/fees/${encodeURIComponent(feeCode)}`);
+export async function fetchActiveFee(feeCode, { percentBaseValue } = {}) {
+  const params = new URLSearchParams();
+  const base = Number(percentBaseValue);
+  if (Number.isFinite(base) && base > 0) {
+    params.set("rent", String(base));
+  }
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await apiFetch(
+    `/wallet/fees/${encodeURIComponent(feeCode)}${qs}`,
+  );
   const body = await res.json().catch(() => ({}));
   if (!res.ok)
     throw new Error(
