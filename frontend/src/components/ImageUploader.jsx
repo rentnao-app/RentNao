@@ -38,6 +38,12 @@ export default function ImageUploader({ propertyId, initialImages = [], onUpdate
           continue;
         }
 
+        const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+        if (file.size > MAX_FILE_SIZE) {
+          setError(`File ${file.name} is too large. Maximum allowed size is 100MB.`);
+          continue;
+        }
+
         const isImage = file.type.startsWith('image/');
         const uploadUrlRes = await apiFetch(`/properties/${propertyId}/images/upload-url`, {
           method: 'POST',
@@ -45,6 +51,7 @@ export default function ImageUploader({ propertyId, initialImages = [], onUpdate
           body: JSON.stringify({
             fileName: file.name,
             mimeType: file.type,
+            fileSize: file.size,
           }),
         });
         const uploadUrlBody = await uploadUrlRes.json().catch(() => ({}));

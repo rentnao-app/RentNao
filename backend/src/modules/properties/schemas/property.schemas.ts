@@ -84,6 +84,14 @@ export const propertyImageUploadUrlRequestSchema = z.object({
     .openapi({
       example: 'image/jpeg',
     }),
+  fileSize: z
+    .number()
+    .max(100 * 1024 * 1024, 'File size exceeds the 100MB limit')
+    .openapi({
+      example: 1048576,
+      description: 'File size in bytes (max 100MB)',
+    }),
+
 });
 
 export const propertyImageUploadUrlResponseSchema = z.object({

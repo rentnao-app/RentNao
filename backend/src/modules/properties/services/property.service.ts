@@ -775,7 +775,7 @@ export async function getPublicListingDetail(listingId: string) {
   const row = result.rows[0];
 
   const imageResult = await db.query(
-    `SELECT image_id, storage_path, file_name, is_primary, display_order
+    `SELECT image_id, storage_path, file_name, mime_type, is_primary, display_order
      FROM "PropertyImage"
      WHERE property_id = $1
      ORDER BY is_primary DESC, display_order ASC, uploaded_at ASC`,
@@ -795,6 +795,7 @@ export async function getPublicListingDetail(listingId: string) {
       imageId: img.image_id,
       storagePath: img.storage_path,
       fileName: img.file_name,
+      mimeType: img.mime_type,
       isPrimary: Boolean(img.is_primary),
       displayOrder: Number(img.display_order),
       url: await presignImageUrl(img.storage_path),
@@ -877,7 +878,7 @@ export async function getListingDetailForAdmin(listingId: string) {
   const row = result.rows[0];
 
   const imageResult = await db.query(
-    `SELECT image_id, storage_path, file_name, is_primary, display_order
+    `SELECT image_id, storage_path, file_name, mime_type, is_primary, display_order
      FROM "PropertyImage"
      WHERE property_id = $1
      ORDER BY is_primary DESC, display_order ASC, uploaded_at ASC`,
@@ -890,6 +891,7 @@ export async function getListingDetailForAdmin(listingId: string) {
       imageId: img.image_id,
       storagePath: img.storage_path,
       fileName: img.file_name,
+      mimeType: img.mime_type,
       isPrimary: Boolean(img.is_primary),
       displayOrder: Number(img.display_order),
       url: await presignImageUrl(img.storage_path),
@@ -1085,7 +1087,7 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
     const row = result.rows[0];
 
     const imageResult = await db.query(
-      `SELECT image_id, storage_path, file_name, is_primary, display_order
+      `SELECT image_id, storage_path, file_name, mime_type, is_primary, display_order
        FROM "PropertyImage"
        WHERE property_id = $1
        ORDER BY is_primary DESC, display_order ASC, uploaded_at ASC`,
@@ -1098,6 +1100,7 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
         imageId: img.image_id,
         storagePath: img.storage_path,
         fileName: img.file_name,
+        mimeType: img.mime_type,
         isPrimary: Boolean(img.is_primary),
         displayOrder: Number(img.display_order),
         url: await presignImageUrl(img.storage_path),

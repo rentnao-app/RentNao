@@ -30,6 +30,7 @@ export interface PaidActionInput {
   referenceId: string;
   walletTxnType: 'TOPUP' | 'LISTING_FEE' | 'REFUND' | 'ADJUSTMENT' | 'REVERSAL';
   description?: string;
+  referenceData?: Record<string, any>;
 }
 
 export interface PaidActionResult {
