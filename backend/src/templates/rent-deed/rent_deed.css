@@ -11,7 +11,8 @@ body {
     align-items: center;
     font-family: 'Noto Serif Bengali', serif;
     font-size: 12pt;
-    line-height: 1.55;
+    font-weight: 600;
+    line-height: 1.4;
     color: #000000;
 }
 
@@ -88,7 +89,7 @@ body {
 }
 
 .var {
-    font-weight: 600;
+    font-weight: 800;
 }
 
 /* ৫. হাতে লেখার জন্য ব্ল্যাঙ্ক স্পেস ইউটিলিটি */

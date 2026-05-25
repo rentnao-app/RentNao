@@ -199,6 +199,11 @@ export const profileStatusSchema = z.object({
     familyStatus: z.string().nullable().optional(),
     familySize: z.number().nullable().optional(),
     ownerCategory: z.string().nullable().optional(),
+    fullNameBn: z.string().nullable().optional(),
+    professionBn: z.string().nullable().optional(),
+    religionBn: z.string().nullable().optional(),
+    phoneBn: z.string().nullable().optional(),
+    nidBn: z.string().nullable().optional(),
   }).optional(),
   requiredDocuments: z.array(
     z.object({

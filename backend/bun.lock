@@ -14,6 +14,7 @@
         "hono": "^4.12.3",
         "ioredis": "^5.10.0",
         "jsonwebtoken": "^9.0.3",
+        "nodejs-avro-phonetic": "^1.0.2",
         "pg": "^8.19.0",
         "react-icons": "^5.6.0",
         "zod": "^4.3.6",
@@ -577,6 +578,8 @@
     "no-case": ["no-case@3.0.4", "", { "dependencies": { "lower-case": "^2.0.2", "tslib": "^2.0.3" } }, "sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg=="],
 
     "node-fetch": ["node-fetch@2.6.11", "", { "dependencies": { "whatwg-url": "^5.0.0" }, "peerDependencies": { "encoding": "^0.1.0" }, "optionalPeers": ["encoding"] }, "sha512-4I6pdBY1EthSqDmJkiNk3JIT8cswwR9nfeW/cPdUagJYEQG7R95WRH74wpz7ma8Gh/9dI9FP+OU+0E4FvtA55w=="],
+
+    "nodejs-avro-phonetic": ["nodejs-avro-phonetic@1.0.2", "", {}, "sha512-+Z+IOMOywOjIac6qnze1MbmA8P8bKCgmPPJVxcRw+BNzu5EyF5nccgW/wiTmvXDFlQ3lXYMnjUVP/yAhHZM2Mg=="],
 
     "normalize-package-data": ["normalize-package-data@2.5.0", "", { "dependencies": { "hosted-git-info": "^2.1.4", "resolve": "^1.10.0", "semver": "2 || 3 || 4 || 5", "validate-npm-package-license": "^3.0.1" } }, "sha512-/5CMN3T0R4XTj4DcGaexo+roZSdSFW/0AOOTROrjxzCG1wrWXEsGbRKevjlIL+ZDE4sZlJr5ED4YW0yqmkK+eA=="],
 

@@ -71,6 +71,9 @@ export const propertyResponseSchema = z.object({
   intendedTenantType: TenantType.nullable(),
   floorNo: z.number().nullable(),
   flatNo: z.string().nullable(),
+  propertyAddressBn: z.string().nullable().optional(),
+  floorNoBn: z.string().nullable().optional(),
+  flatNoBn: z.string().nullable().optional(),
   createdAt: z.string(),
 });
 
@@ -303,6 +306,9 @@ export const publicListingDetailSchema = publicListingSummarySchema.extend({
   hasGenerator: z.boolean(),
   hasSecurityGuard: z.boolean(),
   floorNo: z.number().nullable(),
+  propertyAddressBn: z.string().nullable().optional(),
+  floorNoBn: z.string().nullable().optional(),
+  flatNoBn: z.string().nullable().optional(),
   images: z.array(z.object({
     imageId: z.string(),
     storagePath: z.string(),
@@ -333,6 +339,9 @@ export const unlockedListingDetailSchema = publicListingSummarySchema.extend({
   hasSecurityGuard: z.boolean(),
   floorNo: z.number().nullable(),
   flatNo: z.string().nullable(),
+  propertyAddressBn: z.string().nullable().optional(),
+  floorNoBn: z.string().nullable().optional(),
+  flatNoBn: z.string().nullable().optional(),
   images: z.array(z.object({
     imageId: z.string(),
     storagePath: z.string(),

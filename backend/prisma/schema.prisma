@@ -323,6 +323,13 @@ model BaseUserProfile {
   current_lng  Float?
   current_area String?
 
+  // Transliteration (Bengali)
+  full_name_bn         String?
+  profession_bn        String?
+  religion_bn          String?
+  phone_bn             String?
+  nid_bn               String?
+
   created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)
 
@@ -385,6 +392,11 @@ model Property {
   has_security_guard Boolean        @default(false)
   floor_no           Int            @default(1)
   flat_no            String?
+
+  // Transliteration (Bengali)
+  property_address_bn String?
+  floor_no_bn         String?
+  flat_no_bn          String?
 
   // Property preferences
   intended_tenant_type TenantType

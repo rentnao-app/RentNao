@@ -6,6 +6,7 @@ import * as routes from './routes';
 import * as profileService from './services/profile.service';
 import * as verificationService from './services/verification.service';
 import { requireAuth } from '@/security';
+import { dispatchTransliteration } from '@/services/transliteration';
 
 const users = new OpenAPIHono<{
   Variables: {
@@ -135,7 +136,7 @@ users.openapi(routes.createProfileRoute, async (c) => {
   }
 
   const userResult = await db.query(
-    `SELECT role FROM "User" WHERE user_id = $1`,
+    `SELECT role, contact_phone FROM "User" WHERE user_id = $1`,
     [userId]
   );
 
@@ -151,13 +152,28 @@ users.openapi(routes.createProfileRoute, async (c) => {
   await profileService.createOrUpdateProfile(userId, userRole, body as any);
   const completionStatus = await profileService.getProfileCompletionStatus(userId, userRole);
 
+  const reqBody = body as any;
+  dispatchTransliteration(
+    {
+      fullName: reqBody.firstName || reqBody.lastName ? `${reqBody.firstName || ''} ${reqBody.lastName || ''}`.trim() : undefined,
+      profession: reqBody.profession,
+      religion: reqBody.religion,
+      phone: userResult.rows[0].contact_phone || undefined,
+    },
+    {
+      table: 'BaseUserProfile',
+      idColumn: 'user_id',
+      idValue: userId,
+    }
+  );
+
   return c.json(
     {
       success: true,
       data: {
         userId,
         role: userRole,
-        profileCompletion: completionStatus,
+        profileCompletionStatus: completionStatus,
         onboardingStatus: 'PROFILE_PENDING',
       },
       message: 'Profile created successfully. Next: submit required documents for verification.',
@@ -180,7 +196,7 @@ users.openapi(routes.updateProfileRoute, async (c) => {
   }
 
   const userResult = await db.query(
-    `SELECT role FROM "User" WHERE user_id = $1`,
+    `SELECT role, contact_phone FROM "User" WHERE user_id = $1`,
     [userId]
   );
 
@@ -192,12 +208,27 @@ users.openapi(routes.updateProfileRoute, async (c) => {
   await profileService.createOrUpdateProfile(userId, userRole, body as any);
   const completionStatus = await profileService.getProfileCompletionStatus(userId, userRole);
 
+  const reqBody = body as any;
+  dispatchTransliteration(
+    {
+      fullName: reqBody.firstName || reqBody.lastName ? `${reqBody.firstName || ''} ${reqBody.lastName || ''}`.trim() : undefined,
+      profession: reqBody.profession,
+      religion: reqBody.religion,
+      phone: userResult.rows[0].contact_phone || undefined,
+    },
+    {
+      table: 'BaseUserProfile',
+      idColumn: 'user_id',
+      idValue: userId,
+    }
+  );
+
   return c.json(
     {
       success: true,
       data: {
         userId,
-        profileCompletion: completionStatus,
+        profileCompletionStatus: completionStatus,
       },
       message: 'Profile updated successfully',
     },
@@ -290,6 +321,21 @@ users.openapi(routes.submitVerificationRoute, async (c) => {
 
   const userRole = userResult.rows[0].role;
   const submission = await verificationService.submitVerification(userId, userRole, body);
+
+  const reqBody = body as any;
+  const nidDoc = reqBody.documents?.find((d: any) => d.documentType === 'NATIONAL_ID');
+  if (nidDoc && nidDoc.documentNumber) {
+    dispatchTransliteration(
+      {
+        nid: nidDoc.documentNumber,
+      },
+      {
+        table: 'BaseUserProfile',
+        idColumn: 'user_id',
+        idValue: userId,
+      }
+    );
+  }
 
   return c.json(
     {

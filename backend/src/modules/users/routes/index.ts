@@ -128,7 +128,17 @@ export const createProfileRoute = createRoute({
               userId: z.string(),
               role: UserRole,
               profileCompletionStatus: z.object({
-                isComplete: z.boolean(),
+                base: z.object({
+                  isComplete: z.boolean(),
+                  filledFields: z.array(z.string()),
+                  missingFields: z.array(z.string()),
+                }),
+                roleSpecific: z.object({
+                  isComplete: z.boolean(),
+                  filledFields: z.array(z.string()),
+                  missingFields: z.array(z.string()),
+                }),
+                overall: z.boolean(),
               }),
               onboardingStatus: z.string(),
             }),
@@ -194,7 +204,17 @@ export const updateProfileRoute = createRoute({
             data: z.object({
               userId: z.string(),
               profileCompletionStatus: z.object({
-                isComplete: z.boolean(),
+                base: z.object({
+                  isComplete: z.boolean(),
+                  filledFields: z.array(z.string()),
+                  missingFields: z.array(z.string()),
+                }),
+                roleSpecific: z.object({
+                  isComplete: z.boolean(),
+                  filledFields: z.array(z.string()),
+                  missingFields: z.array(z.string()),
+                }),
+                overall: z.boolean(),
               }),
             }),
             message: z.string(),

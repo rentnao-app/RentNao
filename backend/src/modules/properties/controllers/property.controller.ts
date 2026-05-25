@@ -1,5 +1,6 @@
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { AppError } from '@/errors/base';
+import { dispatchTransliteration } from '@/services/transliteration';
 import {
   createPropertyImageRoute,
   createListingRoute,
@@ -50,6 +51,20 @@ export function registerPropertyRoutes(app: OpenAPIHono) {
 
     const body = c.req.valid('json');
     const data = await createProperty(user.userId, body);
+    
+    dispatchTransliteration(
+      {
+        floorNo: body.floorNo,
+        flatNo: body.flatNo,
+        propertyAddress: body.address,
+      },
+      {
+        table: 'Property',
+        idColumn: 'property_id',
+        idValue: data.propertyId,
+      }
+    );
+
     return c.json({ success: true, data }, 201);
   });
 
@@ -95,6 +110,20 @@ export function registerPropertyRoutes(app: OpenAPIHono) {
     }
 
     const data = await updateMyPropertyById(user.userId, propertyId, body);
+
+    dispatchTransliteration(
+      {
+        floorNo: body.floorNo,
+        flatNo: body.flatNo,
+        propertyAddress: body.address,
+      },
+      {
+        table: 'Property',
+        idColumn: 'property_id',
+        idValue: propertyId,
+      }
+    );
+
     return c.json({ success: true, data }, 200);
   });
 

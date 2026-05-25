@@ -460,7 +460,8 @@ export async function getProfileDetails(userId: string, role: UserRoleType) {
   const baseResult = await db.query(
     `SELECT
       first_name, last_name, date_of_birth, gender, religion, profession,
-      job_category, profile_picture_path, current_lat, current_lng, current_area
+      job_category, profile_picture_path, current_lat, current_lng, current_area,
+      full_name_bn, profession_bn, religion_bn, phone_bn, nid_bn
      FROM "BaseUserProfile"
      WHERE user_id = $1`,
     [userId]
@@ -504,5 +505,10 @@ export async function getProfileDetails(userId: string, role: UserRoleType) {
     familyStatus: roleSpecific.family_status || null,
     familySize: roleSpecific.family_size ?? null,
     ownerCategory: roleSpecific.owner_category || null,
+    fullNameBn: base.full_name_bn || null,
+    professionBn: base.profession_bn || null,
+    religionBn: base.religion_bn || null,
+    phoneBn: base.phone_bn || null,
+    nidBn: base.nid_bn || null,
   };
 }
