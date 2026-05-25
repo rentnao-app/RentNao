@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { apiFetch, getCurrentUser, isLoggedIn } from "../lib/api";
 import toast from "react-hot-toast";
@@ -558,11 +558,25 @@ export default function ListingDetailsPage() {
                     {listing.hasSecurityGuard ? "Yes" : "No"}
                   </span>
                 </p>
+                <p>
+                  <span className="text-slate-400">Floor Number:</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.floorNo ?? "—"}
+                  </span>
+                </p>
                 {hasAccess && listing.address ? (
                   <p className="sm:col-span-2">
                     <span className="text-slate-400">Address:</span>{" "}
                     <span className="font-medium text-slate-800">
                       {listing.address}
+                    </span>
+                  </p>
+                ) : null}
+                {hasAccess && listing.flatNo ? (
+                  <p className="sm:col-span-2">
+                    <span className="text-slate-400">Flat / Unit Number:</span>{" "}
+                    <span className="font-medium text-slate-800">
+                      {listing.flatNo}
                     </span>
                   </p>
                 ) : null}

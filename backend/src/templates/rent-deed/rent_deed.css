@@ -1,5 +1,7 @@
+/* ১. ফন্ট ইমপোর্ট */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&display=swap');
 
+/* ২. বেস রিসেট ও স্টাইল */
 body {
     margin: 0;
     padding: 0;
@@ -9,14 +11,15 @@ body {
     align-items: center;
     font-family: 'Noto Serif Bengali', serif;
     font-size: 12pt;
-    line-height: 1.4;
+    line-height: 1.55;
     color: #000000;
 }
 
+/* ৩. A4 পেজ ডাইমেনশন */
 .page {
     width: 210mm;
     height: 297mm;
-    background-color: #fdf5cd; 
+    background-color: #fdf5cd; /* স্ট্যাম্প পেপারের হালকা হলুদ আভা */
     margin: 20px auto;
     padding: 15mm 20mm; 
     box-sizing: border-box;
@@ -33,6 +36,7 @@ body {
     size: A4;
     margin: 0; 
 }
+
 @media print {
     body { background-color: transparent; }
     .page { 
@@ -43,10 +47,12 @@ body {
     }
 }
 
+/* ৪. ডক এলিমেন্ট স্টাইলিং */
 .stamp-header {
     width: 100%;
     height: auto;
     margin-bottom: 15px;
+    display: block;
 }
 
 .doc-title {
@@ -62,11 +68,6 @@ body {
     margin-bottom: 15px;
 }
 
-.clauses-page .paragraph {
-    line-height: 1.8; 
-    margin-bottom: 22px; 
-}
-
 .party-label {
     text-align: right;
     font-weight: 600;
@@ -78,39 +79,54 @@ body {
     font-weight: 700;
     font-size: 15pt;
     margin-top: 30px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
+}
+
+.clauses-page .paragraph {
+    line-height: 1.8;
+    margin-bottom: 22px;
 }
 
 .var {
     font-weight: 600;
 }
 
-/* Page 5 Signature Layout */
+/* ৫. হাতে লেখার জন্য ব্ল্যাঙ্ক স্পেস ইউটিলিটি */
+.blank-space {
+    display: inline-block;
+    min-width: 120px;
+    border-bottom: 1px dashed #000000;
+    margin: 0 4px;
+    vertical-align: bottom;
+}
+.blank-space.short { min-width: 60px; }
+.blank-space.long { min-width: 220px; }
+
+/* ৬. সিগনেচার সেকশন লেআউট */
 .signature-section {
     display: flex;
     justify-content: space-between;
-    margin-top: 30px;
+    margin-top: 40px;
 }
 
 .witnesses {
     flex: 1;
-    font-size: 14pt;
 }
 
 .witness {
-    margin-bottom: 70px; 
+    margin-bottom: 80px;
 }
 
 .parties {
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: flex-end; 
+    align-items: flex-end;
 }
 
 .signature-block {
     text-align: center;
-    margin-bottom: 70px; 
+    margin-bottom: 80px;
 }
 
 .dotted-line {

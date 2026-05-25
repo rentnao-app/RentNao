@@ -42,6 +42,9 @@ export const createPropertySchema = z.object({
   hasGenerator: z.boolean(),
   hasSecurityGuard: z.boolean(),
   intendedTenantType: TenantType,
+  // propertyType: PropertyType.optional(),
+  floorNo: z.number().int().positive().openapi({ example: 4 }),
+  flatNo: z.string().max(50).optional().openapi({ example: '4A' }),
 });
 
 export const updatePropertySchema = createPropertySchema.partial();
@@ -66,6 +69,8 @@ export const propertyResponseSchema = z.object({
   hasGenerator: z.boolean().nullable(),
   hasSecurityGuard: z.boolean().nullable(),
   intendedTenantType: TenantType.nullable(),
+  floorNo: z.number().nullable(),
+  flatNo: z.string().nullable(),
   createdAt: z.string(),
 });
 
@@ -297,6 +302,7 @@ export const publicListingDetailSchema = publicListingSummarySchema.extend({
   hasLift: z.boolean(),
   hasGenerator: z.boolean(),
   hasSecurityGuard: z.boolean(),
+  floorNo: z.number().nullable(),
   images: z.array(z.object({
     imageId: z.string(),
     storagePath: z.string(),
@@ -325,6 +331,8 @@ export const unlockedListingDetailSchema = publicListingSummarySchema.extend({
   hasLift: z.boolean(),
   hasGenerator: z.boolean(),
   hasSecurityGuard: z.boolean(),
+  floorNo: z.number().nullable(),
+  flatNo: z.string().nullable(),
   images: z.array(z.object({
     imageId: z.string(),
     storagePath: z.string(),

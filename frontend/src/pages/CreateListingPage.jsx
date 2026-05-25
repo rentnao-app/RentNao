@@ -1,4 +1,4 @@
-﻿import { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch, isLoggedIn } from "../lib/api";
 import MapPicker from "../components/MapPicker";
@@ -61,7 +61,7 @@ const FORM_STEPS = [
   {
     title: "Building info",
     description: "Add floor, facing, and amenity details.",
-    requiredFields: ["building_floors"],
+    requiredFields: ["building_floors", "floor_no", "flat_no"],
   },
   {
     title: "Tenant & rent",
@@ -81,6 +81,8 @@ const FIELD_LABELS = {
   commercial_square_footage: "square footage",
   area_name: "area",
   building_floors: "building floors",
+  floor_no: "floor number",
+  flat_no: "flat number",
   rent: "monthly rent",
 };
 
@@ -91,6 +93,7 @@ const FIELD_MINIMUMS = {
   balcony_count: 0,
   commercial_square_footage: 1,
   building_floors: 1,
+  floor_no: 1,
   rent: 0,
 };
 
@@ -347,6 +350,8 @@ export default function CreateListingPage() {
     has_security_guard: false,
     intended_tenant_type: "BOTH",
     rent: "",
+    floor_no: "",
+    flat_no: "",
   });
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -383,6 +388,11 @@ export default function CreateListingPage() {
         "commercial_property_type",
         "commercial_square_footage",
       ];
+    }
+    if (stepIndex === 2) {
+      return isCommercialFlow
+        ? ["building_floors", "floor_no"]
+        : ["building_floors", "floor_no", "flat_no"];
     }
 
     return FORM_STEPS[stepIndex].requiredFields;
@@ -514,6 +524,9 @@ export default function CreateListingPage() {
         hasGenerator: !!form.has_generator,
         hasSecurityGuard: !!form.has_security_guard,
         intendedTenantType: form.intended_tenant_type,
+        propertyType: isCommercialFlow ? 'COMMERCIAL_SPACE' : 'APARTMENT',
+        floorNo: form.floor_no ? parseInt(form.floor_no, 10) : undefined,
+        flatNo: (form.flat_no ?? "").trim() || undefined,
       };
 
       const createPropertyRes = await apiFetch("/properties", {
@@ -883,6 +896,36 @@ export default function CreateListingPage() {
                         <option value="EAST">East</option>
                         <option value="WEST">West</option>
                       </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Floor Number</label>
+                      <input
+                        type="number"
+                        name="floor_no"
+                        value={form.floor_no}
+                        onChange={handleChange}
+                        className={inputClass}
+                        min="1"
+                        placeholder="e.g. 4"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>
+                        Flat / Unit Number {isCommercialFlow && "(Optional)"}
+                      </label>
+                      <input
+                        type="text"
+                        name="flat_no"
+                        value={form.flat_no}
+                        onChange={handleChange}
+                        className={inputClass}
+                        placeholder="e.g. 4B"
+                        required={!isCommercialFlow}
+                      />
                     </div>
                   </div>
 

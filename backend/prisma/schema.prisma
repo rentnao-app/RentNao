@@ -248,7 +248,6 @@ model User {
   conversations_as_owner    Conversation[]          @relation("ConversationsOwner")
   sent_messages             Message[]               @relation("MessagesSender")
   approved_topup_requests   TopupRequest[]          @relation("TopupApprovals")
-  topup_approvals           TopupRequest[]          @relation("TopupApprovals")
   notifications             Notification[]
   discount_redemptions      DiscountRedemption[]
   discount_eligibilities    DiscountEligibleUser[]
@@ -384,6 +383,8 @@ model Property {
   has_lift           Boolean        @default(false)
   has_generator      Boolean        @default(false)
   has_security_guard Boolean        @default(false)
+  floor_no           Int            @default(1)
+  flat_no            String?
 
   // Property preferences
   intended_tenant_type TenantType

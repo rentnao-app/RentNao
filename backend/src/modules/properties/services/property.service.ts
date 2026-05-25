@@ -46,6 +46,8 @@ function mapProperty(row: any) {
     hasGenerator: row.has_generator,
     hasSecurityGuard: row.has_security_guard,
     intendedTenantType: row.intended_tenant_type,
+    floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
+    flatNo: row.flat_no || null,
     createdAt: row.created_at.toISOString(),
   };
 }
@@ -197,10 +199,12 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       has_lift,
       has_generator,
       has_security_guard,
-      intended_tenant_type
+      intended_tenant_type,
+      floor_no,
+      flat_no
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9,
-      $10, $11, $12, $13, $14, $15, $16, $17, $18
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
     )
     RETURNING *`,
     [
@@ -222,6 +226,8 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       input.hasGenerator,
       input.hasSecurityGuard,
       input.intendedTenantType,
+      input.floorNo || 1,
+      input.flatNo || null,
     ]
   );
 
@@ -280,6 +286,8 @@ export async function updateMyPropertyById(userId: string, propertyId: string, i
   if (input.hasGenerator !== undefined) addUpdate('has_generator', input.hasGenerator);
   if (input.hasSecurityGuard !== undefined) addUpdate('has_security_guard', input.hasSecurityGuard);
   if (input.intendedTenantType !== undefined) addUpdate('intended_tenant_type', input.intendedTenantType);
+  if (input.floorNo !== undefined) addUpdate('floor_no', input.floorNo);
+  if (input.flatNo !== undefined) addUpdate('flat_no', input.flatNo);
 
   if (updates.length === 0) {
     throw new AppError(400, 'No fields provided for update');
@@ -758,6 +766,7 @@ export async function getPublicListingDetail(listingId: string) {
       p.has_lift,
       p.has_generator,
       p.has_security_guard,
+      p.floor_no,
       pi.storage_path AS primary_image_path
      FROM "Listing" l
      JOIN "Property" p ON p.property_id = l.property_id
@@ -825,6 +834,7 @@ export async function getPublicListingDetail(listingId: string) {
     hasLift: Boolean(row.has_lift),
     hasGenerator: Boolean(row.has_generator),
     hasSecurityGuard: Boolean(row.has_security_guard),
+    floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
     images,
     isUnlocked: false,
     unlockRequiredFields,
@@ -858,6 +868,8 @@ export async function getListingDetailForAdmin(listingId: string) {
       p.address,
       p.exact_lat,
       p.exact_lng,
+      p.floor_no,
+      p.flat_no,
       u.contact_email,
       u.contact_phone,
       pi.storage_path AS primary_image_path
@@ -921,6 +933,8 @@ export async function getListingDetailForAdmin(listingId: string) {
     hasLift: Boolean(row.has_lift),
     hasGenerator: Boolean(row.has_generator),
     hasSecurityGuard: Boolean(row.has_security_guard),
+    floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
+    flatNo: row.flat_no || null,
     images,
     address: row.address,
     exactLat: Number(row.exact_lat),
@@ -1066,6 +1080,8 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
         p.address,
         p.exact_lat,
         p.exact_lng,
+        p.floor_no,
+        p.flat_no,
         u.contact_email,
         u.contact_phone,
         pi.storage_path AS primary_image_path
@@ -1130,6 +1146,8 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       hasLift: Boolean(row.has_lift),
       hasGenerator: Boolean(row.has_generator),
       hasSecurityGuard: Boolean(row.has_security_guard),
+      floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
+      flatNo: row.flat_no || null,
       images,
       address: row.address,
       exactLat: Number(row.exact_lat),
@@ -1183,6 +1201,8 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       p.address,
       p.exact_lat,
       p.exact_lng,
+      p.floor_no,
+      p.flat_no,
       u.contact_email,
       u.contact_phone,
       pi.storage_path AS primary_image_path
@@ -1246,6 +1266,8 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
     hasLift: Boolean(row.has_lift),
     hasGenerator: Boolean(row.has_generator),
     hasSecurityGuard: Boolean(row.has_security_guard),
+    floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
+    flatNo: row.flat_no || null,
     images,
     address: row.address,
     exactLat: Number(row.exact_lat),
