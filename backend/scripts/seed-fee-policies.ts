@@ -47,6 +47,8 @@ async function main() {
     await client.query('BEGIN');
     await ensureActiveFeePolicy(client, 'LISTING_CREATE', 'Listing Creation Fee', 50);
     await ensureActiveFeePolicy(client, 'LISTING_UNLOCK', 'Listing Unlock Fee', 50);
+    // Legacy / admin alias used on some environments
+    await ensureActiveFeePolicy(client, 'OWNER_FEE', 'Owner listing fee', 50);
 
     const result = await client.query(
       `SELECT code, version, fixed_amount, percentage, percent_base_field, min_amount, max_amount, is_active, effective_from, effective_to

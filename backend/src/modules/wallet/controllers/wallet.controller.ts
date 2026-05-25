@@ -82,7 +82,12 @@ export function registerWalletRoutes(app: OpenAPIHono) {
   // GET /wallet/fees/:feeCode
   app.openapi(routes.getActiveFeeRoute, async (c) => {
     const { feeCode } = c.req.valid('param') as any;
-    const fee = await services.getActiveFeePolicy(feeCode);
+    const rentQuery = c.req.query('rent');
+    const rent =
+      rentQuery != null && rentQuery !== '' && !Number.isNaN(Number(rentQuery))
+        ? Number(rentQuery)
+        : undefined;
+    const fee = await services.getActiveFeePolicy(feeCode, { percentBaseValue: rent });
     return c.json({
       success: true,
       data: fee,

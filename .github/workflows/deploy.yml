@@ -17,11 +17,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # paths-filter must resolve github.event.before (previous main tip).
+          # Default depth-1 shallow clone causes: git fetch ... exit code 128
+          fetch-depth: 0
 
       - name: Detect changed paths
         id: changes
         uses: dorny/paths-filter@v4
         with:
+          # Compare only files changed in this push (merge), not entire branch vs main
+          base: ${{ github.event.before }}
           filters: |
             backend:
               - 'backend/**'
