@@ -39,6 +39,7 @@
     "jsonwebtoken": "^9.0.3",
     "nodejs-avro-phonetic": "^1.0.2",
     "pg": "^8.19.0",
+    "puppeteer": "^25.1.0",
     "react-icons": "^5.6.0",
     "zod": "^4.3.6"
   }

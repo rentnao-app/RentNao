@@ -6,7 +6,7 @@ import * as routes from './routes';
 import * as profileService from './services/profile.service';
 import * as verificationService from './services/verification.service';
 import { requireAuth } from '@/security';
-import { dispatchTransliteration } from '@/services/transliteration';
+import { dispatchTransliteration } from '@/modules/deals/transliteration';
 
 const users = new OpenAPIHono<{
   Variables: {

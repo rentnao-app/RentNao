@@ -92,18 +92,18 @@ body {
     font-weight: 800;
 }
 
-/* ৫. হাতে লেখার জন্য ব্ল্যাঙ্ক স্পেস ইউটিলিটি */
 .blank-space {
     display: inline-block;
-    min-width: 120px;
+    width: 220px;
+    height: 1.2em;
+    background-color: transparent;
     border-bottom: 1px dashed #000000;
     margin: 0 4px;
     vertical-align: bottom;
 }
-.blank-space.short { min-width: 60px; }
-.blank-space.long { min-width: 220px; }
+.blank-space.short { width: 60px; }
+.blank-space.long { width: 220px; }
 
-/* ৬. সিগনেচার সেকশন লেআউট */
 .signature-section {
     display: flex;
     justify-content: space-between;

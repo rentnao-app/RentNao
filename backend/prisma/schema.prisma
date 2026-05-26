@@ -248,6 +248,8 @@ model User {
   conversations_as_owner    Conversation[]          @relation("ConversationsOwner")
   sent_messages             Message[]               @relation("MessagesSender")
   approved_topup_requests   TopupRequest[]          @relation("TopupApprovals")
+  owner_deals               Deal[]                  @relation("OwnerDeals")
+  tenant_deals              Deal[]                  @relation("TenantDeals")
   notifications             Notification[]
   discount_redemptions      DiscountRedemption[]
   discount_eligibilities    DiscountEligibleUser[]
@@ -324,11 +326,11 @@ model BaseUserProfile {
   current_area String?
 
   // Transliteration (Bengali)
-  full_name_bn         String?
-  profession_bn        String?
-  religion_bn          String?
-  phone_bn             String?
-  nid_bn               String?
+  full_name_bn  String?
+  profession_bn String?
+  religion_bn   String?
+  phone_bn      String?
+  nid_bn        String?
 
   created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)
@@ -407,6 +409,7 @@ model Property {
   listings      Listing[]
   images        PropertyImage[]
   conversations Conversation[]
+  deals         Deal[]
 
   @@index([owner_id])
 }
@@ -597,6 +600,7 @@ model Listing {
   listing_unlocks ListingUnlock[]
   wishlist_items  Wishlist[]
   rental_requests RentalRequest[]
+  deals           Deal[]
 
   @@index([property_id])
   @@index([listing_status, listing_start_date])
@@ -780,4 +784,24 @@ model Message {
 
   @@index([conversation_id, created_at])
   @@index([sender_user_id])
+}
+
+model Deal {
+  deal_id      String    @id @default(cuid())
+  property_id  String
+  listing_id   String?
+  owner_id     String
+  tenant_id    String
+  document_url String?
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @updatedAt @db.Timestamptz(6)
+
+  property Property @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
+  listing  Listing? @relation(fields: [listing_id], references: [listing_id], onDelete: SetNull)
+  owner    User     @relation("OwnerDeals", fields: [owner_id], references: [user_id], onDelete: Restrict)
+  tenant   User     @relation("TenantDeals", fields: [tenant_id], references: [user_id], onDelete: Restrict)
+
+  @@index([owner_id])
+  @@index([tenant_id])
+  @@index([property_id])
 }

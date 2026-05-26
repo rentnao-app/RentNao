@@ -1,16 +1,10 @@
-/**
- * Module 2: Phonetic Transliteration Engine
- * The avro-phonetic engine runs entirely in-process with zero
- * network calls. It implements the Avro Phonetic keyboard algorithm
- */
-
 const avro = require('nodejs-avro-phonetic');
 
 export function transliterateOne(input: string): string | null {
   if (!input || !input.trim()) return null;
   try {
-  
-    const result = avro.parse(input.trim().toLowerCase());
+    const safeInput = input.trim().slice(0, 255).toLowerCase();
+    const result = avro.parse(safeInput);
     return typeof result === 'string' && result.length > 0 ? result : null;
   } catch {
     return null;

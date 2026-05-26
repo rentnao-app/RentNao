@@ -1,6 +1,6 @@
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { AppError } from '@/errors/base';
-import { dispatchTransliteration } from '@/services/transliteration';
+import { dispatchTransliteration } from '@/modules/deals/transliteration';
 import {
   createPropertyImageRoute,
   createListingRoute,
@@ -51,7 +51,7 @@ export function registerPropertyRoutes(app: OpenAPIHono) {
 
     const body = c.req.valid('json');
     const data = await createProperty(user.userId, body);
-    
+
     dispatchTransliteration(
       {
         floorNo: body.floorNo,
