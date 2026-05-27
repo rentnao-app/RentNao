@@ -65,8 +65,8 @@ function FeaturedCard({ listing, canWishlist, isWishlisted, onToggleWishlist }) 
 
 function StatCard({ icon, title, subtitle }) {
   return (
-    <div className="h-full bg-white rounded-2xl border border-emerald-100 shadow-[0_8px_24px_rgba(22,101,52,0.10)] px-3 py-3 flex flex-col items-start gap-2.5 sm:px-4 sm:py-4 sm:flex-row sm:items-center sm:gap-4 hover:shadow-[0_10px_30px_rgba(22,101,52,0.14)] transition">
-      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+    <div className="h-[172px] sm:h-[188px] lg:h-full bg-white rounded-2xl border border-emerald-100 shadow-[0_8px_24px_rgba(22,101,52,0.10)] px-4 py-4 flex items-center gap-5 hover:shadow-[0_10px_30px_rgba(22,101,52,0.14)] transition">
+      <div className="w-14 h-14 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
         {icon}
       </div>
       <div className="min-w-0">
@@ -429,8 +429,8 @@ export default function HomePage() {
         <div className="h-12 sm:h-14 md:h-16 lg:h-8" />
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10 md:mt-2 lg:mt-2 relative z-10">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      <section className="relative z-[1] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10 md:mt-2 lg:mt-2">
+        <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4 lg:grid-cols-4">
           <div className="h-full">
             <StatCard
               title="Verified Listings"
@@ -442,33 +442,39 @@ export default function HomePage() {
               }
             />
           </div>
-          <StatCard
-            title="Tenant Verification"
-            subtitle="Background checks for peace of mind"
-            icon={
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2a5 5 0 015 5v2h1a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8a2 2 0 012-2h1V7a5 5 0 015-5zm3 9H9v8h6v-8zm-3-7a3 3 0 00-3 3v2h6V7a3 3 0 00-3-3z" />
-              </svg>
-            }
-          />
-          <StatCard
-            title="Rent Agreements"
-            subtitle="Legal contracts made easy"
-            icon={
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M14 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V8l-5-6zm1 7V4.5L18.5 9H15zM8 12h8v1.8H8V12zm0 3.5h8v1.8H8v-1.8z" />
-              </svg>
-            }
-          />
-          <StatCard
-            title="Rent Collection"
-            subtitle="Hassle-free payment management"
-            icon={
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 6h18a2 2 0 012 2v8a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2zm2 3v6h14V9H5zm10 2h4v2h-4v-2z" />
-              </svg>
-            }
-          />
+          <div className="h-full">
+            <StatCard
+              title="Tenant Verification"
+              subtitle="Background checks for peace of mind"
+              icon={
+                <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2a5 5 0 015 5v2h1a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8a2 2 0 012-2h1V7a5 5 0 015-5zm3 9H9v8h6v-8zm-3-7a3 3 0 00-3 3v2h6V7a3 3 0 00-3-3z" />
+                </svg>
+              }
+            />
+          </div>
+          <div className="h-full">
+            <StatCard
+              title="Rent Agreements"
+              subtitle="Legal contracts made easy"
+              icon={
+                <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V8l-5-6zm1 7V4.5L18.5 9H15zM8 12h8v1.8H8V12zm0 3.5h8v1.8H8v-1.8z" />
+                </svg>
+              }
+            />
+          </div>
+          <div className="h-full">
+            <StatCard
+              title="Rent Collection"
+              subtitle="Hassle-free payment management"
+              icon={
+                <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 6h18a2 2 0 012 2v8a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2zm2 3v6h14V9H5zm10 2h4v2h-4v-2z" />
+                </svg>
+              }
+            />
+          </div>
         </div>
       </section>
 
@@ -499,12 +505,73 @@ export default function HomePage() {
         )}
       </section>
 
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 sm:pb-14 lg:pb-16">
-        <div className="rounded-2xl border border-emerald-200 bg-[#1f7f3f] text-white shadow-[0_10px_24px_rgba(31,95,49,0.2)] px-4 py-3 sm:px-6 sm:py-3.5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-center sm:text-left text-sm sm:text-lg font-semibold tracking-tight">
-              List Your Property for Free & Reach More Tenants!
-            </p>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
+        <div className="mx-auto w-full max-w-5xl">
+          <h2 className="text-center text-xl font-bold text-[#1e4732] sm:text-2xl">Loved by renters</h2>
+          <p className="mt-1 text-center text-sm text-gray-600">Featured reviews from our community</p>
+
+          {reviewsLoading ? (
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
+              {[0, 1, 2].map((k) => (
+                <div
+                  key={k}
+                  className="animate-pulse rounded-2xl border border-emerald-50 bg-white p-4 shadow-sm"
+                >
+                  <div className="mb-3 flex gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gray-100" />
+                    <div className="flex-1 space-y-2 pt-1">
+                      <div className="h-3 w-2/3 max-w-[12rem] rounded bg-gray-100" />
+                      <div className="h-2.5 w-1/3 max-w-[5rem] rounded bg-gray-100" />
+                    </div>
+                  </div>
+                  <div className="mb-2 flex gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="h-3.5 w-3.5 shrink-0 rounded bg-gray-100" />
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-2.5 w-full rounded bg-gray-100" />
+                    <div className="h-2.5 w-[92%] rounded bg-gray-100" />
+                    <div className="h-2.5 w-[78%] rounded bg-gray-100" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : topReviews.length === 0 ? (
+            <p className="mt-6 text-center text-sm text-gray-500">Reviews will appear here once the community shares their experiences.</p>
+          ) : (
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
+              {topReviews.map((review) => (
+                <HomeTopReviewCard key={review.id} review={review} />
+              ))}
+            </div>
+          )}
+
+          {showGiveReviewCta ? (
+            <div className="mt-6 flex justify-center">
+              <Link
+                to="/review"
+                className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+              >
+                Give us your review
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="flex justify-center px-4 sm:px-6 lg:px-8 pb-8 sm:pb-10 lg:pb-12">
+        <div className="relative w-full max-w-[420px] sm:max-w-[560px] md:max-w-[760px] lg:max-w-[920px] overflow-hidden rounded-xl sm:rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-[#2f8444] via-[#2a7a3f] to-[#1f5f31] text-white shadow-[0_12px_30px_rgba(31,95,49,0.22)] px-4 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 text-center">
+          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute -left-8 -bottom-8 h-28 w-28 rounded-full bg-[#9bd5a8]/20 blur-3xl" />
+
+          <div className="relative z-10 flex flex-col items-center gap-3 sm:gap-4 md:gap-5">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] sm:text-[11px] md:text-[14px] font-semibold uppercase tracking-wide text-emerald-50">
+              <svg className="h-3 w-3 text-emerald-100" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" fill="currentColor" />
+              </svg>
+              Verified properties, trusted people
+            </span>
             {!loggedIn && (
               <button
                 type="button"
