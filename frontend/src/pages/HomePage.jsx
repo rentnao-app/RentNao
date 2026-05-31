@@ -5,55 +5,9 @@ import { apiFetch, AUTH_UPDATE_EVENT, getCurrentUser, getUserId, isLoggedIn } fr
 import { getWishlistState, toggleWishlist } from '../lib/wishlist';
 import PropertySearchBar from '../components/PropertySearchBar';
 import AppHeader from '../components/AppHeader';
+import ListingCard from '../components/ListingCard';
 const hero = '/hero-image.png';
 const HERO_TEXT_FONT = 'Avenir, "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif';
-
-function FeaturedCard({ listing, canWishlist, isWishlisted, onToggleWishlist }) {
-  const imageUrl = listing?.primaryImageUrl || null;
-  return (
-    <div className="relative bg-white rounded-xl border border-green-100 shadow-sm hover:shadow-md transition overflow-hidden group">
-      {canWishlist && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onToggleWishlist(listing);
-          }}
-          className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/90 border border-gray-200 shadow-sm flex items-center justify-center hover:bg-white"
-          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-        >
-          <svg className={`w-5 h-5 ${isWishlisted ? 'text-red-500 fill-current' : 'text-gray-500'}`} viewBox="0 0 24 24">
-            <path d="M12.001 20.729l-1.09-.992C6.14 15.39 3 12.548 3 9.06 3 6.219 5.24 4 8.05 4c1.59 0 3.115.74 4.05 1.9C13.835 4.74 15.36 4 16.95 4 19.76 4 22 6.219 22 9.06c0 3.488-3.14 6.33-7.91 10.677l-1.089.992z" />
-          </svg>
-        </button>
-      )}
-      <Link to={`/listings/${listing.listingId}`} className="block">
-        <div className="h-40 sm:h-44 bg-gradient-to-br from-[#dcefdc] to-[#b7ddba] overflow-hidden">
-          {imageUrl ? (
-            <img src={imageUrl} alt={listing.title || 'Property'} className="w-full h-full object-cover object-center" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <svg className="w-14 h-14 text-[#5b9b61]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-8z"
-                />
-              </svg>
-            </div>
-          )}
-        </div>
-        <div className="p-4">
-          <h3 className="font-semibold text-gray-800 truncate">{listing.title || 'Featured Property'}</h3>
-          <p className="text-[#2f8444] font-bold mt-1">BDT {Number(listing.rent || 0).toLocaleString()}</p>
-          <p className="text-sm text-gray-500">/Month</p>
-        </div>
-      </Link>
-    </div>
-  );
-}
 
 function isHttpUrl(s) {
   if (!s || typeof s !== 'string') return false;
@@ -279,6 +233,14 @@ export default function HomePage() {
     toast.success(save ? 'Saved to wishlist' : 'Removed from wishlist');
   };
 
+  const handleViewCountUpdate = (listingId, viewCount) => {
+    setListings((prev) =>
+      prev.map((listing) =>
+        listing.listingId === listingId ? { ...listing, viewCount } : listing
+      )
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#f5faf5] text-gray-800">
       <AppHeader />
@@ -381,12 +343,13 @@ export default function HomePage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {listings.map((listing) => (
-              <FeaturedCard
+              <ListingCard
                 key={listing.listingId}
-                listing={listing}
+                item={listing}
                 canWishlist={canWishlist}
                 isWishlisted={wishlistIds.has(String(listing.listingId))}
                 onToggleWishlist={handleToggleWishlist}
+                onViewCountUpdate={handleViewCountUpdate}
               />
             ))}
           </div>

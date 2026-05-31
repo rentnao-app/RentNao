@@ -6,6 +6,7 @@ import {
   getTestimonialsQuerySchema,
   testimonialStatusSchema,
   myTestimonialStatusResponseSchema,
+  testimonialStatsResponseSchema,
 } from '../schemas';
 
 const errorResponseSchema = z.object({
@@ -28,6 +29,24 @@ export const listTestimonialsRoute = createRoute({
       content: {
         'application/json': {
           schema: testimonialListResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+export const getTestimonialStatsRoute = createRoute({
+  method: 'get',
+  path: '/stats',
+  tags: ['Testimonials'],
+  summary: 'Public testimonial rating stats',
+  description: 'Average rating, total approved reviews, and star distribution for the review page sidebar.',
+  responses: {
+    200: {
+      description: 'Stats fetched',
+      content: {
+        'application/json': {
+          schema: testimonialStatsResponseSchema,
         },
       },
     },

@@ -2,6 +2,7 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import { AppError } from '@/errors/base';
 import {
   listTestimonialsRoute,
+  getTestimonialStatsRoute,
   getMyTestimonialStatusRoute,
   createTestimonialRoute,
   listAllTestimonialsAdminRoute,
@@ -14,6 +15,11 @@ export function registerPublicTestimonialRoutes(app: OpenAPIHono) {
     const query = c.req.valid('query');
     const { items, pagination } = await testimonialService.listApprovedTestimonials(query);
     return c.json({ success: true, data: items, pagination }, 200);
+  });
+
+  app.openapi(getTestimonialStatsRoute, async (c) => {
+    const data = await testimonialService.getApprovedTestimonialStats();
+    return c.json({ success: true, data }, 200);
   });
 }
 

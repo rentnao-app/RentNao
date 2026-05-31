@@ -558,6 +558,7 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
       l.listing_start_date,
       l.listing_end_date,
       l.listing_status,
+      l.view_count,
       l.created_at,
       p.title,
       p.description,
@@ -596,6 +597,7 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
       intendedTenantType: row.intended_tenant_type,
       primaryImagePath: row.primary_image_path,
       primaryImageUrl: await presignImageUrl(row.primary_image_path),
+      viewCount: Number(row.view_count ?? 0),
       createdAt: row.created_at.toISOString(),
     }))
   );
@@ -608,6 +610,28 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
       total,
       totalPages,
     },
+  };
+}
+
+export async function incrementListingViewCount(listingId: string) {
+  const result = await db.query(
+    `UPDATE "Listing"
+     SET view_count = view_count + 1,
+         updated_at = NOW()
+     WHERE listing_id = $1
+       AND listing_status = 'ACTIVE'
+     RETURNING listing_id, view_count`,
+    [listingId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError(404, 'Listing not found');
+  }
+
+  const row = result.rows[0];
+  return {
+    listingId: row.listing_id,
+    viewCount: Number(row.view_count),
   };
 }
 
@@ -692,6 +716,7 @@ export async function listListingsForAdmin(query: AdminListingsQueryInput) {
       l.listing_start_date,
       l.listing_end_date,
       l.listing_status,
+      l.view_count,
       l.created_at,
       p.title,
       p.description,
@@ -729,6 +754,7 @@ export async function listListingsForAdmin(query: AdminListingsQueryInput) {
       intendedTenantType: row.intended_tenant_type,
       primaryImagePath: row.primary_image_path,
       primaryImageUrl: await presignImageUrl(row.primary_image_path),
+      viewCount: Number(row.view_count ?? 0),
       createdAt: row.created_at.toISOString(),
     }))
   );
@@ -753,6 +779,7 @@ export async function getPublicListingDetail(listingId: string) {
       l.listing_start_date,
       l.listing_end_date,
       l.listing_status,
+      l.view_count,
       l.created_at,
       p.title,
       p.description,
@@ -832,6 +859,7 @@ export async function getPublicListingDetail(listingId: string) {
     intendedTenantType: row.intended_tenant_type,
     primaryImagePath: row.primary_image_path,
     primaryImageUrl,
+    viewCount: Number(row.view_count ?? 0),
     createdAt: row.created_at.toISOString(),
     buildingFloors: Number(row.building_floors),
     buildingFacing: row.building_facing,
@@ -858,6 +886,7 @@ export async function getListingDetailForAdmin(listingId: string) {
       l.listing_start_date,
       l.listing_end_date,
       l.listing_status,
+      l.view_count,
       l.created_at,
       p.title,
       p.description,
@@ -1203,6 +1232,7 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       l.listing_start_date,
       l.listing_end_date,
       l.listing_status,
+      l.view_count,
       l.created_at,
       p.title,
       p.description,

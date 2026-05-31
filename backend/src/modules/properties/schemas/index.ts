@@ -23,6 +23,7 @@ export {
   publicListingDetailSchema,
   unlockedListingDetailSchema,
   publicListingListResponseSchema,
+  incrementListingViewResponseSchema,
 } from './property.schemas';
 
 export type {

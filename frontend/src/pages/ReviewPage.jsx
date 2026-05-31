@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AppHeader from '../components/AppHeader';
+import ReviewStatsPanel from '../components/ReviewStatsPanel';
 import {
   apiFetch,
   fetchProfileStatus,
@@ -72,6 +73,10 @@ export default function ReviewPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [listError, setListError] = useState('');
 
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState('');
+
   const [myReview, setMyReview] = useState(() => (userId ? readLocalReview(userId) : null));
   const [editing, setEditing] = useState(false);
 
@@ -113,9 +118,30 @@ export default function ReviewPage() {
     [userId]
   );
 
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const res = await apiFetch('/testimonials/stats');
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body?.success === false) {
+        throw new Error(getApiErrorMessage(body, 'Could not load review stats'));
+      }
+      setStats(body?.data || null);
+      setStatsError('');
+    } catch (err) {
+      setStatsError(err?.message || 'Could not load review stats');
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchReviews(1);
   }, [fetchReviews]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   useEffect(() => {
     if (!loggedIn || !userId) {
@@ -177,13 +203,14 @@ export default function ReviewPage() {
     setEditing(false);
     setPage(1);
     fetchReviews(1);
+    fetchStats();
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <AppHeader />
 
-      <main className="mx-auto max-w-5xl px-4 sm:px-6 py-10 sm:py-14">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-14">
         <header className="mb-8 sm:mb-10">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 mb-2">
             Community reviews
@@ -197,70 +224,81 @@ export default function ReviewPage() {
           </p>
         </header>
 
-        <section className="mb-10 sm:mb-12">
-          <ComposerCard
-            loggedIn={loggedIn}
-            kycGate={kycGate}
-            kycApproved={kycApproved}
-            myReview={myReview}
-            editing={editing}
-            onStartEdit={() => setEditing(true)}
-            onCancelEdit={() => setEditing(false)}
-            onSubmitted={handleSubmitted}
-          />
-        </section>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-8 lg:items-start">
+          <section className="max-w-2xl lg:col-start-1 lg:row-start-1">
+            <ComposerCard
+              loggedIn={loggedIn}
+              kycGate={kycGate}
+              kycApproved={kycApproved}
+              myReview={myReview}
+              editing={editing}
+              onStartEdit={() => setEditing(true)}
+              onCancelEdit={() => setEditing(false)}
+              onSubmitted={handleSubmitted}
+            />
+          </section>
 
-        <section>
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">All reviews</h2>
-            {!loading && reviews.length > 0 ? (
-              <p className="text-xs sm:text-sm text-gray-500">
-                Showing {reviews.length} review{reviews.length === 1 ? '' : 's'}
-              </p>
-            ) : null}
-          </div>
+          <aside className="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24">
+            <ReviewStatsPanel
+              stats={stats}
+              loading={statsLoading}
+              error={statsError}
+              onRetry={fetchStats}
+            />
+          </aside>
 
-          {loading ? (
-            <ReviewSkeletonGrid />
-          ) : listError ? (
-            <div className="rounded-2xl border border-rose-100 bg-rose-50 p-6 text-sm text-rose-700">
-              {listError}{' '}
-              <button
-                type="button"
-                className="ml-1 font-semibold underline hover:text-rose-900"
-                onClick={() => fetchReviews(1)}
-              >
-                Try again
-              </button>
-            </div>
-          ) : reviews.length === 0 ? (
-            <EmptyReviews />
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-                {reviews.map((r) => (
-                  <ReviewCard
-                    key={r.id}
-                    review={r}
-                    isMine={!!userId && r.userId === userId}
-                  />
-                ))}
-              </div>
-              {page < totalPages ? (
-                <div className="mt-8 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-5 py-2.5 text-sm font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loadingMore ? 'Loading…' : 'Load more reviews'}
-                  </button>
-                </div>
+          <section className="lg:col-start-1 lg:row-start-2">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">All reviews</h2>
+              {!loading && reviews.length > 0 ? (
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Showing {reviews.length} review{reviews.length === 1 ? '' : 's'}
+                </p>
               ) : null}
-            </>
-          )}
-        </section>
+            </div>
+
+            {loading ? (
+              <ReviewSkeletonGrid />
+            ) : listError ? (
+              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-6 text-sm text-rose-700">
+                {listError}{' '}
+                <button
+                  type="button"
+                  className="ml-1 font-semibold underline hover:text-rose-900"
+                  onClick={() => fetchReviews(1)}
+                >
+                  Try again
+                </button>
+              </div>
+            ) : reviews.length === 0 ? (
+              <EmptyReviews />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                  {reviews.map((r) => (
+                    <ReviewCard
+                      key={r.id}
+                      review={r}
+                      isMine={!!userId && r.userId === userId}
+                    />
+                  ))}
+                </div>
+                {page < totalPages ? (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
+                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-5 py-2.5 text-sm font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {loadingMore ? 'Loading…' : 'Load more reviews'}
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </section>
+        </div>
       </main>
     </div>
   );
@@ -303,7 +341,7 @@ function ComposerCard({
 
   if (kycGate === 'loading') {
     return (
-      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 sm:p-6 shadow-sm">
         <div className="h-4 w-40 animate-pulse rounded bg-gray-100" />
         <div className="mt-3 h-3 w-full max-w-md animate-pulse rounded bg-gray-100" />
         <div className="mt-2 h-3 w-[66%] max-w-sm animate-pulse rounded bg-gray-100" />
@@ -380,7 +418,7 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-emerald-100 bg-white p-5 sm:p-7 shadow-sm"
+      className="rounded-2xl border border-emerald-100 bg-white p-5 sm:p-6 shadow-sm"
     >
       <div className="mb-5">
         <h2 className="text-lg sm:text-xl font-bold text-gray-900">
@@ -473,7 +511,7 @@ function MyReviewCard({ review, onEdit }) {
   const showStatusBadge = status !== 'APPROVED';
 
   return (
-    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 via-white to-white p-5 sm:p-7 shadow-sm">
+    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 via-white to-white p-5 sm:p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Your review</p>
@@ -527,7 +565,7 @@ function PromptCard({ title, description, actions, tone = 'info' }) {
       ? 'border-amber-200 bg-amber-50'
       : 'border-emerald-100 bg-white';
   return (
-    <div className={`rounded-2xl border p-5 sm:p-7 shadow-sm ${toneClass}`}>
+    <div className={`rounded-2xl border p-5 sm:p-6 shadow-sm ${toneClass}`}>
       <h2 className="text-lg sm:text-xl font-bold text-gray-900">{title}</h2>
       <p className="mt-1.5 text-sm text-gray-700 max-w-xl">{description}</p>
       <div className="mt-4 flex flex-wrap gap-2">{actions}</div>
@@ -593,7 +631,7 @@ function EmptyReviews() {
 
 function ReviewSkeletonGrid() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3 mb-3">

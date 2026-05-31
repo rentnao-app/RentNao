@@ -1,8 +1,9 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
 import PropertySearchBar from '../components/PropertySearchBar';
 import AppHeader from '../components/AppHeader';
+import ListingCard from '../components/ListingCard';
 import { buildListingsQuery, expandAreasForQuery } from '../lib/listingSearchQuery';
 import { toggleWishlist } from '../lib/wishlist';
 import toast from 'react-hot-toast';
@@ -35,58 +36,6 @@ function parseFiltersFromSearchParams(searchParams) {
   const sort_by = ['newest', 'price_asc', 'price_desc'].includes(sortRaw) ? sortRaw : 'newest';
 
   return { areas: uniqueAreas, category, maxRentKey, minRooms, sort_by };
-}
-
-function ListingCard({ item, canWishlist, isWishlisted, onToggleWishlist }) {
-  const firstImage = item?.primaryImageUrl || null;
-  const area = item.areaName ? String(item.areaName).replaceAll('_', ' ') : 'Unknown area';
-  const title = item.title
-    ? `${item.title.slice(0, 56)}${item.title.length > 56 ? '...' : ''}`
-    : `Apartment - ${item.roomCount ?? '?'} beds`;
-  const rent = Number(item.rent || 0).toLocaleString();
-
-  return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-      {canWishlist && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onToggleWishlist(item);
-          }}
-          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/95 shadow-sm transition hover:bg-white"
-          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-        >
-          <svg className={`h-5 w-5 ${isWishlisted ? 'fill-current text-rose-500' : 'text-slate-500'}`} viewBox="0 0 24 24">
-            <path d="M12.001 20.729l-1.09-.992C6.14 15.39 3 12.548 3 9.06 3 6.219 5.24 4 8.05 4c1.59 0 3.115.74 4.05 1.9C13.835 4.74 15.36 4 16.95 4 19.76 4 22 6.219 22 9.06c0 3.488-3.14 6.33-7.91 10.677l-1.089.992z" />
-          </svg>
-        </button>
-      )}
-      <Link to={`/listings/${item.listingId}`} className="block">
-        <div className="flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-100 to-emerald-50 sm:h-48">
-          {firstImage ? (
-            <img src={firstImage} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <svg className="h-14 w-14 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" />
-            </svg>
-          )}
-        </div>
-        <div className="p-4 sm:p-5">
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">{area}</p>
-          <h2 className="text-base font-bold text-slate-900 transition group-hover:text-emerald-800 sm:text-lg">{title}</h2>
-          <p className="mt-1 text-lg font-bold text-emerald-800">BDT {rent}/mo</p>
-          <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
-            <span>{item.bathroomCount ?? '?'} baths</span>
-            <span>&middot;</span>
-            <span>{item.propertySizeSqft ?? '?'} sqft</span>
-          </div>
-          <p className="mt-2 text-xs text-slate-400">Listed on {new Date(item.createdAt).toLocaleDateString()}</p>
-        </div>
-      </Link>
-    </div>
-  );
 }
 
 export default function ListingsPage() {
@@ -212,6 +161,12 @@ export default function ListingsPage() {
     toast.success(nextSave ? 'Saved to wishlist' : 'Removed from wishlist');
   };
 
+  const handleViewCountUpdate = (listingId, viewCount) => {
+    setListings((prev) =>
+      prev.map((item) => (item.listingId === listingId ? { ...item, viewCount } : item))
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#f2f7f3] text-slate-800">
       <AppHeader variant="wide" />
@@ -251,6 +206,8 @@ export default function ListingsPage() {
                 canWishlist={canWishlist}
                 isWishlisted={wishlistIds.has(String(item.listingId))}
                 onToggleWishlist={handleToggleWishlist}
+                onViewCountUpdate={handleViewCountUpdate}
+                showArea
               />
             ))}
           </div>
