@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import HomePage from './pages/HomePage';
 import SignUp from './pages/SignUp';
@@ -38,6 +38,58 @@ import AdminTopupApprovalsPage from './pages/AdminTopupApprovalsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SiteFooter from './components/SiteFooter';
 
+function AppLayout() {
+  const { pathname } = useLocation();
+  const hideFooter = pathname.startsWith('/admin-dashboard');
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/login" element={<LogIn />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/auth-verification" element={<AuthVerificationPage />} />
+          <Route path="/auth/phone-setup" element={<OAuthPhoneSetupPage />} />
+          <Route path="/auth/callback" element={<GoogleAuthCallbackPage />} />
+          <Route path="/tenant-registration" element={<TenantRegistrationPage />} />
+          <Route path="/owner-registration" element={<OwnerRegistrationPage />} />
+          <Route path="/verification" element={<VerificationPage />} />
+          <Route path="/verification-holding" element={<VerificationHoldingPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/service" element={<ServicesPage />} />
+          <Route path="/services" element={<ServicesPage />} />
+          <Route path="/review" element={<ReviewPage />} />
+          <Route path="/reviews" element={<ReviewPage />} />
+          <Route path="/listings" element={<ListingPage />} />
+          <Route path="/listings/:id" element={<ListingDetailsPage />} />
+          <Route path="/profile/:userId" element={<PublicProfilePage />} />
+          <Route path="/tenant-dashboard" element={<ProtectedRoute component={TenantDashboard} requiredRole="TENANT" />} />
+          <Route path="/tenant-dashboard/applications" element={<ProtectedRoute component={MyApplicationsPage} requiredRole="TENANT" />} />
+          <Route path="/tenant-dashboard/wishlist" element={<ProtectedRoute component={WishlistPage} requiredRole="TENANT" />} />
+          <Route path="/owner-dashboard" element={<ProtectedRoute component={OwnerDashboard} requiredRole="OWNER" />} />
+          <Route path="/owner-dashboard/my-properties" element={<ProtectedRoute component={MyPropertiesPage} requiredRole="OWNER" />} />
+          <Route path="/owner-dashboard/my-properties/:propertyId/edit" element={<ProtectedRoute component={OwnerPropertyEditPage} requiredRole="OWNER" />} />
+          <Route path="/owner-dashboard/create-listing" element={<ProtectedRoute component={CreateListingPage} requiredRole="OWNER" />} />
+          <Route path="/owner-dashboard/requests" element={<ProtectedRoute component={IncomingRequestsPage} requiredRole="OWNER" />} />
+          <Route path="/dashboard/rentals" element={<ProtectedRoute component={MyRentalsPage} requiredRole={null} />} />
+          <Route path="/notifications" element={<ProtectedRoute component={NotificationsPage} requiredRole={null} />} />
+          <Route path="/admin-dashboard" element={<ProtectedRoute component={AdminDashboard} requiredRole="ADMIN" />} />
+          <Route path="/admin-dashboard/topup-approvals" element={<ProtectedRoute component={AdminTopupApprovalsPage} requiredRole="ADMIN" />} />
+          <Route path="/account" element={<ProtectedRoute component={AccountSettingsPage} requiredRole={null} />} />
+          <Route path="/wallet" element={<ProtectedRoute component={WalletPage} requiredRole={null} />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </div>
+      {!hideFooter ? <SiteFooter /> : null}
+    </div>
+  );
+}
+
 function App() {
   return (
     <Router>
@@ -65,50 +117,7 @@ function App() {
           },
         }}
       />
-      <div className="min-h-screen flex flex-col">
-        <div className="flex-1">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/login" element={<LogIn />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/auth-verification" element={<AuthVerificationPage />} />
-            <Route path="/auth/phone-setup" element={<OAuthPhoneSetupPage />} />
-            <Route path="/auth/callback" element={<GoogleAuthCallbackPage />} />
-            <Route path="/tenant-registration" element={<TenantRegistrationPage />} />
-            <Route path="/owner-registration" element={<OwnerRegistrationPage />} />
-            <Route path="/verification" element={<VerificationPage />} />
-            <Route path="/verification-holding" element={<VerificationHoldingPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/faq" element={<FAQPage />} />
-            <Route path="/service" element={<ServicesPage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/review" element={<ReviewPage />} />
-            <Route path="/reviews" element={<ReviewPage />} />
-            <Route path="/listings" element={<ListingPage />} />
-            <Route path="/listings/:id" element={<ListingDetailsPage />} />
-            <Route path="/profile/:userId" element={<PublicProfilePage />} />
-            <Route path="/tenant-dashboard" element={<ProtectedRoute component={TenantDashboard} requiredRole="TENANT" />} />
-            <Route path="/tenant-dashboard/applications" element={<ProtectedRoute component={MyApplicationsPage} requiredRole="TENANT" />} />
-            <Route path="/tenant-dashboard/wishlist" element={<ProtectedRoute component={WishlistPage} requiredRole="TENANT" />} />
-            <Route path="/owner-dashboard" element={<ProtectedRoute component={OwnerDashboard} requiredRole="OWNER" />} />
-            <Route path="/owner-dashboard/my-properties" element={<ProtectedRoute component={MyPropertiesPage} requiredRole="OWNER" />} />
-            <Route path="/owner-dashboard/my-properties/:propertyId/edit" element={<ProtectedRoute component={OwnerPropertyEditPage} requiredRole="OWNER" />} />
-            <Route path="/owner-dashboard/create-listing" element={<ProtectedRoute component={CreateListingPage} requiredRole="OWNER" />} />
-            <Route path="/owner-dashboard/requests" element={<ProtectedRoute component={IncomingRequestsPage} requiredRole="OWNER" />} />
-            <Route path="/dashboard/rentals" element={<ProtectedRoute component={MyRentalsPage} requiredRole={null} />} />
-            <Route path="/notifications" element={<ProtectedRoute component={NotificationsPage} requiredRole={null} />} />
-            <Route path="/admin-dashboard" element={<ProtectedRoute component={AdminDashboard} requiredRole="ADMIN" />} />
-            <Route path="/admin-dashboard/topup-approvals" element={<ProtectedRoute component={AdminTopupApprovalsPage} requiredRole="ADMIN" />} />
-            <Route path="/account" element={<ProtectedRoute component={AccountSettingsPage} requiredRole={null} />} />
-            <Route path="/wallet" element={<ProtectedRoute component={WalletPage} requiredRole={null} />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </div>
-        <SiteFooter />
-      </div>
+      <AppLayout />
     </Router>
   );
 }

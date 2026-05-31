@@ -22,6 +22,24 @@ import { TOKEN_TTL } from '../config/token-ttl';
 import type { RegisterInput, LoginInput } from '../schemas';
 import type { UserWithTokens } from '../types/auth.types';
 
+async function resolveSignupOnboardingStatus(client: any): Promise<string> {
+  const enumRows = await client.query(
+    `SELECT e.enumlabel
+     FROM pg_type t
+     JOIN pg_enum e ON t.oid = e.enumtypid
+     WHERE t.typname = 'OnboardingStatus'`
+  );
+
+  const values = new Set<string>((enumRows.rows || []).map((r: any) => String(r.enumlabel)));
+
+  if (values.has('PHONE_VERIFICATION_PENDING')) return 'PHONE_VERIFICATION_PENDING';
+  if (values.has('PHONE_REQUIRED')) return 'PHONE_REQUIRED';
+  if (values.has('AUTH_PENDING')) return 'AUTH_PENDING';
+  if (values.has('PROFILE_PENDING')) return 'PROFILE_PENDING';
+
+  throw new AppError(500, 'Unsupported OnboardingStatus enum configuration in database');
+}
+
 /**
  * Register a new user
  */
@@ -69,13 +87,14 @@ export async function registerUser(input: RegisterInput): Promise<UserWithTokens
   
   try {
     await client.query('BEGIN');
+    const signupOnboardingStatus = await resolveSignupOnboardingStatus(client);
 
     // Create user
     const userResult = await client.query(
       `INSERT INTO "User" (user_id, role, onboarding_status, is_active)
-       VALUES (gen_random_uuid()::text, $1, 'PHONE_VERIFICATION_PENDING', true)
+       VALUES (gen_random_uuid()::text, $1, $2, true)
        RETURNING user_id, role, onboarding_status, kyc_verification_status, contact_email, contact_phone, is_active, created_at`,
-      [role]
+      [role, signupOnboardingStatus]
     );
 
     const user = userResult.rows[0];

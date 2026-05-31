@@ -3,6 +3,7 @@ import { defaultValidationHook } from '@/config/openapi';
 import { db } from '@/db/client';
 import { AppError } from '@/errors/base';
 import * as routes from './routes';
+import * as schemas from './schemas';
 import * as profileService from './services/profile.service';
 import * as verificationService from './services/verification.service';
 import { requireAuth } from '@/security';
@@ -183,6 +184,30 @@ users.openapi(routes.createProfileRoute, async (c) => {
 });
 
 /**
+ * POST /users/{userId}/profile-photo/upload-url
+ * Get presigned upload URL for profile photo
+ */
+users.openapi(routes.getProfilePhotoUploadUrlRoute, async (c) => {
+  const { userId } = c.req.valid('param');
+  const authUser = c.get('user');
+  const body = c.req.valid('json');
+
+  if (authUser.userId !== userId) {
+    throw new AppError(403, 'You can only upload a profile photo for your own account');
+  }
+
+  const presigned = await profileService.getProfilePhotoUploadUrl(userId, body);
+
+  return c.json(
+    {
+      success: true,
+      data: presigned,
+    },
+    200
+  );
+});
+
+/**
  * PATCH /users/{userId}/profile
  * Update user profile
  */
@@ -205,7 +230,18 @@ users.openapi(routes.updateProfileRoute, async (c) => {
   }
 
   const userRole = userResult.rows[0].role;
-  await profileService.createOrUpdateProfile(userId, userRole, body as any);
+  if (userRole !== 'TENANT' && userRole !== 'OWNER') {
+    throw new AppError(400, 'Profile updates are only available for TENANT and OWNER accounts');
+  }
+
+  // Re-validate against the authenticated user's actual role to avoid enum/type
+  // mismatches reaching SQL and surfacing as generic DB format errors.
+  const roleValidatedBody =
+    userRole === 'TENANT'
+      ? schemas.updateTenantProfileSchema.parse(body)
+      : schemas.updateOwnerProfileSchema.parse(body);
+
+  await profileService.createOrUpdateProfile(userId, userRole, roleValidatedBody as any);
   const completionStatus = await profileService.getProfileCompletionStatus(userId, userRole);
 
   const reqBody = body as any;
