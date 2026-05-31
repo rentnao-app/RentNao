@@ -98,6 +98,10 @@ jobs:
           push: true
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+          build-args: |
+            VITE_API_URL=https://api.rentnao.co
+            VITE_GOOGLE_AUTH_URL=https://api.rentnao.co/auth/google
+            VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
           tags: |
             ${{ steps.vars.outputs.image }}:latest
             ${{ steps.vars.outputs.image }}:${{ github.sha }}
