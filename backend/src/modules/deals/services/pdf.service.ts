@@ -1,19 +1,45 @@
-import puppeteer from 'puppeteer';
+import puppeteer, { Browser } from 'puppeteer';
 
-export async function generatePdf(htmlContent: string): Promise<Buffer> {
-  console.log('[PDF Service] Launching headless browser');
-  const browser = await puppeteer.launch({
+let browserInstance: Browser | null = null;
+
+async function getBrowser(): Promise<Browser> {
+  if (browserInstance && browserInstance.connected) {
+    return browserInstance;
+  }
+
+  console.log('[PDF Service] Launching shared headless browser instance');
+  browserInstance = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-local-file-access'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-local-file-access',
+      '--disable-extensions',
+      '--disable-dev-shm-usage',
+    ],
   });
 
-  try {
-    const page = await browser.newPage();
-    
-    await page.setContent(htmlContent, {
-      waitUntil: 'load',
-    });
+  browserInstance.on('disconnected', () => {
+    console.log('[PDF Service] Shared browser disconnected.');
+    browserInstance = null;
+  });
 
+  return browserInstance;
+}
+
+export async function closeBrowser(): Promise<void> {
+  if (browserInstance) {
+    await browserInstance.close();
+    browserInstance = null;
+  }
+}
+
+export async function generatePdf(htmlContent: string): Promise<Buffer> {
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+
+  try {
+    // Enable request interception before setting content to prevent SSRF
     await page.setRequestInterception(true);
     page.on('request', (request) => {
       const url = request.url();
@@ -27,6 +53,11 @@ export async function generatePdf(htmlContent: string): Promise<Buffer> {
         console.warn(`[PDF Service Security Alert] Blocked outbound request to: ${url}`);
         request.abort();
       }
+    });
+
+    await page.setContent(htmlContent, {
+      waitUntil: 'load',
+      timeout: 10000,
     });
 
     await page.evaluate(async () => {
@@ -48,7 +79,7 @@ export async function generatePdf(htmlContent: string): Promise<Buffer> {
 
     return Buffer.from(pdfUint8);
   } finally {
-    await browser.close();
-    console.log('[PDF Service] Browser session closed.');
+    await page.close();
+    console.log('[PDF Service] Page session closed.');
   }
 }

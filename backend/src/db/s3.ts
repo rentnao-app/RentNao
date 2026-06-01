@@ -27,6 +27,7 @@ export interface StorageProvider {
   presignDownload(key: string, expiresInSeconds?: number): Promise<string>;
   deleteObject(key: string): Promise<void>;
   exists(key: string): Promise<boolean>;
+  getObjectMetadata(key: string): Promise<{ contentLength: number; contentType: string } | null>;
 }
 
 export class LocalS3StorageProvider implements StorageProvider {
@@ -115,6 +116,32 @@ export class LocalS3StorageProvider implements StorageProvider {
     }
   }
 
+  async getObjectMetadata(
+    key: string
+  ): Promise<{ contentLength: number; contentType: string } | null> {
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      });
+
+      const response = await this.internalClient.send(command);
+      return {
+        contentLength: response.ContentLength ?? 0,
+        contentType: response.ContentType ?? '',
+      };
+    } catch (error: any) {
+      if (
+        error.name === 'NotFound' ||
+        error?.name === 'NoSuchKey' ||
+        error?.$metadata?.httpStatusCode === 404
+      ) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
   async isHealthy(): Promise<boolean> {
     try {
       const command = new HeadBucketCommand({
@@ -158,8 +185,7 @@ export class LocalS3StorageProvider implements StorageProvider {
       console.log(`[S3] Created bucket: ${this.bucket}`);
     } catch (error: any) {
       const alreadyExists =
-        error?.name === 'BucketAlreadyOwnedByYou' ||
-        error?.name === 'BucketAlreadyExists';
+        error?.name === 'BucketAlreadyOwnedByYou' || error?.name === 'BucketAlreadyExists';
 
       if (!alreadyExists) {
         throw error;

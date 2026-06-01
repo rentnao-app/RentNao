@@ -21,6 +21,24 @@ FROM oven/bun:1-slim AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+# Install system dependencies for Chromium and Bengali fonts
+USER root
+RUN apt-get update && apt-get install -y \
+    fonts-beng \
+    libnss3 \
+    libatk-1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    && rm -rf /var/lib/apt/lists/*
+
 USER bun
 
 COPY --from=builder /app/dist ./dist
