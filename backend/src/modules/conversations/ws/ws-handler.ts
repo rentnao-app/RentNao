@@ -97,10 +97,6 @@ function isValidId(value: unknown): value is string {
 /**
  * Creates WebSocket event handlers for a connection.
  * Called by Hono's upgradeWebSocket middleware.
- *
- * Authentication is now ticket-based:
- *   ws://host/ws?ticket=<single-use-ticket>
- * The ticket is consumed from Redis on connection open.
  */
 export function chatWebSocketHandler(c: any) {
   // Extract ticket from query param (NOT a JWT — single-use, short-lived)
