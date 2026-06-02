@@ -1,4 +1,4 @@
-FROM oven/bun:1 AS deps
+FROM oven/bun:1.3.11 AS deps
 WORKDIR /app
 
 
@@ -17,7 +17,7 @@ FROM deps AS deps-prod
 RUN bun install --production --frozen-lockfile
 
 # 4. Final lightweight runtime
-FROM oven/bun:1-slim AS runtime
+FROM oven/bun:1.3.11-slim AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
