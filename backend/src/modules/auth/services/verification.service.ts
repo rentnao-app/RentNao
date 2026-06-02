@@ -31,6 +31,30 @@ type PhoneVerificationResult = {
   rateResetSeconds?: number;
 };
 
+async function getOnboardingStatusValues(client: any): Promise<Set<string>> {
+  const enumRows = await client.query(
+    `SELECT e.enumlabel
+     FROM pg_type t
+     JOIN pg_enum e ON t.oid = e.enumtypid
+     WHERE t.typname = 'OnboardingStatus'`
+  );
+  return new Set<string>((enumRows.rows || []).map((r: any) => String(r.enumlabel)));
+}
+
+function resolvePendingPhoneStatus(values: Set<string>): string | null {
+  if (values.has('PHONE_VERIFICATION_PENDING')) return 'PHONE_VERIFICATION_PENDING';
+  if (values.has('PHONE_REQUIRED')) return 'PHONE_REQUIRED';
+  if (values.has('AUTH_PENDING')) return 'AUTH_PENDING';
+  return null;
+}
+
+function resolvePostPhoneVerifiedStatus(values: Set<string>): string | null {
+  if (values.has('PROFILE_PENDING')) return 'PROFILE_PENDING';
+  if (values.has('UNDER_REVIEW')) return 'UNDER_REVIEW';
+  if (values.has('COMPLETED')) return 'COMPLETED';
+  return null;
+}
+
 async function loadUserForPhoneVerification(userId: string) {
   const userResult = await db.query(
     `SELECT user_id, onboarding_status, is_active, deleted_at
@@ -112,6 +136,8 @@ async function upsertPendingPhoneCredential(userId: string, phone: string) {
   const client = await db.connect();
   try {
     await client.query('BEGIN');
+    const onboardingValues = await getOnboardingStatusValues(client);
+    const pendingPhoneStatus = resolvePendingPhoneStatus(onboardingValues);
 
     if (existingPhoneCred.rows.length > 0) {
       await client.query(
@@ -128,16 +154,19 @@ async function upsertPendingPhoneCredential(userId: string, phone: string) {
       );
     }
 
+    const allowedTransitionFrom = ['PHONE_REQUIRED', 'PHONE_VERIFICATION_PENDING', 'PROFILE_PENDING'].filter((s) =>
+      onboardingValues.has(s)
+    );
     await client.query(
       `UPDATE "User"
        SET contact_phone = $1,
            onboarding_status = CASE
-             WHEN onboarding_status IN ('PHONE_REQUIRED', 'PHONE_VERIFICATION_PENDING', 'PROFILE_PENDING') THEN 'PHONE_VERIFICATION_PENDING'
+             WHEN $3::text IS NOT NULL AND onboarding_status::text = ANY($4::text[]) THEN $3::"OnboardingStatus"
              ELSE onboarding_status
            END,
            updated_at = NOW()
        WHERE user_id = $2`,
-      [phone, userId]
+      [phone, userId, pendingPhoneStatus, allowedTransitionFrom]
     );
 
     await client.query('COMMIT');
@@ -450,6 +479,8 @@ export async function verifyPhone(
 
   try {
     await client.query('BEGIN');
+    const onboardingValues = await getOnboardingStatusValues(client);
+    const postVerifiedStatus = resolvePostPhoneVerifiedStatus(onboardingValues);
 
     // Update credentials to mark as verified
     const updateResult = await client.query(
@@ -465,16 +496,19 @@ export async function verifyPhone(
     }
 
     // Phone verification unlocks profile completion stage.
+    const allowedTransitionFrom = ['PHONE_REQUIRED', 'PHONE_VERIFICATION_PENDING', 'AUTH_PENDING'].filter((s) =>
+      onboardingValues.has(s)
+    );
     await client.query(
       `UPDATE "User"
        SET contact_phone = COALESCE(contact_phone, $1),
            onboarding_status = CASE
-             WHEN onboarding_status IN ('PHONE_REQUIRED', 'PHONE_VERIFICATION_PENDING') THEN 'PROFILE_PENDING'
+             WHEN $3::text IS NOT NULL AND onboarding_status::text = ANY($4::text[]) THEN $3::"OnboardingStatus"
              ELSE onboarding_status
            END,
            updated_at = NOW()
        WHERE user_id = $2`,
-      [matchedIdentifier, userId]
+      [matchedIdentifier, userId, postVerifiedStatus, allowedTransitionFrom]
     );
 
     await client.query('COMMIT');
@@ -546,8 +580,39 @@ export async function resendVerification(
   // Store new token in Redis
   await storeVerificationToken(identifier, newToken, tokenType, ttl);
 
-  // TODO: Send verification email
-  console.log(`New verification email token: ${newToken}`);
+  if (type === 'PHONE') {
+    const client = await db.connect();
+    let pendingPhoneStatus: string | null = null;
+    try {
+      const onboardingValues = await getOnboardingStatusValues(client);
+      pendingPhoneStatus = resolvePendingPhoneStatus(onboardingValues);
+    } finally {
+      client.release();
+    }
+
+    await db.query(
+      `UPDATE "User"
+       SET onboarding_status = CASE
+         WHEN $2::text IS NOT NULL AND onboarding_status::text = 'PHONE_REQUIRED' THEN $2::"OnboardingStatus"
+         ELSE onboarding_status
+       END,
+           updated_at = NOW()
+       WHERE user_id = $1`,
+      [credential.user_id, pendingPhoneStatus]
+    );
+  }
+
+  if (type === 'PHONE') {
+    await sendPhoneOtp({
+      identifier,
+      otp: newToken,
+      purpose: 'PHONE_VERIFICATION',
+      ttlSeconds: ttl,
+    });
+  } else {
+    // TODO: Send verification email
+    console.log(`New verification email token: ${newToken}`);
+  }
 
   return {
     success: true,

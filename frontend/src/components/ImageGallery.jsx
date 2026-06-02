@@ -22,7 +22,7 @@ export default function ImageGallery({ images = [] }) {
     <div>
       <div className="mb-3 aspect-[4/3] max-h-[min(70vh,28rem)] min-h-[12rem] w-full overflow-hidden rounded-xl bg-gray-100 sm:aspect-video sm:min-h-[14rem] md:max-h-[32rem]">
         {isVideo ? (
-          <video src={src} controls className="h-full w-full object-cover" />
+          <video key={src} src={src} controls className="h-full w-full object-cover" />
         ) : (
           <img src={src} alt="" className="h-full w-full object-cover" />
         )}

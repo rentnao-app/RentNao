@@ -18,6 +18,7 @@ import {
   publicListingsQuerySchema,
   publicListingListResponseSchema,
   publicListingDetailSchema,
+  incrementListingViewResponseSchema,
   unlockedListingDetailSchema,
   propertyListResponseSchema,
   propertyResponseSchema,
@@ -560,6 +561,34 @@ export const getPublicListingDetailRoute = createRoute({
           schema: z.object({
             success: z.boolean(),
             data: publicListingDetailSchema,
+          }),
+        },
+      },
+    },
+    404: {
+      description: 'Listing not found',
+      content: { 'application/json': { schema: errorResponseSchema } },
+    },
+  },
+});
+
+export const incrementListingViewRoute = createRoute({
+  method: 'post',
+  path: '/public/listings/{listingId}/view',
+  tags: ['Properties'],
+  summary: 'Record a listing card view',
+  description: 'Increments the public view counter when a user opens a listing from a card.',
+  request: {
+    params: listingIdParamSchema,
+  },
+  responses: {
+    200: {
+      description: 'View count updated',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: incrementListingViewResponseSchema,
           }),
         },
       },

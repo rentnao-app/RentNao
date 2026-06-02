@@ -7,6 +7,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { Scalar } from '@scalar/hono-api-reference';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { upgradeWebSocket, websocket } from 'hono/bun';
 import { env } from '@/config/env';
 import { defaultValidationHook } from '@/config/openapi';
 import { errorHandler } from '@/middlewares/error-handler';
@@ -25,6 +26,10 @@ import wishlists from '@/modules/wishlist';
 import rentalRequests from '@/modules/rental-requests';
 import notifications from '@/modules/notifications';
 import testimonials from '@/modules/testimonials';
+import conversations from '@/modules/conversations';
+import { chatWebSocketHandler } from '@/modules/conversations/ws/ws-handler';
+import { startHeartbeat, stopHeartbeat } from '@/modules/conversations/ws/ws-registry';
+import { startScheduledJobs, stopScheduledJobs } from '@/jobs/scheduler';
 import { bearerAuth } from 'hono/bearer-auth';
 
 const app = new OpenAPIHono({
@@ -68,6 +73,10 @@ app.route('/wishlists', wishlists);
 app.route('/requests', rentalRequests);
 app.route('/notifications', notifications);
 app.route('/testimonials', testimonials);
+app.route('/conversations', conversations);
+
+// WebSocket endpoint for real-time chat and notifications
+app.get('/ws', upgradeWebSocket(chatWebSocketHandler));
 
 app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
   type: 'http',
@@ -125,6 +134,10 @@ app.doc('/openapi.json', {
     {
       name: 'Testimonials',
       description: 'User feedback and platform testimonials',
+    },
+    {
+      name: 'Conversations',
+      description: 'Listing-based chat conversations and real-time messaging',
     },
     {
       name: 'Admin - User Management',
@@ -194,6 +207,10 @@ connectRedis()
     if (!healthy) {
       process.exit(1);
     }
+
+    // Start WebSocket heartbeat and scheduled jobs after Redis is ready
+    startHeartbeat();
+    startScheduledJobs();
   })
   .catch((err) => {
     console.error('Redis connection failed:', err.message);
@@ -227,6 +244,10 @@ const gracefulShutdown = async (signal: string) => {
   isShuttingDown = true;
   console.log(`\n[App] ${signal} received, shutting down...`);
 
+  // Stop background tasks first
+  stopHeartbeat();
+  stopScheduledJobs();
+
   const [dbResult, redisResult] = await Promise.allSettled([
     closeDbConnection(),
     disconnectRedis(),
@@ -258,4 +279,5 @@ process.once('SIGTERM', () => {
 export default {
   port,
   fetch: app.fetch,
+  websocket,
 };

@@ -1,5 +1,6 @@
 import { db } from '@/db/client';
 import { AppError } from '@/errors/base';
+import { sanitizeHtml } from '@/utils/sanitize';
 import { storage } from '@/db/s3';
 import type { TestimonialStatus } from '@prisma/client';
 import type { CreateTestimonialInput, GetTestimonialsQueryInput } from '../schemas';
@@ -8,9 +9,11 @@ function createId() {
   return crypto.randomUUID();
 }
 
-function sanitizeHtml(content: string) {
-  // Basic HTML tag stripping to prevent XSS
-  return content.replace(/<[^>]*>?/gm, '');
+function checkPii(content: string) {
+  // Regex for basic Credit Card (16 digits) and IBAN detection
+  const ccRegex = /\b(?:\d[ -]*?){13,16}\b/;
+  const ibanRegex = /[a-zA-Z]{2}[0-9]{2}[a-zA-Z0-9]{4}[0-9]{7}([a-zA-Z0-9]?){0,16}/;
+  return ccRegex.test(content) || ibanRegex.test(content);
 }
 
 async function presignProfilePhoto(key: string | null | undefined): Promise<string | null> {
@@ -21,6 +24,7 @@ async function presignProfilePhoto(key: string | null | undefined): Promise<stri
     return null;
   }
 }
+
 
 async function buildTestimonialRow(row: any) {
   const displayName = row.first_name
@@ -100,6 +104,45 @@ export async function listApprovedTestimonials(query: GetTestimonialsQueryInput)
       limit: take,
       totalPages: Math.ceil(total / take),
     },
+  };
+}
+
+export async function getApprovedTestimonialStats() {
+  const result = await db.query(
+    `SELECT
+      COUNT(*)::int AS total,
+      COALESCE(AVG(rating), 0)::float AS average_rating,
+      COUNT(*) FILTER (WHERE rating = 5)::int AS star_5,
+      COUNT(*) FILTER (WHERE rating = 4)::int AS star_4,
+      COUNT(*) FILTER (WHERE rating = 3)::int AS star_3,
+      COUNT(*) FILTER (WHERE rating = 2)::int AS star_2,
+      COUNT(*) FILTER (WHERE rating = 1)::int AS star_1
+     FROM "Testimonial"
+     WHERE status = 'APPROVED'`
+  );
+
+  const row = result.rows[0] ?? {};
+  const totalReviews = Number(row.total ?? 0);
+  const averageRating = totalReviews > 0 ? Number(row.average_rating ?? 0) : 0;
+
+  const countsByStar = {
+    5: Number(row.star_5 ?? 0),
+    4: Number(row.star_4 ?? 0),
+    3: Number(row.star_3 ?? 0),
+    2: Number(row.star_2 ?? 0),
+    1: Number(row.star_1 ?? 0),
+  };
+
+  const distribution = [5, 4, 3, 2, 1].map((stars) => {
+    const count = countsByStar[stars as keyof typeof countsByStar];
+    const percentage = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0;
+    return { stars, count, percentage };
+  });
+
+  return {
+    averageRating: Math.round(averageRating * 10) / 10,
+    totalReviews,
+    distribution,
   };
 }
 

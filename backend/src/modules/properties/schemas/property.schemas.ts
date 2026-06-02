@@ -42,6 +42,9 @@ export const createPropertySchema = z.object({
   hasGenerator: z.boolean(),
   hasSecurityGuard: z.boolean(),
   intendedTenantType: TenantType,
+  // propertyType: PropertyType.optional(),
+  floorNo: z.number().int().positive().openapi({ example: 4 }),
+  flatNo: z.string().max(50).optional().openapi({ example: '4A' }),
 });
 
 export const updatePropertySchema = createPropertySchema.partial();
@@ -66,6 +69,11 @@ export const propertyResponseSchema = z.object({
   hasGenerator: z.boolean().nullable(),
   hasSecurityGuard: z.boolean().nullable(),
   intendedTenantType: TenantType.nullable(),
+  floorNo: z.number().nullable(),
+  flatNo: z.string().nullable(),
+  propertyAddressBn: z.string().nullable().optional(),
+  floorNoBn: z.string().nullable().optional(),
+  flatNoBn: z.string().nullable().optional(),
   createdAt: z.string(),
 });
 
@@ -84,6 +92,14 @@ export const propertyImageUploadUrlRequestSchema = z.object({
     .openapi({
       example: 'image/jpeg',
     }),
+  fileSize: z
+    .number()
+    .max(100 * 1024 * 1024, 'File size exceeds the 100MB limit')
+    .openapi({
+      example: 1048576,
+      description: 'File size in bytes (max 100MB)',
+    }),
+
 });
 
 export const propertyImageUploadUrlResponseSchema = z.object({
@@ -280,6 +296,7 @@ export const publicListingSummarySchema = z.object({
   intendedTenantType: TenantType,
   primaryImagePath: z.string().nullable(),
   primaryImageUrl: z.string().url().nullable().optional(),
+  viewCount: z.number().int().nonnegative(),
   createdAt: z.string(),
 });
 
@@ -289,6 +306,10 @@ export const publicListingDetailSchema = publicListingSummarySchema.extend({
   hasLift: z.boolean(),
   hasGenerator: z.boolean(),
   hasSecurityGuard: z.boolean(),
+  floorNo: z.number().nullable(),
+  propertyAddressBn: z.string().nullable().optional(),
+  floorNoBn: z.string().nullable().optional(),
+  flatNoBn: z.string().nullable().optional(),
   images: z.array(z.object({
     imageId: z.string(),
     storagePath: z.string(),
@@ -317,6 +338,11 @@ export const unlockedListingDetailSchema = publicListingSummarySchema.extend({
   hasLift: z.boolean(),
   hasGenerator: z.boolean(),
   hasSecurityGuard: z.boolean(),
+  floorNo: z.number().nullable(),
+  flatNo: z.string().nullable(),
+  propertyAddressBn: z.string().nullable().optional(),
+  floorNoBn: z.string().nullable().optional(),
+  flatNoBn: z.string().nullable().optional(),
   images: z.array(z.object({
     imageId: z.string(),
     storagePath: z.string(),
@@ -342,6 +368,11 @@ export const publicListingListResponseSchema = z.object({
     total: z.number(),
     totalPages: z.number(),
   }),
+});
+
+export const incrementListingViewResponseSchema = z.object({
+  listingId: z.string(),
+  viewCount: z.number().int().nonnegative(),
 });
 
 export type CreatePropertyInput = z.infer<typeof createPropertySchema>;

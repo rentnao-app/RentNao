@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { apiFetch, getApiErrorMessage, isLoggedIn } from '../lib/api';
@@ -166,6 +166,11 @@ export default function MyPropertiesPage() {
                   key={property.propertyId}
                   className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow isolate"
                 >
+                  {/* Top half is clickable to the main listing */}
+                  <Link
+                    to={property.listings?.[0] ? `/listings/${property.listings[0].listingId}` : `/owner-dashboard/my-properties/${property.propertyId}/edit`}
+                    className="block hover:opacity-95 transition-opacity"
+                  >
                   <div className="relative h-44 bg-gray-100">
                     {src ? (
                       <img
@@ -195,7 +200,10 @@ export default function MyPropertiesPage() {
                       {property.bathroomCount != null ? `${property.bathroomCount} baths` : '-'} -{' '}
                       {property.propertySizeSqft != null ? `${property.propertySizeSqft} sqft` : '-'}
                     </p>
+                  </div>
+                  </Link>
 
+                  <div className="px-5 pb-5 flex-1 flex flex-col">
                     <div className="mt-4 space-y-2 flex-1">
                       {property.listings && property.listings.length > 0 ? (
                         property.listings.map((listing) => {
@@ -213,9 +221,10 @@ export default function MyPropertiesPage() {
                                 ? 'bg-amber-100 text-amber-900'
                                 : 'bg-gray-200 text-gray-700';
                           return (
-                            <div
+                            <Link
+                              to={`/listings/${listing.listingId}`}
                               key={listing.listingId}
-                              className="flex flex-col gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
+                              className="flex flex-col gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between hover:bg-gray-100 transition-colors"
                             >
                               <div className="min-w-0 flex-1">
                                 <p className="font-semibold text-teal-700 truncate">
@@ -237,9 +246,10 @@ export default function MyPropertiesPage() {
                                   <button
                                     type="button"
                                     disabled={anyBusy}
-                                    onClick={() =>
-                                      handleListingStatus(property.propertyId, listing.listingId, 'UNLISTED')
-                                    }
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleListingStatus(property.propertyId, listing.listingId, 'UNLISTED');
+                                    }}
                                     className="shrink-0 rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-900 hover:bg-amber-50 disabled:opacity-50"
                                   >
                                     {busyPause ? 'Pausing' : 'Pause'}
@@ -249,16 +259,17 @@ export default function MyPropertiesPage() {
                                   <button
                                     type="button"
                                     disabled={anyBusy}
-                                    onClick={() =>
-                                      handleListingStatus(property.propertyId, listing.listingId, 'ACTIVE')
-                                    }
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleListingStatus(property.propertyId, listing.listingId, 'ACTIVE');
+                                    }}
                                     className="shrink-0 rounded-md border border-teal-300 bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-800 hover:bg-teal-100 disabled:opacity-50"
                                   >
                                     {busyResume ? 'Resuming...' : 'Resume'}
                                   </button>
                                 ) : null}
                               </div>
-                            </div>
+                            </Link>
                           );
                         })
                       ) : (

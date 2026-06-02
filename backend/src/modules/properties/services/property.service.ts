@@ -2,6 +2,7 @@ import { db } from '@/db/client';
 import { storage } from '@/db/s3';
 import { AppError } from '@/errors/base';
 import { assertPaidActionAndDebit } from '@/modules/wallet/services';
+import { createConversationOnUnlock } from '@/modules/conversations';
 import type {
   AdminListingsQueryInput,
   CreatePropertyImageInput,
@@ -45,6 +46,11 @@ function mapProperty(row: any) {
     hasGenerator: row.has_generator,
     hasSecurityGuard: row.has_security_guard,
     intendedTenantType: row.intended_tenant_type,
+    floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
+    flatNo: row.flat_no || null,
+    propertyAddressBn: row.property_address_bn || null,
+    floorNoBn: row.floor_no_bn || null,
+    flatNoBn: row.flat_no_bn || null,
     createdAt: row.created_at.toISOString(),
   };
 }
@@ -196,10 +202,12 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       has_lift,
       has_generator,
       has_security_guard,
-      intended_tenant_type
+      intended_tenant_type,
+      floor_no,
+      flat_no
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9,
-      $10, $11, $12, $13, $14, $15, $16, $17, $18
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
     )
     RETURNING *`,
     [
@@ -221,6 +229,8 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       input.hasGenerator,
       input.hasSecurityGuard,
       input.intendedTenantType,
+      input.floorNo || 1,
+      input.flatNo || null,
     ]
   );
 
@@ -279,6 +289,8 @@ export async function updateMyPropertyById(userId: string, propertyId: string, i
   if (input.hasGenerator !== undefined) addUpdate('has_generator', input.hasGenerator);
   if (input.hasSecurityGuard !== undefined) addUpdate('has_security_guard', input.hasSecurityGuard);
   if (input.intendedTenantType !== undefined) addUpdate('intended_tenant_type', input.intendedTenantType);
+  if (input.floorNo !== undefined) addUpdate('floor_no', input.floorNo);
+  if (input.flatNo !== undefined) addUpdate('flat_no', input.flatNo);
 
   if (updates.length === 0) {
     throw new AppError(400, 'No fields provided for update');
@@ -546,6 +558,7 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
       l.listing_start_date,
       l.listing_end_date,
       l.listing_status,
+      l.view_count,
       l.created_at,
       p.title,
       p.description,
@@ -584,6 +597,7 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
       intendedTenantType: row.intended_tenant_type,
       primaryImagePath: row.primary_image_path,
       primaryImageUrl: await presignImageUrl(row.primary_image_path),
+      viewCount: Number(row.view_count ?? 0),
       createdAt: row.created_at.toISOString(),
     }))
   );
@@ -596,6 +610,28 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
       total,
       totalPages,
     },
+  };
+}
+
+export async function incrementListingViewCount(listingId: string) {
+  const result = await db.query(
+    `UPDATE "Listing"
+     SET view_count = view_count + 1,
+         updated_at = NOW()
+     WHERE listing_id = $1
+       AND listing_status = 'ACTIVE'
+     RETURNING listing_id, view_count`,
+    [listingId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError(404, 'Listing not found');
+  }
+
+  const row = result.rows[0];
+  return {
+    listingId: row.listing_id,
+    viewCount: Number(row.view_count),
   };
 }
 
@@ -680,6 +716,7 @@ export async function listListingsForAdmin(query: AdminListingsQueryInput) {
       l.listing_start_date,
       l.listing_end_date,
       l.listing_status,
+      l.view_count,
       l.created_at,
       p.title,
       p.description,
@@ -717,6 +754,7 @@ export async function listListingsForAdmin(query: AdminListingsQueryInput) {
       intendedTenantType: row.intended_tenant_type,
       primaryImagePath: row.primary_image_path,
       primaryImageUrl: await presignImageUrl(row.primary_image_path),
+      viewCount: Number(row.view_count ?? 0),
       createdAt: row.created_at.toISOString(),
     }))
   );
@@ -741,6 +779,7 @@ export async function getPublicListingDetail(listingId: string) {
       l.listing_start_date,
       l.listing_end_date,
       l.listing_status,
+      l.view_count,
       l.created_at,
       p.title,
       p.description,
@@ -755,6 +794,10 @@ export async function getPublicListingDetail(listingId: string) {
       p.has_lift,
       p.has_generator,
       p.has_security_guard,
+      p.floor_no,
+      p.property_address_bn,
+      p.floor_no_bn,
+      p.flat_no_bn,
       pi.storage_path AS primary_image_path
      FROM "Listing" l
      JOIN "Property" p ON p.property_id = l.property_id
@@ -772,7 +815,7 @@ export async function getPublicListingDetail(listingId: string) {
   const row = result.rows[0];
 
   const imageResult = await db.query(
-    `SELECT image_id, storage_path, file_name, is_primary, display_order
+    `SELECT image_id, storage_path, file_name, mime_type, is_primary, display_order
      FROM "PropertyImage"
      WHERE property_id = $1
      ORDER BY is_primary DESC, display_order ASC, uploaded_at ASC`,
@@ -792,6 +835,7 @@ export async function getPublicListingDetail(listingId: string) {
       imageId: img.image_id,
       storagePath: img.storage_path,
       fileName: img.file_name,
+      mimeType: img.mime_type,
       isPrimary: Boolean(img.is_primary),
       displayOrder: Number(img.display_order),
       url: await presignImageUrl(img.storage_path),
@@ -815,12 +859,17 @@ export async function getPublicListingDetail(listingId: string) {
     intendedTenantType: row.intended_tenant_type,
     primaryImagePath: row.primary_image_path,
     primaryImageUrl,
+    viewCount: Number(row.view_count ?? 0),
     createdAt: row.created_at.toISOString(),
     buildingFloors: Number(row.building_floors),
     buildingFacing: row.building_facing,
     hasLift: Boolean(row.has_lift),
     hasGenerator: Boolean(row.has_generator),
     hasSecurityGuard: Boolean(row.has_security_guard),
+    floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
+    propertyAddressBn: row.property_address_bn || null,
+    floorNoBn: row.floor_no_bn || null,
+    flatNoBn: row.flat_no_bn || null,
     images,
     isUnlocked: false,
     unlockRequiredFields,
@@ -837,6 +886,7 @@ export async function getListingDetailForAdmin(listingId: string) {
       l.listing_start_date,
       l.listing_end_date,
       l.listing_status,
+      l.view_count,
       l.created_at,
       p.title,
       p.description,
@@ -854,6 +904,11 @@ export async function getListingDetailForAdmin(listingId: string) {
       p.address,
       p.exact_lat,
       p.exact_lng,
+      p.floor_no,
+      p.flat_no,
+      p.property_address_bn,
+      p.floor_no_bn,
+      p.flat_no_bn,
       u.contact_email,
       u.contact_phone,
       pi.storage_path AS primary_image_path
@@ -874,7 +929,7 @@ export async function getListingDetailForAdmin(listingId: string) {
   const row = result.rows[0];
 
   const imageResult = await db.query(
-    `SELECT image_id, storage_path, file_name, is_primary, display_order
+    `SELECT image_id, storage_path, file_name, mime_type, is_primary, display_order
      FROM "PropertyImage"
      WHERE property_id = $1
      ORDER BY is_primary DESC, display_order ASC, uploaded_at ASC`,
@@ -887,6 +942,7 @@ export async function getListingDetailForAdmin(listingId: string) {
       imageId: img.image_id,
       storagePath: img.storage_path,
       fileName: img.file_name,
+      mimeType: img.mime_type,
       isPrimary: Boolean(img.is_primary),
       displayOrder: Number(img.display_order),
       url: await presignImageUrl(img.storage_path),
@@ -916,6 +972,11 @@ export async function getListingDetailForAdmin(listingId: string) {
     hasLift: Boolean(row.has_lift),
     hasGenerator: Boolean(row.has_generator),
     hasSecurityGuard: Boolean(row.has_security_guard),
+    floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
+    flatNo: row.flat_no || null,
+    propertyAddressBn: row.property_address_bn || null,
+    floorNoBn: row.floor_no_bn || null,
+    flatNoBn: row.flat_no_bn || null,
     images,
     address: row.address,
     exactLat: Number(row.exact_lat),
@@ -960,10 +1021,19 @@ export async function unlockListingForTenant(userId: string, role: string, listi
     );
 
     if (existingUnlockResult.rows.length > 0) {
+      // Look up existing conversation for idempotent response
+      const existingConvResult = await client.query(
+        `SELECT c.id FROM "Conversation" c
+         JOIN "Listing" l ON l.property_id = c.property_id
+         WHERE l.listing_id = $1 AND c.tenant_user_id = $2
+         LIMIT 1`,
+        [listingId, userId]
+      );
       await client.query('COMMIT');
       return {
         listingId,
         unlockId: existingUnlockResult.rows[0].id,
+        conversationId: existingConvResult.rows[0]?.id || null,
         isUnlocked: true,
         alreadyUnlocked: true,
         unlockRequiredFields: [] as Array<'address' | 'exactLat' | 'exactLng' | 'owner'>,
@@ -987,11 +1057,28 @@ export async function unlockListingForTenant(userId: string, role: string, listi
       [unlockId, listingId, userId, paid.chargeId]
     );
 
+    // Auto-create conversation: resolve owner and property from listing
+    const ownerResult = await client.query(
+      `SELECT o.user_id AS owner_user_id, l.property_id
+       FROM "Listing" l
+       JOIN "Property" p ON p.property_id = l.property_id
+       JOIN "OwnerProfile" o ON o.owner_id = p.owner_id
+       WHERE l.listing_id = $1`,
+      [listingId]
+    );
+    const ownerUserId = ownerResult.rows[0].owner_user_id;
+    const propertyId = ownerResult.rows[0].property_id;
+
+    const conversationId = await createConversationOnUnlock(
+      client, userId, propertyId, ownerUserId
+    );
+
     await client.query('COMMIT');
 
     return {
       listingId,
       unlockId,
+      conversationId,
       isUnlocked: true,
       alreadyUnlocked: false,
       unlockRequiredFields: [] as Array<'address' | 'exactLat' | 'exactLng' | 'owner'>,
@@ -1035,6 +1122,11 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
         p.address,
         p.exact_lat,
         p.exact_lng,
+        p.floor_no,
+        p.flat_no,
+        p.property_address_bn,
+        p.floor_no_bn,
+        p.flat_no_bn,
         u.contact_email,
         u.contact_phone,
         pi.storage_path AS primary_image_path
@@ -1056,7 +1148,7 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
     const row = result.rows[0];
 
     const imageResult = await db.query(
-      `SELECT image_id, storage_path, file_name, is_primary, display_order
+      `SELECT image_id, storage_path, file_name, mime_type, is_primary, display_order
        FROM "PropertyImage"
        WHERE property_id = $1
        ORDER BY is_primary DESC, display_order ASC, uploaded_at ASC`,
@@ -1069,6 +1161,7 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
         imageId: img.image_id,
         storagePath: img.storage_path,
         fileName: img.file_name,
+        mimeType: img.mime_type,
         isPrimary: Boolean(img.is_primary),
         displayOrder: Number(img.display_order),
         url: await presignImageUrl(img.storage_path),
@@ -1098,6 +1191,11 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       hasLift: Boolean(row.has_lift),
       hasGenerator: Boolean(row.has_generator),
       hasSecurityGuard: Boolean(row.has_security_guard),
+      floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
+      flatNo: row.flat_no || null,
+      propertyAddressBn: row.property_address_bn || null,
+      floorNoBn: row.floor_no_bn || null,
+      flatNoBn: row.flat_no_bn || null,
       images,
       address: row.address,
       exactLat: Number(row.exact_lat),
@@ -1134,6 +1232,7 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       l.listing_start_date,
       l.listing_end_date,
       l.listing_status,
+      l.view_count,
       l.created_at,
       p.title,
       p.description,
@@ -1151,6 +1250,11 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       p.address,
       p.exact_lat,
       p.exact_lng,
+      p.floor_no,
+      p.flat_no,
+      p.property_address_bn,
+      p.floor_no_bn,
+      p.flat_no_bn,
       u.contact_email,
       u.contact_phone,
       pi.storage_path AS primary_image_path
@@ -1214,6 +1318,11 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
     hasLift: Boolean(row.has_lift),
     hasGenerator: Boolean(row.has_generator),
     hasSecurityGuard: Boolean(row.has_security_guard),
+    floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
+    flatNo: row.flat_no || null,
+    propertyAddressBn: row.property_address_bn || null,
+    floorNoBn: row.floor_no_bn || null,
+    flatNoBn: row.flat_no_bn || null,
     images,
     address: row.address,
     exactLat: Number(row.exact_lat),

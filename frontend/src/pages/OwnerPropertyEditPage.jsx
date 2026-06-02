@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { apiFetch, isLoggedIn } from '../lib/api';
@@ -52,7 +52,10 @@ export default function OwnerPropertyEditPage() {
     hasLift: false,
     hasGenerator: false,
     hasSecurityGuard: false,
+    floorNo: '',
+    flatNo: '',
   });
+  const [propertyType, setPropertyType] = useState('APARTMENT');
   const [images, setImages] = useState([]);
 
   const sortedImages = useMemo(() => {
@@ -70,6 +73,7 @@ export default function OwnerPropertyEditPage() {
       throw new Error(body?.error || body?.message || 'Failed to fetch property details');
     }
     const data = body?.data || {};
+    setPropertyType(data.propertyType || 'APARTMENT');
     setForm({
       title: data.title || '',
       description: data.description || '',
@@ -85,6 +89,8 @@ export default function OwnerPropertyEditPage() {
       hasLift: Boolean(data.hasLift),
       hasGenerator: Boolean(data.hasGenerator),
       hasSecurityGuard: Boolean(data.hasSecurityGuard),
+      floorNo: toInputValue(data.floorNo),
+      flatNo: data.flatNo || '',
     });
   }, [propertyId]);
 
@@ -145,6 +151,8 @@ export default function OwnerPropertyEditPage() {
         hasLift: Boolean(form.hasLift),
         hasGenerator: Boolean(form.hasGenerator),
         hasSecurityGuard: Boolean(form.hasSecurityGuard),
+        floorNo: toNumberOrUndefined(form.floorNo),
+        flatNo: (form.flatNo ?? '').trim() || undefined,
       };
 
       const res = await apiFetch(`/properties/${propertyId}`, {
@@ -373,6 +381,32 @@ export default function OwnerPropertyEditPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className={labelClass}>Floor Number</label>
+                <input
+                  type="number"
+                  min="1"
+                  inputMode="numeric"
+                  name="floorNo"
+                  value={form.floorNo}
+                  onChange={handleChange}
+                  className={inputClass}
+                  required
+                />
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Flat / Unit Number {propertyType === 'COMMERCIAL_SPACE' && '(Optional)'}
+                </label>
+                <input
+                  type="text"
+                  name="flatNo"
+                  value={form.flatNo}
+                  onChange={handleChange}
+                  className={inputClass}
+                  required={propertyType !== 'COMMERCIAL_SPACE'}
+                />
               </div>
               <div>
                 <label className={labelClass}>Intended Tenant Type</label>

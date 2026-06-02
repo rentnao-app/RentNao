@@ -17,11 +17,24 @@ export async function createNotification(
   data?: Record<string, unknown>
 ): Promise<void> {
   const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
   await db.query(
     `INSERT INTO "Notification" (notification_id, user_id, title, message, data, is_read)
      VALUES ($1, $2, $3, $4, $5::jsonb, false)`,
     [id, userId, title, message, data == null ? null : JSON.stringify(data)]
   );
+
+  // Push real-time notification via WebSocket (if user is connected)
+  // Lazy import to avoid circular dependency (conversations → notifications → ws-registry)
+  try {
+    const { pushToUser } = await import('@/modules/conversations/ws/ws-registry');
+    pushToUser(userId, {
+      type: 'notification',
+      notification: { id, title, message, data: data ?? null, createdAt },
+    });
+  } catch {
+    // WebSocket module not loaded yet (startup) or import failed — silently skip
+  }
 }
 
 export async function listNotificationsForUser(userId: string, limit: number): Promise<NotificationRow[]> {

@@ -15,6 +15,7 @@ export {
   updateMyListingStatusRoute,
   listPublicListingsRoute,
   getPublicListingDetailRoute,
+  incrementListingViewRoute,
   unlockListingRoute,
   getUnlockedListingDetailRoute,
 } from './property.routes';

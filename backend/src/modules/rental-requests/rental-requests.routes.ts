@@ -23,7 +23,7 @@ export const listingIdParamSchema = z.object({
 const rentalRequestEnvelope = z.object({
   success: z.boolean(),
   data: z.object({
-    requests: z.array(z.any()),
+    requests: z.array(z.any().openapi({ type: 'object' })),
   }),
 });
 

@@ -91,7 +91,6 @@ function resolveFeePolicyAmount(
   percentBaseValue?: number
 ): number {
   let amount = 0;
-  let hasComponent = false;
 
   if (row.fixed_amount != null) {
     const fixed = Number(row.fixed_amount);
@@ -99,7 +98,6 @@ function resolveFeePolicyAmount(
       throw new AppError(500, 'Fee policy fixed_amount is invalid');
     }
     amount += fixed;
-    hasComponent = true;
   }
 
   if (row.percentage != null) {
@@ -116,12 +114,9 @@ function resolveFeePolicyAmount(
       }
       amount += (percentBaseValue * pct) / 100;
     }
-    hasComponent = true;
   }
 
-  if (!hasComponent) {
-    throw new AppError(500, 'Fee policy has no calculable amount');
-  }
+  // Policy row with no formula fields configured is treated as free (0).
 
   if (!Number.isFinite(amount) || amount < 0) {
     throw new AppError(500, 'Fee policy has no calculable amount');
@@ -166,15 +161,6 @@ export async function assertPaidActionAndDebit(
   const requiredAmount = resolveFeePolicyAmount(feePolicy, input.percentBaseValue);
   const chargeAmount = requiredAmount.toFixed(2);
 
-  if (requiredAmount === 0) {
-    return {
-      chargeId: null,
-      walletTransactionId: null,
-      debitedAmount: chargeAmount,
-      currency: feePolicy.currency,
-    };
-  }
-
   const walletResult = await client.query(
     `SELECT id, status, currency, available_balance
      FROM "WalletAccount"
@@ -194,6 +180,15 @@ export async function assertPaidActionAndDebit(
 
   if (wallet.currency !== feePolicy.currency) {
     throw new AppError(409, 'Wallet currency does not match fee currency');
+  }
+
+  if (requiredAmount === 0) {
+    return {
+      chargeId: null,
+      walletTransactionId: null,
+      debitedAmount: chargeAmount,
+      currency: feePolicy.currency,
+    };
   }
 
   const availableBalance = Number(wallet.available_balance);

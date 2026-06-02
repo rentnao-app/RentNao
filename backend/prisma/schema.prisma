@@ -206,6 +206,12 @@ enum TestimonialStatus {
   ARCHIVED
 }
 
+enum ConversationStatus {
+  PENDING
+  ACCEPTED
+  CLOSED
+}
+
 model User {
   user_id           String           @id @default(cuid())
   role              UserRole         @default(TENANT)
@@ -238,7 +244,12 @@ model User {
   identity_documents        UserIdentityDocument[]
   verification_submissions  VerificationSubmission?
   rental_requests_as_tenant RentalRequest[]         @relation("RentalRequestsTenant")
-  topup_approvals           TopupRequest[]          @relation("TopupApprovals")
+  conversations_as_tenant   Conversation[]          @relation("ConversationsTenant")
+  conversations_as_owner    Conversation[]          @relation("ConversationsOwner")
+  sent_messages             Message[]               @relation("MessagesSender")
+  approved_topup_requests   TopupRequest[]          @relation("TopupApprovals")
+  owner_deals               Deal[]                  @relation("OwnerDeals")
+  tenant_deals              Deal[]                  @relation("TenantDeals")
   notifications             Notification[]
   discount_redemptions      DiscountRedemption[]
   discount_eligibilities    DiscountEligibleUser[]
@@ -314,6 +325,13 @@ model BaseUserProfile {
   current_lng  Float?
   current_area String?
 
+  // Transliteration (Bengali)
+  full_name_bn  String?
+  profession_bn String?
+  religion_bn   String?
+  phone_bn      String?
+  nid_bn        String?
+
   created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)
 
@@ -374,15 +392,24 @@ model Property {
   has_lift           Boolean        @default(false)
   has_generator      Boolean        @default(false)
   has_security_guard Boolean        @default(false)
+  floor_no           Int            @default(1)
+  flat_no            String?
+
+  // Transliteration (Bengali)
+  property_address_bn String?
+  floor_no_bn         String?
+  flat_no_bn          String?
 
   // Property preferences
   intended_tenant_type TenantType
 
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  owner    OwnerProfile    @relation(fields: [owner_id], references: [owner_id], onDelete: Cascade)
-  listings Listing[]
-  images   PropertyImage[]
+  owner         OwnerProfile    @relation(fields: [owner_id], references: [owner_id], onDelete: Cascade)
+  listings      Listing[]
+  images        PropertyImage[]
+  conversations Conversation[]
+  deals         Deal[]
 
   @@index([owner_id])
 }
@@ -573,6 +600,7 @@ model Listing {
   listing_unlocks ListingUnlock[]
   wishlist_items  Wishlist[]
   rental_requests RentalRequest[]
+  deals           Deal[]
 
   @@index([property_id])
   @@index([listing_status, listing_start_date])
@@ -719,4 +747,61 @@ model Testimonial {
   user User @relation(fields: [userId], references: [user_id], onDelete: Cascade)
 
   @@index([status, isFeatured])
+}
+
+model Conversation {
+  id             String             @id @default(cuid())
+  property_id    String
+  tenant_user_id String
+  owner_user_id  String
+  status         ConversationStatus @default(PENDING)
+  expires_at     DateTime?          @db.Timestamptz(6)
+  created_at     DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?          @updatedAt @db.Timestamptz(6)
+  closed_at      DateTime?          @db.Timestamptz(6)
+  closed_by      String?
+
+  property Property  @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
+  tenant   User      @relation("ConversationsTenant", fields: [tenant_user_id], references: [user_id], onDelete: Restrict)
+  owner    User      @relation("ConversationsOwner", fields: [owner_user_id], references: [user_id], onDelete: Restrict)
+  messages Message[]
+
+  @@unique([property_id, tenant_user_id])
+  @@index([tenant_user_id, status])
+  @@index([owner_user_id, status])
+  @@index([status, expires_at])
+}
+
+model Message {
+  id              String   @id @default(cuid())
+  conversation_id String
+  sender_user_id  String
+  content         String   @db.Text
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessagesSender", fields: [sender_user_id], references: [user_id], onDelete: Restrict)
+
+  @@index([conversation_id, created_at])
+  @@index([sender_user_id])
+}
+
+model Deal {
+  deal_id      String    @id @default(cuid())
+  property_id  String
+  listing_id   String?
+  owner_id     String
+  tenant_id    String
+  document_url String?
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @updatedAt @db.Timestamptz(6)
+
+  property Property @relation(fields: [property_id], references: [property_id], onDelete: Restrict)
+  listing  Listing? @relation(fields: [listing_id], references: [listing_id], onDelete: SetNull)
+  owner    User     @relation("OwnerDeals", fields: [owner_id], references: [user_id], onDelete: Restrict)
+  tenant   User     @relation("TenantDeals", fields: [tenant_id], references: [user_id], onDelete: Restrict)
+
+  @@index([owner_id])
+  @@index([tenant_id])
+  @@index([property_id])
 }

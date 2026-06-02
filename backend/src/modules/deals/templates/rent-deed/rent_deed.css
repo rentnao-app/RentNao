@@ -1,0 +1,137 @@
+/* ১. ফন্ট ইমপোর্ট */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&display=swap');
+
+/* ২. বেস রিসেট ও স্টাইল */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #525659; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Noto Serif Bengali', serif;
+    font-size: 12pt;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #000000;
+}
+
+/* ৩. A4 পেজ ডাইমেনশন */
+.page {
+    width: 210mm;
+    height: 297mm;
+    background-color: #fdf5cd; /* স্ট্যাম্প পেপারের হালকা হলুদ আভা */
+    margin: 20px auto;
+    padding: 15mm 20mm; 
+    box-sizing: border-box;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    page-break-after: always;
+    position: relative;
+}
+
+.page:last-child {
+    page-break-after: auto;
+}
+
+@page {
+    size: A4;
+    margin: 0; 
+}
+
+@media print {
+    body { background-color: transparent; }
+    .page { 
+        margin: 0; 
+        box-shadow: none; 
+        -webkit-print-color-adjust: exact; 
+        print-color-adjust: exact;
+    }
+}
+
+/* ৪. ডক এলিমেন্ট স্টাইলিং */
+.stamp-header {
+    width: 100%;
+    height: auto;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.doc-title {
+    text-align: center;
+    font-size: 16pt;
+    font-weight: 700;
+    text-decoration: underline;
+    margin-bottom: 15px;
+}
+
+.paragraph {
+    text-align: justify;
+    margin-bottom: 15px;
+}
+
+.party-label {
+    text-align: right;
+    font-weight: 600;
+    margin-bottom: 25px;
+    margin-top: -10px;
+}
+
+.condition-title {
+    font-weight: 700;
+    font-size: 15pt;
+    margin-top: 30px;
+    margin-bottom: 10px;
+}
+
+.clauses-page .paragraph {
+    line-height: 1.8;
+    margin-bottom: 22px;
+}
+
+.var {
+    font-weight: 800;
+}
+
+.blank-space {
+    display: inline-block;
+    width: 220px;
+    height: 1.2em;
+    background-color: transparent;
+    border-bottom: 1px dashed #000000;
+    margin: 0 4px;
+    vertical-align: bottom;
+}
+.blank-space.short { width: 60px; }
+.blank-space.long { width: 220px; }
+
+.signature-section {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 40px;
+}
+
+.witnesses {
+    flex: 1;
+}
+
+.witness {
+    margin-bottom: 80px;
+}
+
+.parties {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.signature-block {
+    text-align: center;
+    margin-bottom: 80px;
+}
+
+.dotted-line {
+    border-bottom: 1.5px dotted #000000;
+    width: 250px;
+    margin-bottom: 5px;
+}

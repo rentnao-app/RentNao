@@ -1,9 +1,11 @@
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { AppError } from '@/errors/base';
+import { dispatchTransliteration } from '@/modules/deals/transliteration';
 import {
   createPropertyImageRoute,
   createListingRoute,
   getPublicListingDetailRoute,
+  incrementListingViewRoute,
   getUnlockedListingDetailRoute,
   createPropertyRoute,
   getPropertyImageUploadUrlRoute,
@@ -25,6 +27,7 @@ import {
   createListingForProperty,
   createProperty,
   getPublicListingDetail,
+  incrementListingViewCount,
   getUnlockedListingDetailForTenant,
   getPropertyByIdForUserRole,
   getPropertyImageUploadUrl,
@@ -50,6 +53,20 @@ export function registerPropertyRoutes(app: OpenAPIHono) {
 
     const body = c.req.valid('json');
     const data = await createProperty(user.userId, body);
+
+    dispatchTransliteration(
+      {
+        floorNo: body.floorNo,
+        flatNo: body.flatNo,
+        propertyAddress: body.address,
+      },
+      {
+        table: 'Property',
+        idColumn: 'property_id',
+        idValue: data.propertyId,
+      }
+    );
+
     return c.json({ success: true, data }, 201);
   });
 
@@ -95,6 +112,20 @@ export function registerPropertyRoutes(app: OpenAPIHono) {
     }
 
     const data = await updateMyPropertyById(user.userId, propertyId, body);
+
+    dispatchTransliteration(
+      {
+        floorNo: body.floorNo,
+        flatNo: body.flatNo,
+        propertyAddress: body.address,
+      },
+      {
+        table: 'Property',
+        idColumn: 'property_id',
+        idValue: propertyId,
+      }
+    );
+
     return c.json({ success: true, data }, 200);
   });
 
@@ -208,6 +239,12 @@ export function registerPublicPropertyRoutes(app: OpenAPIHono) {
   app.openapi(getPublicListingDetailRoute, async (c) => {
     const { listingId } = c.req.valid('param');
     const data = await getPublicListingDetail(listingId);
+    return c.json({ success: true, data }, 200);
+  });
+
+  app.openapi(incrementListingViewRoute, async (c) => {
+    const { listingId } = c.req.valid('param');
+    const data = await incrementListingViewCount(listingId);
     return c.json({ success: true, data }, 200);
   });
 }

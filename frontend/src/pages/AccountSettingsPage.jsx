@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { apiFetch, getApiErrorMessage, getCurrentUser, getUserId, getUserRole, isLoggedIn } from '../lib/api';
@@ -56,6 +56,52 @@ function toDateLabel(value) {
   return date.toLocaleDateString();
 }
 
+function toDateInputValue(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+const EMPTY_PROFILE_FORM = {
+  firstName: '',
+  lastName: '',
+  dateOfBirth: '',
+  gender: '',
+  religion: '',
+  profession: '',
+  jobCategory: '',
+  profilePhotoKey: '',
+  currentArea: '',
+  incomeRange: '',
+  employmentStatus: '',
+  familyStatus: '',
+  familySize: '',
+  ownerCategory: '',
+};
+
+function buildProfileFormFromDetails(profile = {}) {
+  return {
+    firstName: profile.firstName || '',
+    lastName: profile.lastName || '',
+    dateOfBirth: toDateInputValue(profile.dateOfBirth),
+    gender: profile.gender || '',
+    religion: profile.religion || '',
+    profession: profile.profession || '',
+    jobCategory: profile.jobCategory || '',
+    profilePhotoKey: profile.profilePhotoKey || '',
+    currentArea: profile.currentArea || '',
+    incomeRange: profile.incomeRange || '',
+    employmentStatus: profile.employmentStatus || '',
+    familyStatus: profile.familyStatus || '',
+    familySize:
+      profile.familySize != null && profile.familySize !== ''
+        ? String(profile.familySize)
+        : '',
+    ownerCategory: profile.ownerCategory || '',
+  };
+}
+
 export default function AccountSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -66,22 +112,10 @@ export default function AccountSettingsPage() {
   const [profilePhotoFile, setProfilePhotoFile] = useState(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState('');
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
-  const [profileForm, setProfileForm] = useState({
-    firstName: '',
-    lastName: '',
-    dateOfBirth: '',
-    gender: '',
-    religion: '',
-    profession: '',
-    jobCategory: '',
-    profilePhotoKey: '',
-    currentArea: '',
-    incomeRange: '',
-    employmentStatus: '',
-    familyStatus: '',
-    familySize: '',
-    ownerCategory: '',
-  });
+  const [profileForm, setProfileForm] = useState({ ...EMPTY_PROFILE_FORM });
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [savingPhoto, setSavingPhoto] = useState(false);
+  const profilePhotoInputRef = useRef(null);
 
   const [localUser] = useState(() => getCurrentUser());
   const localUserId = getLocalUserId(localUser);
@@ -125,6 +159,7 @@ export default function AccountSettingsPage() {
         if (!statusRes.ok) throw new Error(getApiErrorMessage(statusBody, 'Failed to load profile status'));
         setStatusData(statusBody?.data || null);
         const profile = statusBody?.data?.profile || {};
+        setProfileForm(buildProfileFormFromDetails(profile));
         await loadProfilePhotoUrl(profile?.profilePhotoKey);
         savePublicProfileSnapshot({
           userId: localUserId,
@@ -162,6 +197,28 @@ export default function AccountSettingsPage() {
 
   const isFamilyStatus = profileForm.familyStatus === 'FAMILY';
 
+  const startEditingProfile = () => {
+    const profile = statusData?.profile || {};
+    setProfileForm(buildProfileFormFromDetails(profile));
+    setProfilePhotoFile(null);
+    setProfilePhotoPreview('');
+    setError('');
+    setSuccess('');
+    setIsEditingProfile(true);
+  };
+
+  const cancelEditingProfile = () => {
+    const profile = statusData?.profile || {};
+    setProfileForm(buildProfileFormFromDetails(profile));
+    setProfilePhotoFile(null);
+    setProfilePhotoPreview('');
+    setError('');
+    setIsEditingProfile(false);
+  };
+
+  const fieldClass =
+    'w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-600 disabled:cursor-not-allowed';
+
   const adjustFamilySize = (delta) => {
     if (!isFamilyStatus) return;
     const current = Number(profileForm.familySize) || 1;
@@ -189,6 +246,88 @@ export default function AccountSettingsPage() {
     reader.readAsDataURL(file);
     setProfilePhotoFile(file);
     setError('');
+  };
+
+  const uploadProfilePhoto = async (file) => {
+    if (!localUserId) throw new Error('User ID not found.');
+
+    const uploadRes = await apiFetch(`/users/${localUserId}/profile-photo/upload-url`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: file.name,
+        mimeType: file.type,
+      }),
+    });
+    const uploadBody = await uploadRes.json().catch(() => ({}));
+    if (!uploadRes.ok) throw new Error(getApiErrorMessage(uploadBody, 'Failed to prepare profile photo upload'));
+
+    const { uploadUrl, fileKey } = uploadBody?.data || {};
+    if (!uploadUrl || !fileKey) throw new Error('Invalid profile photo upload response.');
+
+    const putRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+    if (!putRes.ok) throw new Error('Failed to upload profile photo.');
+
+    const res = await apiFetch(`/users/${localUserId}/profile`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profilePhotoKey: fileKey,
+        ...(role === 'TENANT' || role === 'OWNER' ? { role } : {}),
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(getApiErrorMessage(body, 'Failed to update profile photo'));
+
+    const statusRes = await apiFetch(`/users/${localUserId}/profile-status`);
+    const statusBody = await statusRes.json().catch(() => ({}));
+    if (statusRes.ok) {
+      setStatusData(statusBody?.data || null);
+      const updatedProfile = statusBody?.data?.profile || {};
+      setProfileForm(buildProfileFormFromDetails(updatedProfile));
+      await loadProfilePhotoUrl(updatedProfile?.profilePhotoKey);
+    }
+
+    return body?.message || 'Profile photo updated successfully.';
+  };
+
+  const handleProfilePhotoOnlyChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Profile photo must be less than 5MB.');
+      return;
+    }
+
+    if (!isAllowedFileByMimeAndExtension(file, PROFILE_PHOTO_MIMES)) {
+      setError('Only JPG, JPEG, PNG, or WebP profile photos are allowed, and the file extension must match the file type.');
+      return;
+    }
+
+    setSavingPhoto(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const message = await uploadProfilePhoto(file);
+      addLocalNotification({
+        title: 'Profile Photo Updated',
+        message: 'Your profile picture was updated successfully.',
+        url: '/account',
+        type: 'PROFILE',
+      });
+      setSuccess(message);
+    } catch (err) {
+      setError(err?.message || 'Failed to update profile photo.');
+    } finally {
+      setSavingPhoto(false);
+    }
   };
 
   const saveProfile = async (e) => {
@@ -258,6 +397,7 @@ export default function AccountSettingsPage() {
       if (statusRes.ok) {
         setStatusData(statusBody?.data || null);
         const profile = statusBody?.data?.profile || {};
+        setProfileForm(buildProfileFormFromDetails(profile));
         await loadProfilePhotoUrl(profile?.profilePhotoKey);
         savePublicProfileSnapshot({
           userId: localUserId,
@@ -280,22 +420,7 @@ export default function AccountSettingsPage() {
       setSuccess(body?.message || 'Profile updated successfully.');
       setProfilePhotoFile(null);
       setProfilePhotoPreview('');
-      setProfileForm({
-        firstName: '',
-        lastName: '',
-        dateOfBirth: '',
-        gender: '',
-        religion: '',
-        profession: '',
-        jobCategory: '',
-        profilePhotoKey: '',
-        currentArea: '',
-        incomeRange: '',
-        employmentStatus: '',
-        familyStatus: '',
-        familySize: '',
-        ownerCategory: '',
-      });
+      setIsEditingProfile(false);
     } catch (e) {
       setError(e.message || 'Failed to update profile.');
     } finally {
@@ -319,23 +444,24 @@ export default function AccountSettingsPage() {
   const dashboardPath =
     role === 'ADMIN' ? '/admin-dashboard' : role === 'OWNER' ? '/owner-dashboard' : '/tenant-dashboard';
 
-  const profileCompletion = statusData?.profileCompletion;
   const profile = statusData?.profile || {};
-  const baseMissing = profileCompletion?.base?.missingFields || [];
-  const roleMissing = profileCompletion?.roleSpecific?.missingFields || [];
 
   return (
     <div className="min-h-screen bg-gray-100">
       <AppHeader />
 
       <main className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <Link
-          to={dashboardPath}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 mb-3"
-        >
-          <span aria-hidden>&larr;</span> Back to dashboard
-        </Link>
-        <h1 className="mb-6 text-xl font-bold text-gray-900 md:text-2xl lg:text-3xl">Account Settings</h1>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-xl font-bold text-gray-900 md:text-2xl lg:text-3xl">
+            Account Settings
+          </h1>
+          <Link
+            to={dashboardPath}
+            className="inline-flex items-center justify-center gap-1.5 self-start rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 sm:self-auto"
+          >
+            <span aria-hidden>&larr;</span> Back to dashboard
+          </Link>
+        </div>
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
@@ -348,76 +474,101 @@ export default function AccountSettingsPage() {
         )}
 
         <section className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Account</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <p><span className="text-gray-500">Email:</span> {statusData?.contactEmail || user.contactEmail || user.contact_email || user.email || 'N/A'}</p>
-            <p><span className="text-gray-500">Phone:</span> {statusData?.contactPhone || user.contactPhone || user.contact_phone || user.contactNumber || user.contact_number || 'N/A'}</p>
-            <p><span className="text-gray-500">Role:</span> {role || 'N/A'}</p>
-            <p><span className="text-gray-500">Onboarding:</span> {toLabel(statusData?.onboardingStatus)}</p>
-            <p><span className="text-gray-500">KYC Status:</span> {toLabel(statusData?.kycVerificationStatus)}</p>
-          </div>
-          {profileCompletion && (
-            <div className="mt-4 text-sm">
-              <p className="font-medium text-gray-900">
-                Profile completion: {profileCompletion?.overall ? 'Complete' : 'Incomplete'}
-              </p>
-              {!profileCompletion?.overall && (
-                <div className="mt-2 text-gray-600">
-                  {baseMissing.length > 0 && <p>Base missing: {baseMissing.join(', ')}</p>}
-                  {roleMissing.length > 0 && <p>Role missing: {roleMissing.join(', ')}</p>}
-                </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Profile Details</h2>
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-[12rem_minmax(0,1fr)_minmax(0,1fr)] md:gap-x-10 lg:gap-x-14 md:items-start">
+            <div className="mx-auto flex w-full max-w-[12rem] flex-col items-center text-center md:mx-0">
+              <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50">
+                {profilePhotoUrl ? (
+                  <img
+                    src={profilePhotoUrl}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="px-2 text-center text-xs text-gray-400">No photo</span>
+                )}
+              </div>
+              <input
+                ref={profilePhotoInputRef}
+                type="file"
+                accept={getAcceptValue(PROFILE_PHOTO_MIMES)}
+                className="hidden"
+                onChange={handleProfilePhotoOnlyChange}
+              />
+              <button
+                type="button"
+                onClick={() => profilePhotoInputRef.current?.click()}
+                disabled={savingPhoto}
+                className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold leading-snug text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingPhoto ? 'Uploading…' : 'Update profile picture'}
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm md:pl-2 lg:pl-4">
+              <p><span className="text-gray-500">Email:</span> {statusData?.contactEmail || user.contactEmail || user.contact_email || user.email || 'N/A'}</p>
+              <p><span className="text-gray-500">Full Name:</span> {profile.firstName || profile.lastName ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'N/A'}</p>
+              <p><span className="text-gray-500">Gender:</span> {toLabel(profile.gender)}</p>
+              <p><span className="text-gray-500">Profession:</span> {profile.profession || 'N/A'}</p>
+              <p><span className="text-gray-500">Current Area:</span> {profile.currentArea || 'N/A'}</p>
+              {role === 'TENANT' && (
+                <>
+                  <p><span className="text-gray-500">Income Range:</span> {toLabel(profile.incomeRange)}</p>
+                  <p><span className="text-gray-500">Employment Status:</span> {toLabel(profile.employmentStatus)}</p>
+                </>
               )}
             </div>
-          )}
-        </section>
 
-        <section className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Complete Profile Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <p><span className="text-gray-500">Full Name:</span> {profile.firstName || profile.lastName ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'N/A'}</p>
-            <p><span className="text-gray-500">Date of Birth:</span> {toDateLabel(profile.dateOfBirth)}</p>
-            <p><span className="text-gray-500">Gender:</span> {toLabel(profile.gender)}</p>
-            <p><span className="text-gray-500">Religion:</span> {profile.religion || 'N/A'}</p>
-            <p><span className="text-gray-500">Profession:</span> {profile.profession || 'N/A'}</p>
-            <p><span className="text-gray-500">Job Category:</span> {toLabel(profile.jobCategory)}</p>
-            <p><span className="text-gray-500">Current Area:</span> {profile.currentArea || 'N/A'}</p>
-            {role === 'TENANT' && (
-              <>
-                <p><span className="text-gray-500">Income Range:</span> {toLabel(profile.incomeRange)}</p>
-                <p><span className="text-gray-500">Employment Status:</span> {toLabel(profile.employmentStatus)}</p>
-                <p><span className="text-gray-500">Family Status:</span> {toLabel(profile.familyStatus)}</p>
-                <p><span className="text-gray-500">Family Size:</span> {profile.familySize ?? 'N/A'}</p>
-              </>
-            )}
-            {role === 'OWNER' && (
-              <p><span className="text-gray-500">Owner Category:</span> {toLabel(profile.ownerCategory)}</p>
-            )}
+            <div className="space-y-3 text-sm md:pl-2 lg:pl-4">
+              <p><span className="text-gray-500">Phone:</span> {statusData?.contactPhone || user.contactPhone || user.contact_phone || user.contactNumber || user.contact_number || 'N/A'}</p>
+              <p><span className="text-gray-500">Date of Birth:</span> {toDateLabel(profile.dateOfBirth)}</p>
+              <p><span className="text-gray-500">Religion:</span> {profile.religion || 'N/A'}</p>
+              <p><span className="text-gray-500">Job Category:</span> {toLabel(profile.jobCategory)}</p>
+              {role === 'OWNER' && (
+                <p><span className="text-gray-500">Owner Category:</span> {toLabel(profile.ownerCategory)}</p>
+              )}
+              {role === 'TENANT' && (
+                <>
+                  <p><span className="text-gray-500">Family Status:</span> {toLabel(profile.familyStatus)}</p>
+                  <p><span className="text-gray-500">Family Size:</span> {profile.familySize ?? 'N/A'}</p>
+                </>
+              )}
+            </div>
           </div>
         </section>
 
-        <form onSubmit={saveProfile} className="bg-white shadow rounded-lg p-6 space-y-4">
+        {!isEditingProfile ? (
+          <button
+            type="button"
+            onClick={startEditingProfile}
+            className="mb-8 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+          >
+            Edit Profile
+          </button>
+        ) : (
+        <form onSubmit={saveProfile} className="bg-white shadow rounded-lg p-6 space-y-4 mb-8">
           <h2 className="text-xl font-bold text-gray-900">Update Profile</h2>
           <p className="text-sm text-gray-500">
-            Submit only the fields you want to change. Fields left empty are ignored.
+            Update the fields below, then click Update Profile to save your changes.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="text" placeholder="First name" value={profileForm.firstName} onChange={(e) => onChange('firstName', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-            <input type="text" placeholder="Last name" value={profileForm.lastName} onChange={(e) => onChange('lastName', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-            <input type="date" value={profileForm.dateOfBirth} onChange={(e) => onChange('dateOfBirth', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-            <select value={profileForm.gender} onChange={(e) => onChange('gender', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <input type="text" placeholder="First name" value={profileForm.firstName} onChange={(e) => onChange('firstName', e.target.value)} className={fieldClass} />
+            <input type="text" placeholder="Last name" value={profileForm.lastName} onChange={(e) => onChange('lastName', e.target.value)} className={fieldClass} />
+            <input type="date" value={profileForm.dateOfBirth} onChange={(e) => onChange('dateOfBirth', e.target.value)} className={fieldClass} />
+            <select value={profileForm.gender} onChange={(e) => onChange('gender', e.target.value)} className={fieldClass}>
               <option value="">Select gender</option>
               {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
-            <select value={profileForm.religion} onChange={(e) => onChange('religion', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <select value={profileForm.religion} onChange={(e) => onChange('religion', e.target.value)} className={fieldClass}>
               <option value="">Select religion</option>
               {RELIGION_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
-            <select value={profileForm.profession} onChange={(e) => onChange('profession', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <select value={profileForm.profession} onChange={(e) => onChange('profession', e.target.value)} className={fieldClass}>
               <option value="">Select profession</option>
               {PROFESSION_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
-            <select value={profileForm.jobCategory} onChange={(e) => onChange('jobCategory', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <select value={profileForm.jobCategory} onChange={(e) => onChange('jobCategory', e.target.value)} className={fieldClass}>
               <option value="">Select job category</option>
               {JOB_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
@@ -466,7 +617,7 @@ export default function AccountSettingsPage() {
                 </div>
               </div>
             </div>
-            <select value={profileForm.currentArea} onChange={(e) => onChange('currentArea', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg md:col-span-2">
+            <select value={profileForm.currentArea} onChange={(e) => onChange('currentArea', e.target.value)} className={`${fieldClass} md:col-span-2`}>
               <option value="">Select current area</option>
               {AREA_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
@@ -474,15 +625,15 @@ export default function AccountSettingsPage() {
 
           {role === 'TENANT' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
-              <select value={profileForm.incomeRange} onChange={(e) => onChange('incomeRange', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+              <select value={profileForm.incomeRange} onChange={(e) => onChange('incomeRange', e.target.value)} className={fieldClass}>
                 <option value="">Select income range</option>
                 {INCOME_RANGES.map((item) => <option key={item} value={item}>{INCOME_RANGE_LABELS[item] || item}</option>)}
               </select>
-              <select value={profileForm.employmentStatus} onChange={(e) => onChange('employmentStatus', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+              <select value={profileForm.employmentStatus} onChange={(e) => onChange('employmentStatus', e.target.value)} className={fieldClass}>
                 <option value="">Select employment status</option>
                 {EMPLOYMENT_STATUSES.map((item) => <option key={item} value={item}>{toLabel(item)}</option>)}
               </select>
-              <select value={profileForm.familyStatus} onChange={(e) => onChange('familyStatus', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+              <select value={profileForm.familyStatus} onChange={(e) => onChange('familyStatus', e.target.value)} className={fieldClass}>
                 <option value="">Select family status</option>
                 {FAMILY_STATUSES.map((item) => <option key={item} value={item}>{toLabel(item)}</option>)}
               </select>
@@ -518,21 +669,32 @@ export default function AccountSettingsPage() {
 
           {role === 'OWNER' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
-              <select value={profileForm.ownerCategory} onChange={(e) => onChange('ownerCategory', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+              <select value={profileForm.ownerCategory} onChange={(e) => onChange('ownerCategory', e.target.value)} className={fieldClass}>
                 <option value="">Select owner category</option>
                 {OWNER_CATEGORIES.map((item) => <option key={item} value={item}>{toLabel(item)}</option>)}
               </select>
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={savingProfile}
-            className="bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2 px-4 rounded disabled:opacity-50"
-          >
-            {savingProfile ? 'Saving...' : 'Save Profile'}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              disabled={savingProfile}
+              className="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-50"
+            >
+              {savingProfile ? 'Updating...' : 'Update Profile'}
+            </button>
+            <button
+              type="button"
+              onClick={cancelEditingProfile}
+              disabled={savingProfile}
+              className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
+        )}
       </main>
     </div>
   );

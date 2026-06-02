@@ -160,5 +160,9 @@ export type TopupProviderType = z.infer<typeof TopupProvider>;
 export const TopupStatus = z.enum(['PENDING', 'SUCCESS', 'FAILED', 'EXPIRED']);
 export type TopupStatusType = z.infer<typeof TopupStatus>;
 
+// Chat Enums
+
+export const ConversationStatus = z.enum(['PENDING', 'ACCEPTED', 'CLOSED']);
+export type ConversationStatusType = z.infer<typeof ConversationStatus>;
 export const DiscountType = z.enum(['FIXED', 'PERCENTAGE']);
 export type DiscountTypeType = z.infer<typeof DiscountType>;
