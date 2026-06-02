@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { apiFetch, getApiErrorMessage, getCurrentUser, getUserId, getUserRole, isLoggedIn } from '../lib/api';
@@ -114,6 +114,8 @@ export default function AccountSettingsPage() {
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const [profileForm, setProfileForm] = useState({ ...EMPTY_PROFILE_FORM });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [savingPhoto, setSavingPhoto] = useState(false);
+  const profilePhotoInputRef = useRef(null);
 
   const [localUser] = useState(() => getCurrentUser());
   const localUserId = getLocalUserId(localUser);
@@ -244,6 +246,88 @@ export default function AccountSettingsPage() {
     reader.readAsDataURL(file);
     setProfilePhotoFile(file);
     setError('');
+  };
+
+  const uploadProfilePhoto = async (file) => {
+    if (!localUserId) throw new Error('User ID not found.');
+
+    const uploadRes = await apiFetch(`/users/${localUserId}/profile-photo/upload-url`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: file.name,
+        mimeType: file.type,
+      }),
+    });
+    const uploadBody = await uploadRes.json().catch(() => ({}));
+    if (!uploadRes.ok) throw new Error(getApiErrorMessage(uploadBody, 'Failed to prepare profile photo upload'));
+
+    const { uploadUrl, fileKey } = uploadBody?.data || {};
+    if (!uploadUrl || !fileKey) throw new Error('Invalid profile photo upload response.');
+
+    const putRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+    if (!putRes.ok) throw new Error('Failed to upload profile photo.');
+
+    const res = await apiFetch(`/users/${localUserId}/profile`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profilePhotoKey: fileKey,
+        ...(role === 'TENANT' || role === 'OWNER' ? { role } : {}),
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(getApiErrorMessage(body, 'Failed to update profile photo'));
+
+    const statusRes = await apiFetch(`/users/${localUserId}/profile-status`);
+    const statusBody = await statusRes.json().catch(() => ({}));
+    if (statusRes.ok) {
+      setStatusData(statusBody?.data || null);
+      const updatedProfile = statusBody?.data?.profile || {};
+      setProfileForm(buildProfileFormFromDetails(updatedProfile));
+      await loadProfilePhotoUrl(updatedProfile?.profilePhotoKey);
+    }
+
+    return body?.message || 'Profile photo updated successfully.';
+  };
+
+  const handleProfilePhotoOnlyChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Profile photo must be less than 5MB.');
+      return;
+    }
+
+    if (!isAllowedFileByMimeAndExtension(file, PROFILE_PHOTO_MIMES)) {
+      setError('Only JPG, JPEG, PNG, or WebP profile photos are allowed, and the file extension must match the file type.');
+      return;
+    }
+
+    setSavingPhoto(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const message = await uploadProfilePhoto(file);
+      addLocalNotification({
+        title: 'Profile Photo Updated',
+        message: 'Your profile picture was updated successfully.',
+        url: '/account',
+        type: 'PROFILE',
+      });
+      setSuccess(message);
+    } catch (err) {
+      setError(err?.message || 'Failed to update profile photo.');
+    } finally {
+      setSavingPhoto(false);
+    }
   };
 
   const saveProfile = async (e) => {
@@ -390,28 +474,66 @@ export default function AccountSettingsPage() {
         )}
 
         <section className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Profile Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <p><span className="text-gray-500">Email:</span> {statusData?.contactEmail || user.contactEmail || user.contact_email || user.email || 'N/A'}</p>
-            <p><span className="text-gray-500">Phone:</span> {statusData?.contactPhone || user.contactPhone || user.contact_phone || user.contactNumber || user.contact_number || 'N/A'}</p>
-            <p><span className="text-gray-500">Full Name:</span> {profile.firstName || profile.lastName ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'N/A'}</p>
-            <p><span className="text-gray-500">Date of Birth:</span> {toDateLabel(profile.dateOfBirth)}</p>
-            <p><span className="text-gray-500">Gender:</span> {toLabel(profile.gender)}</p>
-            <p><span className="text-gray-500">Religion:</span> {profile.religion || 'N/A'}</p>
-            <p><span className="text-gray-500">Profession:</span> {profile.profession || 'N/A'}</p>
-            <p><span className="text-gray-500">Job Category:</span> {toLabel(profile.jobCategory)}</p>
-            <p><span className="text-gray-500">Current Area:</span> {profile.currentArea || 'N/A'}</p>
-            {role === 'TENANT' && (
-              <>
-                <p><span className="text-gray-500">Income Range:</span> {toLabel(profile.incomeRange)}</p>
-                <p><span className="text-gray-500">Employment Status:</span> {toLabel(profile.employmentStatus)}</p>
-                <p><span className="text-gray-500">Family Status:</span> {toLabel(profile.familyStatus)}</p>
-                <p><span className="text-gray-500">Family Size:</span> {profile.familySize ?? 'N/A'}</p>
-              </>
-            )}
-            {role === 'OWNER' && (
-              <p><span className="text-gray-500">Owner Category:</span> {toLabel(profile.ownerCategory)}</p>
-            )}
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Profile Details</h2>
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-[12rem_minmax(0,1fr)_minmax(0,1fr)] md:gap-x-10 lg:gap-x-14 md:items-start">
+            <div className="mx-auto flex w-full max-w-[12rem] flex-col items-center text-center md:mx-0">
+              <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50">
+                {profilePhotoUrl ? (
+                  <img
+                    src={profilePhotoUrl}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="px-2 text-center text-xs text-gray-400">No photo</span>
+                )}
+              </div>
+              <input
+                ref={profilePhotoInputRef}
+                type="file"
+                accept={getAcceptValue(PROFILE_PHOTO_MIMES)}
+                className="hidden"
+                onChange={handleProfilePhotoOnlyChange}
+              />
+              <button
+                type="button"
+                onClick={() => profilePhotoInputRef.current?.click()}
+                disabled={savingPhoto}
+                className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold leading-snug text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingPhoto ? 'Uploading…' : 'Update profile picture'}
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm md:pl-2 lg:pl-4">
+              <p><span className="text-gray-500">Email:</span> {statusData?.contactEmail || user.contactEmail || user.contact_email || user.email || 'N/A'}</p>
+              <p><span className="text-gray-500">Full Name:</span> {profile.firstName || profile.lastName ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'N/A'}</p>
+              <p><span className="text-gray-500">Gender:</span> {toLabel(profile.gender)}</p>
+              <p><span className="text-gray-500">Profession:</span> {profile.profession || 'N/A'}</p>
+              <p><span className="text-gray-500">Current Area:</span> {profile.currentArea || 'N/A'}</p>
+              {role === 'TENANT' && (
+                <>
+                  <p><span className="text-gray-500">Income Range:</span> {toLabel(profile.incomeRange)}</p>
+                  <p><span className="text-gray-500">Employment Status:</span> {toLabel(profile.employmentStatus)}</p>
+                </>
+              )}
+            </div>
+
+            <div className="space-y-3 text-sm md:pl-2 lg:pl-4">
+              <p><span className="text-gray-500">Phone:</span> {statusData?.contactPhone || user.contactPhone || user.contact_phone || user.contactNumber || user.contact_number || 'N/A'}</p>
+              <p><span className="text-gray-500">Date of Birth:</span> {toDateLabel(profile.dateOfBirth)}</p>
+              <p><span className="text-gray-500">Religion:</span> {profile.religion || 'N/A'}</p>
+              <p><span className="text-gray-500">Job Category:</span> {toLabel(profile.jobCategory)}</p>
+              {role === 'OWNER' && (
+                <p><span className="text-gray-500">Owner Category:</span> {toLabel(profile.ownerCategory)}</p>
+              )}
+              {role === 'TENANT' && (
+                <>
+                  <p><span className="text-gray-500">Family Status:</span> {toLabel(profile.familyStatus)}</p>
+                  <p><span className="text-gray-500">Family Size:</span> {profile.familySize ?? 'N/A'}</p>
+                </>
+              )}
+            </div>
           </div>
         </section>
 

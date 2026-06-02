@@ -78,7 +78,7 @@ export default function AppHeader({ variant = 'app' }) {
           {loggedIn ? <WalletPill /> : null}
 
           {/* Nav block pushed to the right */}
-          <nav className="ml-auto hidden items-center gap-1 lg:flex" aria-label="Primary">
+          <nav className="ml-auto hidden items-center gap-2 lg:flex" aria-label="Primary">
             {navItems.map((item) => (
               <NavLink key={item.to + item.label} item={item} pathname={location.pathname} />
             ))}
@@ -139,6 +139,7 @@ export default function AppHeader({ variant = 'app' }) {
         <MobileDrawer
           onClose={() => setDrawerOpen(false)}
           navItems={navItems}
+          pathname={location.pathname}
           loggedIn={loggedIn}
           userName={userName}
           userEmail={userEmail}
@@ -160,6 +161,20 @@ function NavLink({ item, pathname }) {
         }`}
       >
         {item.icon ? <Icon path={item.icon} className="h-4 w-4" /> : null}
+        {item.label}
+      </Link>
+    );
+  }
+  if (item.buttonNav) {
+    return (
+      <Link
+        to={item.to}
+        className={`inline-flex items-center rounded-lg border px-3.5 py-2 text-sm font-semibold shadow-sm transition ${
+          active
+            ? 'border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800'
+            : 'border-emerald-200 bg-white text-emerald-800 hover:border-emerald-300 hover:bg-emerald-50'
+        }`}
+      >
         {item.label}
       </Link>
     );
@@ -199,7 +214,7 @@ function WalletPill() {
   );
 }
 
-function MobileDrawer({ onClose, navItems, loggedIn, userName, userEmail, role }) {
+function MobileDrawer({ onClose, navItems, pathname, loggedIn, userName, userEmail, role }) {
   return (
     <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
       <button
@@ -250,8 +265,10 @@ function MobileDrawer({ onClose, navItems, loggedIn, userName, userEmail, role }
           </div>
         ) : null}
 
-        <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 flex flex-col gap-1" aria-label="Primary">
-          {navItems.map((item) => (
+        <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 flex flex-col gap-1.5" aria-label="Primary">
+          {navItems.map((item) => {
+            const active = isActive(item, pathname);
+            return (
             <Link
               key={item.to + item.label}
               to={item.to}
@@ -259,12 +276,17 @@ function MobileDrawer({ onClose, navItems, loggedIn, userName, userEmail, role }
               className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition ${
                 item.cta
                   ? 'bg-emerald-700 text-white hover:bg-emerald-800 font-semibold'
-                  : 'text-gray-700 hover:bg-emerald-50/80 font-medium'
+                  : item.buttonNav
+                    ? active
+                      ? 'border border-emerald-700 bg-emerald-700 font-semibold text-white'
+                      : 'border border-emerald-200 bg-white font-semibold text-emerald-800 hover:border-emerald-300 hover:bg-emerald-50'
+                    : 'text-gray-700 hover:bg-emerald-50/80 font-medium'
               }`}
             >
               {item.label}
             </Link>
-          ))}
+            );
+          })}
         </nav>
 
         {loggedIn ? (
@@ -343,10 +365,10 @@ function buildNav(role, loggedIn) {
   }
   if (role === 'TENANT') {
     return [
-      { to: '/tenant-dashboard', label: 'Dashboard' },
-      { to: '/listings', label: 'Browse' },
-      { to: '/tenant-dashboard/applications', label: 'My Applications' },
-      { to: '/tenant-dashboard/wishlist', label: 'Wishlist' },
+      { to: '/tenant-dashboard', label: 'Dashboard', buttonNav: true },
+      { to: '/listings', label: 'Browse', buttonNav: true },
+      { to: '/tenant-dashboard/applications', label: 'My Applications', buttonNav: true },
+      { to: '/tenant-dashboard/wishlist', label: 'Wishlist', buttonNav: true },
     ];
   }
   if (role === 'ADMIN') {
