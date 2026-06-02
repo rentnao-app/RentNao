@@ -4,6 +4,7 @@ export async function generatePdf(htmlContent: string): Promise<Buffer> {
   console.log('[PDF Service] Launching headless browser');
   const browser = await puppeteer.launch({
     headless: true,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-local-file-access'],
   });
 
