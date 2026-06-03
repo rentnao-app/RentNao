@@ -338,4 +338,3 @@ export default function AuthVerificationPage() {
     </div>
   );
 }
-
