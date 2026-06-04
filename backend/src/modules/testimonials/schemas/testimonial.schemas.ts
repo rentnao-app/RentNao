@@ -51,5 +51,20 @@ export const myTestimonialStatusResponseSchema = z.object({
   }),
 });
 
+export const testimonialRatingDistributionSchema = z.object({
+  stars: z.number().int().min(1).max(5),
+  count: z.number().int().nonnegative(),
+  percentage: z.number().min(0).max(100),
+});
+
+export const testimonialStatsResponseSchema = z.object({
+  success: z.boolean().openapi({ example: true }),
+  data: z.object({
+    averageRating: z.number().min(0).max(5),
+    totalReviews: z.number().int().nonnegative(),
+    distribution: z.array(testimonialRatingDistributionSchema),
+  }),
+});
+
 export type CreateTestimonialInput = z.infer<typeof createTestimonialSchema>;
 export type GetTestimonialsQueryInput = z.infer<typeof getTestimonialsQuerySchema>;

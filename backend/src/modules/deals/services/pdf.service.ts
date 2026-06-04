@@ -10,13 +10,8 @@ async function getBrowser(): Promise<Browser> {
   console.log('[PDF Service] Launching shared headless browser instance');
   browserInstance = await puppeteer.launch({
     headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-local-file-access',
-      '--disable-extensions',
-      '--disable-dev-shm-usage',
-    ],
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-local-file-access'],
   });
 
   browserInstance.on('disconnected', () => {

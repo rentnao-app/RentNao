@@ -5,6 +5,7 @@ import {
   createPropertyImageRoute,
   createListingRoute,
   getPublicListingDetailRoute,
+  incrementListingViewRoute,
   getUnlockedListingDetailRoute,
   createPropertyRoute,
   getPropertyImageUploadUrlRoute,
@@ -26,6 +27,7 @@ import {
   createListingForProperty,
   createProperty,
   getPublicListingDetail,
+  incrementListingViewCount,
   getUnlockedListingDetailForTenant,
   getPropertyByIdForUserRole,
   getPropertyImageUploadUrl,
@@ -237,6 +239,12 @@ export function registerPublicPropertyRoutes(app: OpenAPIHono) {
   app.openapi(getPublicListingDetailRoute, async (c) => {
     const { listingId } = c.req.valid('param');
     const data = await getPublicListingDetail(listingId);
+    return c.json({ success: true, data }, 200);
+  });
+
+  app.openapi(incrementListingViewRoute, async (c) => {
+    const { listingId } = c.req.valid('param');
+    const data = await incrementListingViewCount(listingId);
     return c.json({ success: true, data }, 200);
   });
 }

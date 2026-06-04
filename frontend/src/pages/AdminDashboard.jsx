@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { apiFetch, isLoggedIn, logout } from '../lib/api';
 import AdminDashboardSection from './admin-dashboard/AdminDashboardSection';
@@ -36,6 +36,9 @@ export default function AdminDashboard() {
   const [roleFilter, setRoleFilter] = useState('');
   const [submissionStatusFilter, setSubmissionStatusFilter] = useState('SUBMITTED');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [usersRefreshing, setUsersRefreshing] = useState(false);
+  const isInitialLoad = useRef(true);
   const [busy, setBusy] = useState(false);
   const [selectingUserId, setSelectingUserId] = useState(null);
   const [selectingSubmissionId, setSelectingSubmissionId] = useState(null);
@@ -86,7 +89,12 @@ export default function AdminDashboard() {
   });
 
   const loadDashboard = useCallback(async () => {
-    setLoading(true);
+    const initial = isInitialLoad.current;
+    if (initial) {
+      setLoading(true);
+    } else {
+      setUsersRefreshing(true);
+    }
     setError('');
 
     try {
@@ -99,7 +107,7 @@ export default function AdminDashboard() {
       usersQuery.set('page', '1');
       usersQuery.set('limit', '50');
       if (roleFilter) usersQuery.set('role', roleFilter);
-      if (search.trim()) usersQuery.set('search', search.trim());
+      if (debouncedSearch.trim()) usersQuery.set('search', debouncedSearch.trim());
 
       const kycQuery = new URLSearchParams();
       kycQuery.set('page', '1');
@@ -135,9 +143,19 @@ export default function AdminDashboard() {
     } catch {
       setError('Failed to load data. Please check your connection.');
     } finally {
-      setLoading(false);
+      if (initial) {
+        isInitialLoad.current = false;
+        setLoading(false);
+      } else {
+        setUsersRefreshing(false);
+      }
     }
-  }, [roleFilter, search, submissionStatusFilter]);
+  }, [roleFilter, debouncedSearch, submissionStatusFilter]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   const loadListings = useCallback(async () => {
     setListingsLoading(true);
@@ -823,6 +841,7 @@ export default function AdminDashboard() {
                 selectedUserDetails={selectedUserDetails}
                 selectingUserId={selectingUserId}
                 busy={busy}
+                usersRefreshing={usersRefreshing}
                 search={search}
                 roleFilter={roleFilter}
                 roleEdit={roleEdit}

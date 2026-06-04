@@ -159,10 +159,10 @@ export default function PropertySearchBar({
       : 'w-full bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-3.5 sm:p-4';
 
   const formRow = isHero
-    ? 'flex flex-nowrap items-stretch gap-1.5 sm:gap-2 min-w-0'
+    ? 'grid grid-cols-2 items-stretch gap-1.5 sm:gap-2 md:flex md:flex-nowrap md:min-w-0'
     : 'flex flex-wrap items-stretch gap-2.5 sm:gap-3';
 
-  const heroFieldCell = 'min-w-0 flex-1 basis-0';
+  const heroFieldCell = 'min-w-0 col-span-1 md:flex-1 md:basis-0';
   const selectCls = selectClassName(isHero);
 
   return (
@@ -270,7 +270,7 @@ export default function PropertySearchBar({
         type="submit"
         className={
           isHero
-            ? 'shrink-0 self-stretch rounded-xl bg-[#2f8444] px-3 py-2.5 text-xs font-semibold text-white shadow-sm ring-1 ring-[#256c38]/30 transition hover:bg-[#256c38] sm:px-4 sm:py-3 sm:text-sm sm:min-w-[5.5rem]'
+            ? 'col-span-2 w-full rounded-xl bg-[#2f8444] px-3 py-2.5 text-xs font-semibold text-white shadow-sm ring-1 ring-[#256c38]/30 transition hover:bg-[#256c38] sm:px-4 sm:py-3 sm:text-sm md:col-span-1 md:w-auto md:shrink-0 md:self-stretch md:min-w-[5.5rem]'
             : 'min-w-[6.5rem] shrink-0 rounded-xl bg-[#2f8444] px-4 py-3 text-sm font-semibold text-white shadow-sm ring-1 ring-[#256c38]/30 transition hover:bg-[#256c38] sm:min-w-[7.5rem]'
         }
       >

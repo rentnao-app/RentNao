@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { apiFetch, isLoggedIn } from "../lib/api";
 import MapPicker from "../components/MapPicker";
 import ImageUploader from "../components/ImageUploader";
+import AppHeader from "../components/AppHeader";
 import { addLocalNotification } from "../lib/notifications";
 import { usePaymentGuard } from "../lib/usePaymentGuard";
 import { formatMoney } from "../lib/wallet";
@@ -65,7 +66,7 @@ const FORM_STEPS = [
   },
   {
     title: "Tenant & rent",
-    description: "Finish with tenant preference and monthly rent.",
+    description: "Set rent, add photos or videos, then publish.",
     requiredFields: ["rent"],
   },
 ];
@@ -225,68 +226,29 @@ function CommercialBasicsFields({
   );
 }
 
-function CommercialMediaUploadPanel({ propertyId }) {
+function PropertyMediaUploadPanel({ propertyId, preparing }) {
   return (
     <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4">
-      <h3 className="text-sm font-bold text-teal-900">
-        Commercial photos and videos
-      </h3>
+      <h3 className="text-sm font-bold text-teal-900">Photos and videos</h3>
       <p className="mt-1 text-sm text-teal-800">
-        Add storefront, floor-plan, utility, and access media from this Tenant &
-        Rent tab.
+        Add listing media before you publish.
       </p>
       <div className="mt-3">
         {propertyId ? (
           <ImageUploader
             propertyId={propertyId}
             initialImages={[]}
-            onUpdate={() => { }}
+            onUpdate={() => {}}
           />
+        ) : preparing ? (
+          <div className="rounded-lg border border-dashed border-teal-200 bg-white/70 px-4 py-3 text-sm text-teal-800">
+            Preparing uploads…
+          </div>
         ) : (
           <div className="rounded-lg border border-dashed border-teal-200 bg-white/70 px-4 py-3 text-sm text-teal-800">
-            Uploads unlock here after the listing details are submitted.
+            Complete the previous steps to enable uploads.
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-function ListingCompletionModal({ open, onClose, isCommercial }) {
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/45 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-100 text-teal-700">
-          <svg
-            className="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-        </div>
-        <h2 className="mt-4 text-xl font-bold text-gray-900">
-          Listing completed
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-gray-600">
-          Your {isCommercial ? "commercial" : "residential"} listing has been
-          completed successfully.
-        </p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-5 w-full rounded-lg bg-teal-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-800"
-        >
-          Continue
-        </button>
       </div>
     </div>
   );
@@ -325,6 +287,7 @@ function buildCommercialDescription(form) {
 }
 
 export default function CreateListingPage() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     rental_type: "residential",
     title: "",
@@ -356,13 +319,12 @@ export default function CreateListingPage() {
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [createdPropertyId, setCreatedPropertyId] = useState(null);
-  const [completionModalOpen, setCompletionModalOpen] = useState(false);
+  const [draftPropertyId, setDraftPropertyId] = useState(null);
+  const [draftSaving, setDraftSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const finalStepEnabledAtRef = useRef(0);
 
   const isCommercialFlow = form.rental_type === "commercial";
-  const showWizard = !createdPropertyId || isCommercialFlow;
   const currentStepConfig = FORM_STEPS[currentStep];
   const isLastStep = currentStep === FORM_STEPS.length - 1;
   const listingRentForFee = useMemo(() => {
@@ -372,9 +334,71 @@ export default function CreateListingPage() {
 
   const createListingPayment = usePaymentGuard({
     feeCode: "LISTING_CREATE",
-    enabled: !createdPropertyId,
+    enabled: true,
     percentBaseValue: listingRentForFee,
   });
+
+  const buildPropertyBody = () => ({
+    title: form.title,
+    description: isCommercialFlow
+      ? buildCommercialDescription(form)
+      : form.description,
+    propertySizeSqft: parseFloat(
+      isCommercialFlow ? form.commercial_square_footage : form.property_size,
+    ),
+    roomCount: isCommercialFlow ? 0 : parseFloat(form.room_count),
+    bathroomCount: isCommercialFlow
+      ? form.commercial_amenity_washroom
+        ? 1
+        : 0
+      : parseFloat(form.bathroom_count),
+    balconyCount: isCommercialFlow ? 0 : parseInt(form.balcony_count, 10),
+    areaName: form.area_name || undefined,
+    address: (form.address ?? "").trim(),
+    exactLat: location?.lat ?? DEFAULT_LOCATION.lat,
+    exactLng: location?.lng ?? DEFAULT_LOCATION.lng,
+    buildingFloors: form.building_floors
+      ? parseInt(form.building_floors, 10)
+      : undefined,
+    buildingFacing: form.building_facing,
+    hasLift: !!form.has_lift,
+    hasGenerator: !!form.has_generator,
+    hasSecurityGuard: !!form.has_security_guard,
+    intendedTenantType: form.intended_tenant_type,
+    propertyType: isCommercialFlow ? "COMMERCIAL_SPACE" : "APARTMENT",
+    floorNo: form.floor_no ? parseInt(form.floor_no, 10) : undefined,
+    flatNo: (form.flat_no ?? "").trim() || undefined,
+  });
+
+  const ensureDraftProperty = async () => {
+    if (draftPropertyId) return draftPropertyId;
+
+    if (!isLoggedIn()) {
+      throw new Error("Not authenticated. Please log in again.");
+    }
+
+    const createPropertyRes = await apiFetch("/properties", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildPropertyBody()),
+    });
+    const createPropertyBody = await createPropertyRes.json().catch(() => ({}));
+    if (!createPropertyRes.ok) {
+      throw new Error(
+        formatApiError(createPropertyBody) ||
+          createPropertyBody?.message ||
+          "Failed to prepare property for media upload",
+      );
+    }
+
+    const propertyId = createPropertyBody?.data?.propertyId;
+    if (!propertyId) {
+      throw new Error("Property draft created but property ID missing.");
+    }
+
+    setDraftPropertyId(propertyId);
+    return propertyId;
+  };
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -439,7 +463,7 @@ export default function CreateListingPage() {
     });
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     const validationMessage = getValidationMessage(
       getStepRequiredFields(currentStep),
     );
@@ -451,9 +475,21 @@ export default function CreateListingPage() {
 
     setError("");
     const nextStep = Math.min(currentStep + 1, FORM_STEPS.length - 1);
-    if (nextStep === FORM_STEPS.length - 1) {
+
+    if (nextStep === FORM_STEPS.length - 1 && nextStep !== currentStep) {
+      setDraftSaving(true);
+      try {
+        await ensureDraftProperty();
+      } catch (err) {
+        setError(err.message || "Failed to prepare property for uploads");
+        scrollToPageTop();
+        return;
+      } finally {
+        setDraftSaving(false);
+      }
       finalStepEnabledAtRef.current = Date.now() + 500;
     }
+
     setCurrentStep(nextStep);
     scrollToPageTop();
   };
@@ -470,7 +506,7 @@ export default function CreateListingPage() {
     setError("");
 
     if (!isLastStep) {
-      handleNextStep();
+      await handleNextStep();
       return;
     }
     if (Date.now() < finalStepEnabledAtRef.current) {
@@ -500,59 +536,44 @@ export default function CreateListingPage() {
 
       setLoading(true);
 
-      const body = {
-        title: form.title,
-        description: isCommercialFlow
-          ? buildCommercialDescription(form)
-          : form.description,
-        propertySizeSqft: parseFloat(
-          isCommercialFlow
-            ? form.commercial_square_footage
-            : form.property_size,
-        ),
-        roomCount: isCommercialFlow ? 0 : parseFloat(form.room_count),
-        bathroomCount: isCommercialFlow
-          ? form.commercial_amenity_washroom
-            ? 1
-            : 0
-          : parseFloat(form.bathroom_count),
-        balconyCount: isCommercialFlow ? 0 : parseInt(form.balcony_count, 10),
-        areaName: form.area_name || undefined,
-        // Backend requires a string; omitting empty address breaks Zod validation.
-        address: (form.address ?? "").trim(),
-        exactLat: location?.lat ?? DEFAULT_LOCATION.lat,
-        exactLng: location?.lng ?? DEFAULT_LOCATION.lng,
-        buildingFloors: form.building_floors
-          ? parseInt(form.building_floors, 10)
-          : undefined,
-        buildingFacing: form.building_facing,
-        hasLift: !!form.has_lift,
-        hasGenerator: !!form.has_generator,
-        hasSecurityGuard: !!form.has_security_guard,
-        intendedTenantType: form.intended_tenant_type,
-        propertyType: isCommercialFlow ? 'COMMERCIAL_SPACE' : 'APARTMENT',
-        floorNo: form.floor_no ? parseInt(form.floor_no, 10) : undefined,
-        flatNo: (form.flat_no ?? "").trim() || undefined,
-      };
-
-      const createPropertyRes = await apiFetch("/properties", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const createPropertyBody = await createPropertyRes
-        .json()
-        .catch(() => ({}));
-      if (!createPropertyRes.ok) {
-        throw new Error(
-          formatApiError(createPropertyBody) ||
-          createPropertyBody?.message ||
-          "Failed to create property",
-        );
+      let propertyId = draftPropertyId;
+      if (propertyId) {
+        const updatePropertyRes = await apiFetch(`/properties/${propertyId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildPropertyBody()),
+        });
+        const updatePropertyBody = await updatePropertyRes
+          .json()
+          .catch(() => ({}));
+        if (!updatePropertyRes.ok) {
+          throw new Error(
+            formatApiError(updatePropertyBody) ||
+              updatePropertyBody?.message ||
+              "Failed to update property",
+          );
+        }
+      } else {
+        const createPropertyRes = await apiFetch("/properties", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildPropertyBody()),
+        });
+        const createPropertyBody = await createPropertyRes
+          .json()
+          .catch(() => ({}));
+        if (!createPropertyRes.ok) {
+          throw new Error(
+            formatApiError(createPropertyBody) ||
+              createPropertyBody?.message ||
+              "Failed to create property",
+          );
+        }
+        propertyId = createPropertyBody?.data?.propertyId;
+        if (!propertyId) {
+          throw new Error("Property created but property ID missing.");
+        }
       }
-      const propertyId = createPropertyBody?.data?.propertyId;
-      if (!propertyId)
-        throw new Error("Property created but property ID missing.");
 
       const now = new Date();
       const listingStartDate = new Date(
@@ -591,9 +612,7 @@ export default function CreateListingPage() {
         url: "/owner-dashboard/my-properties",
         type: "LISTING",
       });
-      setCreatedPropertyId(propertyId);
-      setCompletionModalOpen(true);
-      scrollToPageTop();
+      navigate("/owner-dashboard/my-properties");
     } catch (err) {
       setError(err.message || "An unexpected error occurred");
     } finally {
@@ -609,90 +628,55 @@ export default function CreateListingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-4 pr-14 sm:pr-16 flex items-center justify-between">
-          <Link
-            to="/owner-dashboard"
-            className="text-2xl font-bold text-teal-800 tracking-tight"
-          >
-            RentNao
-          </Link>
-          <Link
-            to="/owner-dashboard/my-properties"
-            className="text-sm font-medium text-gray-600 hover:text-teal-700 transition"
-          >
-            &larr; My Properties
-          </Link>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="max-w-3xl mx-auto px-6 py-10">
         <div className="mb-8">
-          {createdPropertyId ? (
-            <>
-              <p className="text-sm font-semibold text-teal-700 mb-2">
-                Listing ready
-              </p>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Listing created
-              </h1>
-              <p className="text-gray-500">
-                {isCommercialFlow
-                  ? "Add commercial photos and videos in the Tenant & Rent tab, or return to your properties."
-                  : "Add photos or return to your properties when you are done."}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-semibold text-teal-700 mb-2">
-                Step {currentStep + 1} of {FORM_STEPS.length}
-              </p>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Create New Listing
-              </h1>
-              <p className="text-gray-500">
-                Create a property first, then publish its listing section by
-                section.
-              </p>
-            </>
-          )}
+          <p className="text-sm font-semibold text-teal-700 mb-2">
+            Step {currentStep + 1} of {FORM_STEPS.length}
+          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Create New Listing
+          </h1>
+          <p className="text-gray-500">
+            Create a property first, then publish its listing section by
+            section.
+          </p>
         </div>
 
-        {showWizard && (
-          <div className="mb-6">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              {FORM_STEPS.map((step, index) => {
-                const isActive = index === currentStep;
-                const isComplete = index < currentStep;
-                return (
-                  <div
-                    key={step.title}
-                    className={`rounded-xl border p-3 ${isActive
-                        ? "border-teal-600 bg-teal-50 text-teal-900"
-                        : isComplete
-                          ? "border-teal-100 bg-white text-teal-700"
-                          : "border-gray-100 bg-white text-gray-400"
-                      }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${isActive || isComplete
-                            ? "bg-teal-700 text-white"
-                            : "bg-gray-100 text-gray-400"
-                          }`}
-                      >
-                        {index + 1}
-                      </span>
-                      <span className="text-sm font-semibold">
-                        {step.title}
-                      </span>
-                    </div>
+        <div className="mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            {FORM_STEPS.map((step, index) => {
+              const isActive = index === currentStep;
+              const isComplete = index < currentStep;
+              return (
+                <div
+                  key={step.title}
+                  className={`rounded-xl border p-3 ${isActive
+                      ? "border-teal-600 bg-teal-50 text-teal-900"
+                      : isComplete
+                        ? "border-teal-100 bg-white text-teal-700"
+                        : "border-gray-100 bg-white text-gray-400"
+                    }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${isActive || isComplete
+                          ? "bg-teal-700 text-white"
+                          : "bg-gray-100 text-gray-400"
+                        }`}
+                    >
+                      {index + 1}
+                    </span>
+                    <span className="text-sm font-semibold">
+                      {step.title}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
@@ -700,13 +684,12 @@ export default function CreateListingPage() {
           </div>
         )}
 
-        {showWizard && (
-          <form
-            onSubmit={handleSubmit}
-            onKeyDown={handleFormKeyDown}
-            className="space-y-5"
-            noValidate
-          >
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={handleFormKeyDown}
+          className="space-y-5"
+          noValidate
+        >
             <section className={sectionClass}>
               <div>
                 <p className="text-sm font-semibold text-teal-700">
@@ -991,7 +974,6 @@ export default function CreateListingPage() {
                       value={form.intended_tenant_type}
                       onChange={handleChange}
                       className={inputClass}
-                      disabled={Boolean(createdPropertyId)}
                     >
                       <option value="BOTH">Both</option>
                       <option value="FAMILY">Family</option>
@@ -1010,27 +992,25 @@ export default function CreateListingPage() {
                       placeholder="e.g. 15000"
                       min="0"
                       required
-                      disabled={Boolean(createdPropertyId)}
                     />
                   </div>
 
-                  {!createdPropertyId && (
-                    <div className="rounded-xl border border-teal-100 bg-teal-50/70 px-4 py-3 text-sm text-teal-900">
+                  <PropertyMediaUploadPanel
+                    propertyId={draftPropertyId}
+                    preparing={draftSaving}
+                  />
+
+                  <div className="rounded-xl border border-teal-100 bg-teal-50/70 px-4 py-3 text-sm text-teal-900">
                       <p className="font-semibold">
-                        {createListingPayment.fee &&
-                        Number(createListingPayment.requiredAmount) === 0
-                          ? "No listing fee required"
-                          : "Payment required before publishing"}
+                        Payment required before publishing
                       </p>
                       <p className="mt-1">
                         Listing creation fee:{" "}
                         {createListingPayment.fee
-                          ? Number(createListingPayment.requiredAmount) === 0
-                            ? formatMoney(0, createListingPayment.currency)
-                            : formatMoney(
-                                createListingPayment.requiredAmount,
-                                createListingPayment.currency,
-                              )
+                          ? formatMoney(
+                              createListingPayment.requiredAmount,
+                              createListingPayment.currency,
+                            )
                           : "Loading payment amount..."}
                       </p>
                       {createListingPayment.availableBalance ? (
@@ -1047,14 +1027,7 @@ export default function CreateListingPage() {
                           {createListingPayment.error}
                         </p>
                       ) : null}
-                    </div>
-                  )}
-
-                  {isCommercialFlow && (
-                    <CommercialMediaUploadPanel
-                      propertyId={createdPropertyId}
-                    />
-                  )}
+                  </div>
                 </>
               )}
             </section>
@@ -1063,26 +1036,18 @@ export default function CreateListingPage() {
               <button
                 type="button"
                 onClick={handlePreviousStep}
-                disabled={
-                  currentStep === 0 || loading || Boolean(createdPropertyId)
-                }
+                disabled={currentStep === 0 || loading || draftSaving}
                 className="px-5 py-3 rounded-lg border border-gray-200 text-gray-700 font-semibold transition hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Back
               </button>
 
-              {isLastStep && createdPropertyId && isCommercialFlow ? (
-                <Link
-                  to="/owner-dashboard/my-properties"
-                  className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-lg transition"
-                >
-                  Done - My Properties
-                </Link>
-              ) : isLastStep ? (
+              {isLastStep ? (
                 <button
                   type="submit"
                   disabled={
                     loading ||
+                    draftSaving ||
                     createListingPayment.loading ||
                     !createListingPayment.fee
                   }
@@ -1090,49 +1055,23 @@ export default function CreateListingPage() {
                 >
                   {loading || createListingPayment.loading
                     ? "Checking wallet..."
-                    : "Create Property & Listing"}
+                    : draftSaving
+                      ? "Preparing..."
+                      : "Create Property & Listing"}
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={handleNextStep}
-                  disabled={loading}
+                  disabled={loading || draftSaving}
                   className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Continue
+                  {draftSaving ? "Preparing..." : "Continue"}
                 </button>
               )}
             </div>
           </form>
-        )}
-
-        {createdPropertyId && !isCommercialFlow && (
-          <div className="mt-10 p-6 bg-white rounded-xl border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              Add photos and videos
-            </h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Upload media now, or go back to My Properties when you are done.
-            </p>
-            <ImageUploader
-              propertyId={createdPropertyId}
-              initialImages={[]}
-              onUpdate={() => { }}
-            />
-            <Link
-              to="/owner-dashboard/my-properties"
-              className="inline-block mt-4 text-teal-700 font-semibold text-sm hover:text-teal-800"
-            >
-              Done — My Properties &rarr;
-            </Link>
-          </div>
-        )}
       </main>
-      <ListingCompletionModal
-        open={completionModalOpen}
-        onClose={() => setCompletionModalOpen(false)}
-        isCommercial={isCommercialFlow}
-      />
       {createListingPayment.modal}
     </div>
   );

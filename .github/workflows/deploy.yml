@@ -3,6 +3,7 @@ name: Build and Deploy
 on:
   push:
     branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -37,7 +38,7 @@ jobs:
 
   build-backend:
     needs: detect-changes
-    if: needs.detect-changes.outputs.backend == 'true'
+    if: needs.detect-changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -71,7 +72,7 @@ jobs:
 
   build-frontend:
     needs: detect-changes
-    if: needs.detect-changes.outputs.frontend == 'true'
+    if: needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -98,6 +99,10 @@ jobs:
           push: true
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+          build-args: |
+            VITE_API_URL=https://api.rentnao.co
+            VITE_GOOGLE_AUTH_URL=https://api.rentnao.co/auth/google
+            VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
           tags: |
             ${{ steps.vars.outputs.image }}:latest
             ${{ steps.vars.outputs.image }}:${{ github.sha }}
@@ -108,7 +113,7 @@ jobs:
     # ONLY proceed if there were actual changes AND no builds failed.
     if: |
       always() &&
-      (needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true') &&
+      (needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch') &&
       !contains(needs.*.result, 'failure') &&
       !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
@@ -123,5 +128,5 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.VPS_APP_DIR }}
-            docker compose --env-file .env.app -f docker-compose.app.yml pull
-            docker compose --env-file .env.app -f docker-compose.app.yml up -d
+            docker compose pull
+            docker compose up -d

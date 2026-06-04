@@ -17,6 +17,7 @@ export default function AdminUsersSection({
   selectedUserDetails,
   selectingUserId,
   busy,
+  usersRefreshing = false,
   search,
   roleFilter,
   roleEdit,
@@ -62,11 +63,16 @@ export default function AdminUsersSection({
       <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Users</h2>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-            {users.length}
-          </span>
+          <div className="flex items-center gap-2">
+            {usersRefreshing ? (
+              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-600" aria-label="Updating users" />
+            ) : null}
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+              {users.length}
+            </span>
+          </div>
         </div>
-        <div className="max-h-[580px] space-y-2 overflow-y-auto pr-1">
+        <div className={`max-h-[580px] space-y-2 overflow-y-auto pr-1 transition-opacity ${usersRefreshing ? 'opacity-60' : ''}`}>
           {users.length === 0 ? (
             <p className="rounded-xl bg-slate-50 py-10 text-center text-sm text-slate-500">
               No users found.

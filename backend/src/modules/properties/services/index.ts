@@ -15,6 +15,7 @@ export {
   listListingsByPropertyForUserRole,
   updateMyListingStatus,
   listPublicListings,
+  incrementListingViewCount,
   listListingsForAdmin,
   getPublicListingDetail,
   getListingDetailForAdmin,

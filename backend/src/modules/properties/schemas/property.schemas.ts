@@ -296,6 +296,7 @@ export const publicListingSummarySchema = z.object({
   intendedTenantType: TenantType,
   primaryImagePath: z.string().nullable(),
   primaryImageUrl: z.string().url().nullable().optional(),
+  viewCount: z.number().int().nonnegative(),
   createdAt: z.string(),
 });
 
@@ -367,6 +368,11 @@ export const publicListingListResponseSchema = z.object({
     total: z.number(),
     totalPages: z.number(),
   }),
+});
+
+export const incrementListingViewResponseSchema = z.object({
+  listingId: z.string(),
+  viewCount: z.number().int().nonnegative(),
 });
 
 export type CreatePropertyInput = z.infer<typeof createPropertySchema>;
