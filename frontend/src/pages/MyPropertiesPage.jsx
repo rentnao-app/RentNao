@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
-import { apiFetch, getApiErrorMessage, isLoggedIn } from '../lib/api';
+import { apiFetch, getApiErrorMessage, getRequestErrorMessage, isLoggedIn, isOwnerProfileMissingError } from '../lib/api';
 import toast from 'react-hot-toast';
 
 function areaLabel(areaName) {
@@ -57,8 +57,8 @@ export default function MyPropertiesPage() {
           return;
         }
         await loadProperties();
-      } catch {
-        setError('An error occurred');
+      } catch (err) {
+        setError(getRequestErrorMessage(err, 'Failed to load properties'));
       } finally {
         setLoading(false);
       }
@@ -143,7 +143,20 @@ export default function MyPropertiesPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">{error}</div>
+          <div
+            role="alert"
+            className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm"
+          >
+            <p className="font-medium">{error}</p>
+            {isOwnerProfileMissingError(error) ? (
+              <p className="mt-2">
+                <Link to="/owner-registration" className="font-semibold underline hover:text-red-900">
+                  Complete owner registration
+                </Link>{' '}
+                to load and manage your properties.
+              </p>
+            ) : null}
+          </div>
         )}
 
         {properties.length === 0 ? (

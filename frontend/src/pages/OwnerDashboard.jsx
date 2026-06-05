@@ -1,7 +1,16 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { apiFetch, getApiErrorMessage, getCurrentUser, getUserId, isLoggedIn, logout } from '../lib/api';
+import {
+  apiFetch,
+  getApiErrorMessage,
+  getCurrentUser,
+  getRequestErrorMessage,
+  getUserId,
+  isLoggedIn,
+  isOwnerProfileMissingError,
+  logout,
+} from '../lib/api';
 import { listOwnerIncomingRequests, reviewOwnerRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
@@ -173,6 +182,7 @@ export default function OwnerDashboard() {
   const [reviewingId, setReviewingId] = useState(null);
   /** `d:propertyId` | `p:propertyId:listingId` | `r:propertyId:listingId` */
   const [propertyBusyKey, setPropertyBusyKey] = useState(null);
+  const [dashError, setDashError] = useState('');
 
   const loadOwnerListingIds = useCallback(async () => {
     try {
@@ -197,7 +207,7 @@ export default function OwnerDashboard() {
   const loadProperties = useCallback(async () => {
     const res = await apiFetch('/properties/me');
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body?.error || body?.message || 'Failed to load properties');
+    if (!res.ok) throw new Error(getApiErrorMessage(body, 'Failed to load properties'));
     const items = body?.data?.items || [];
     const withListings = await Promise.all(
       items.map(async (property) => {
@@ -250,7 +260,9 @@ export default function OwnerDashboard() {
       setProperties(await loadProperties());
     } catch (e) {
       console.error(e);
-      toast.error(e?.message || 'Could not refresh dashboard');
+      const message = getRequestErrorMessage(e, 'Could not refresh dashboard');
+      setDashError(message);
+      toast.error(message);
     }
   }, [loadIncoming, loadProperties, loadTransactions]);
 
@@ -325,6 +337,7 @@ export default function OwnerDashboard() {
         return;
       }
       setDashLoading(true);
+      setDashError('');
       try {
         const stored = getCurrentUser();
         if (stored) setUser(stored);
@@ -351,7 +364,9 @@ export default function OwnerDashboard() {
         await loadIncoming();
       } catch (err) {
         console.error(err);
-        toast.error('Could not load dashboard');
+        const message = getRequestErrorMessage(err, 'Could not load dashboard');
+        setDashError(message);
+        toast.error(message);
       } finally {
         setDashLoading(false);
       }
@@ -484,6 +499,22 @@ export default function OwnerDashboard() {
         </aside>
 
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-7">
+            {dashError ? (
+              <div
+                role="alert"
+                className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+              >
+                <p className="font-medium">{dashError}</p>
+                {isOwnerProfileMissingError(dashError) ? (
+                  <p className="mt-2 text-red-700">
+                    <Link to="/owner-registration" className="font-semibold underline hover:text-red-900">
+                      Complete owner registration
+                    </Link>{' '}
+                    to restore access to your dashboard and properties.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <section className="mb-5 rounded-2xl border border-emerald-100/80 bg-white p-4 shadow-sm sm:p-6 lg:mb-6">
               <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
                 Welcome, {welcomeName}!
