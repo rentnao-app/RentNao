@@ -1,6 +1,11 @@
-import { apiFetch, getCurrentUser, getUserId, isLoggedIn } from './api';
+import { apiFetch, getCurrentUser, getUserId, getUserRole, isLoggedIn } from './api';
 
 const MAX_LOCAL_WISHLIST = 200;
+
+function isTenantUser() {
+  if (!isLoggedIn()) return false;
+  return getUserRole(getCurrentUser()) === 'TENANT';
+}
 
 function getStorageKey(userId) {
   return `rentnao_wishlist_${userId || 'guest'}`;
@@ -68,7 +73,7 @@ function removeLocalWishlist(listingId) {
 }
 
 async function tryRemoteList() {
-  if (!isLoggedIn()) return { items: [], remoteAvailable: false };
+  if (!isTenantUser()) return { items: [], remoteAvailable: false };
   try {
     const res = await apiFetch('/wishlists');
     if (!res.ok) return { items: [], remoteAvailable: false };
@@ -84,7 +89,7 @@ async function tryRemoteList() {
 }
 
 async function tryRemoteAdd(listingId) {
-  if (!isLoggedIn()) return false;
+  if (!isTenantUser()) return false;
   try {
     const id = normalizeId(listingId);
     const attempts = [
@@ -106,7 +111,7 @@ async function tryRemoteAdd(listingId) {
 }
 
 async function tryRemoteRemove(listingId) {
-  if (!isLoggedIn()) return false;
+  if (!isTenantUser()) return false;
   try {
     const id = normalizeId(listingId);
     const attempts = [

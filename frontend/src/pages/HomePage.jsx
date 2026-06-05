@@ -213,11 +213,15 @@ export default function HomePage() {
   const showGiveReviewCta = !loggedIn || hasMyReview === false;
 
   useEffect(() => {
+    if (!canWishlist) {
+      setWishlistIds(new Set());
+      return undefined;
+    }
     const timer = setTimeout(() => {
       void getWishlistState().then((state) => setWishlistIds(state.ids));
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [canWishlist]);
 
   const handleToggleWishlist = async (listing) => {
     const id = String(listing?.listingId || '');
