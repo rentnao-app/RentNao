@@ -28,7 +28,7 @@ import notifications from '@/modules/notifications';
 import testimonials from '@/modules/testimonials';
 import conversations from '@/modules/conversations';
 import { chatWebSocketHandler } from '@/modules/conversations/ws/ws-handler';
-import { startHeartbeat, stopHeartbeat } from '@/modules/conversations/ws/ws-registry';
+import { startHeartbeat, stopHeartbeat, closeAllConnections } from '@/modules/conversations/ws/ws-registry';
 import { startScheduledJobs, stopScheduledJobs } from '@/jobs/scheduler';
 import { bearerAuth } from 'hono/bearer-auth';
 import deals from '@/modules/deals';
@@ -255,6 +255,7 @@ const gracefulShutdown = async (signal: string) => {
 
   // Stop background tasks first
   stopHeartbeat();
+  closeAllConnections();
   stopScheduledJobs();
 
   try {

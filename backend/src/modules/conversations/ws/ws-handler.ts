@@ -5,7 +5,8 @@
  *   1. Client calls POST /conversations/ws-ticket (with Bearer JWT)
  *   2. Server returns { ticket: "abc-123" } (valid for 30 seconds, single-use)
  *   3. Client connects: ws://host/ws?ticket=abc-123
- *   4. Server consumes ticket from Redis, authenticates user
+ *   4. Server validates Origin header against CORS_ORIGIN allowlist
+ *   5. Server consumes ticket from Redis, authenticates user
  *
  * Client → Server:
  *   { type: "join",    conversationId: string }
@@ -23,6 +24,7 @@
 
 import type { WSContext, WSMessageReceive } from 'hono/ws';
 import { db } from '@/db/client';
+import { env } from '@/config/env';
 import {
   addConnection,
   removeConnection,
@@ -31,55 +33,39 @@ import {
   broadcastToRoom,
   pushToUser,
   isUserInRoom,
+  isRateLimited,
+  cleanupRateLimitData,
 } from './ws-registry';
 import { consumeWsTicket } from './ws-ticket';
 import { sendMessage } from '../services/conversation.service';
 import { createNotification } from '@/modules/notifications/notifications.service';
+import { isExpired } from '@/utils/expiry';
+import { AppError } from '@/errors/base';
 
 // Re-export pushToUser for use by notification service
 export { pushToUser } from './ws-registry';
 
 
-// Rate Limiting (in-memory sliding window per user per conversation)
+// Origin Validation
+// Reuses CORS_ORIGIN from env to maintain a single source of truth for allowed origins.
+// In development (CORS_ORIGIN='*'), all origins are permitted.
 
-const MESSAGE_RATE_WINDOW_MS = 10_000; // 10 seconds
-const MESSAGE_RATE_MAX = 10;           // max 10 messages per window
+const corsOriginRaw = env.CORS_ORIGIN.trim();
+const ALLOW_ALL_ORIGINS = corsOriginRaw === '*';
+const allowedOrigins: Set<string> = new Set(
+  ALLOW_ALL_ORIGINS
+    ? []
+    : corsOriginRaw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+);
 
-// userId → { conversationId → timestamp[] }
-const messageTimestamps = new Map<string, Map<string, number[]>>();
-
-function isRateLimited(userId: string, conversationId: string): boolean {
-  const now = Date.now();
-  const cutoff = now - MESSAGE_RATE_WINDOW_MS;
-
-  let userMap = messageTimestamps.get(userId);
-  if (!userMap) {
-    userMap = new Map();
-    messageTimestamps.set(userId, userMap);
-  }
-
-  let timestamps = userMap.get(conversationId);
-  if (!timestamps) {
-    timestamps = [];
-    userMap.set(conversationId, timestamps);
-  }
-
-  // Prune expired timestamps
-  const filtered = timestamps.filter(t => t > cutoff);
-  userMap.set(conversationId, filtered);
-
-  if (filtered.length >= MESSAGE_RATE_MAX) {
-    return true;
-  }
-
-  filtered.push(now);
-  return false;
+function isOriginAllowed(origin: string | undefined | null): boolean {
+  if (ALLOW_ALL_ORIGINS) return true;
+  if (!origin) return false;
+  return allowedOrigins.has(origin.toLowerCase());
 }
 
-// Clean up rate limit data when connection drops
-function cleanupRateLimitData(userId: string): void {
-  messageTimestamps.delete(userId);
-}
+
+// Rate Limiting is now managed globally in ws-registry.ts
 
 
 // Input Validation
@@ -99,6 +85,22 @@ function isValidId(value: unknown): value is string {
  * Called by Hono's upgradeWebSocket middleware.
  */
 export function chatWebSocketHandler(c: any) {
+  // Validate Origin header before upgrading (defense-in-depth alongside ticket auth)
+  const origin = c.req.header('origin') as string | undefined;
+  if (!isOriginAllowed(origin)) {
+    console.warn(`[WS] Rejected connection from disallowed origin: ${origin || '(none)'}`);
+    // Return handlers that immediately close the socket
+    return {
+      onOpen(_event: Event, ws: WSContext) {
+        sendError(ws, 'ORIGIN_REJECTED', 'Connection from this origin is not allowed.');
+        ws.close(1008, 'Origin not allowed');
+      },
+      onMessage() {},
+      onClose() {},
+      onError() {},
+    };
+  }
+
   // Extract ticket from query param (NOT a JWT — single-use, short-lived)
   const url = new URL(c.req.url);
   const ticket = url.searchParams.get('ticket');
@@ -123,7 +125,12 @@ export function chatWebSocketHandler(c: any) {
         }
 
         userId = ticketData.userId;
-        addConnection(userId, ws);
+        if (!addConnection(userId, ws)) {
+          sendError(ws, 'CONNECTION_LIMIT_EXCEEDED', 'Too many concurrent WebSocket connections.');
+          ws.close(1008, 'Connection limit exceeded');
+          userId = null; // Prevent cleanup triggers for unadded connection
+          return;
+        }
         console.log(`[WS] User ${userId} connected (ticket auth)`);
       } catch (err: any) {
         sendError(ws, 'AUTH_FAILED', 'Ticket verification failed');
@@ -218,6 +225,17 @@ async function handleJoin(userId: string, conversationId: unknown, ws: WSContext
   const conv = result.rows[0];
   if (conv.tenant_user_id !== userId && conv.owner_user_id !== userId) {
     sendError(ws, 'FORBIDDEN', 'You are not a participant in this conversation');
+    return;
+  }
+
+  // Reject joining if the conversation is closed or expired
+  if (conv.status === 'CLOSED') {
+    sendError(ws, 'CONVERSATION_CLOSED', 'This conversation has been closed');
+    return;
+  }
+
+  if (conv.status === 'ACCEPTED' && isExpired(conv.expires_at)) {
+    sendError(ws, 'CONVERSATION_EXPIRED', 'This conversation has expired');
     return;
   }
 
@@ -319,7 +337,12 @@ async function handleMessage(
       }
     }
   } catch (err: any) {
-    sendError(ws, 'MESSAGE_FAILED', err.message || 'Failed to send message');
+    console.error('[WS Message Error]:', err);
+    // Sanitize error messages sent to WebSocket clients.
+    // Database or unexpected system errors should not be leaked.
+    const isOperational = err instanceof AppError || err.isOperational === true;
+    const clientMessage = isOperational ? err.message : 'Internal server error';
+    sendError(ws, 'MESSAGE_FAILED', clientMessage);
   }
 }
 
