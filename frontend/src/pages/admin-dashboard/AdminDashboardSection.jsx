@@ -18,6 +18,9 @@ export default function AdminDashboardSection({
   setAnalyticsTab,
 }) {
   const pendingCount = stats?.pendingVerificationCount ?? kycSubmissions.length;
+  const totalListings = stats?.totalListings ?? 0;
+  const activeListings = stats?.activeListingsCount ?? 0;
+  const inactiveListings = Math.max(0, totalListings - activeListings);
   const userWeekPct = pctChange(stats?.usersCreatedLast7Days, stats?.usersCreatedPrev7Days);
   const listingWeekPct = pctChange(stats?.listingsCreatedLast7Days, stats?.listingsCreatedPrev7Days);
   const recentListingsFeed = stats?.recentListings || [];
@@ -46,13 +49,31 @@ export default function AdminDashboardSection({
         </p>
       </section>
 
-      <section className="mb-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+      <section className="mb-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <StatCard
           title="Total Listings"
-          value={(stats?.totalListings ?? 0).toLocaleString()}
+          value={totalListings.toLocaleString()}
+          subtitle="All listings ever created on the platform"
           accent="emerald"
           iconPath="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
         />
+        <StatCard
+          title="Active Listings"
+          value={activeListings.toLocaleString()}
+          subtitle="Currently ACTIVE and visible in public search"
+          accent="teal"
+          iconPath="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          footer={
+            inactiveListings > 0 ? (
+              <p className="text-[11px] text-gray-500 sm:text-xs">
+                {inactiveListings.toLocaleString()} paused, pending, or inactive
+              </p>
+            ) : null
+          }
+        />
+      </section>
+
+      <section className="mb-5 grid grid-cols-2 gap-2.5 lg:grid-cols-3">
         <StatCard
           title="Total Users"
           value={(stats?.totalUsers ?? 0).toLocaleString()}
@@ -299,7 +320,7 @@ export default function AdminDashboardSection({
                   <p className="mt-1 text-xs text-slate-500 sm:text-sm">
                     {analyticsTab === 'users'
                       ? `${(stats?.activeToday ?? 0).toLocaleString()} active users today`
-                      : `${(stats?.activeListingsCount ?? 0).toLocaleString()} live listings`}
+                      : `${activeListings.toLocaleString()} active · ${totalListings.toLocaleString()} total`}
                   </p>
                   <div className="mt-auto flex h-12 shrink-0 items-end gap-0.5 pt-3 sm:h-14 sm:gap-1">
                     {[35, 50, 42, 68, 55, 72, 60].map((h, i) => (
@@ -320,10 +341,10 @@ export default function AdminDashboardSection({
                   <p className="mt-1 text-lg font-bold text-emerald-900 sm:text-xl">
                     {analyticsTab === 'users'
                       ? (stats?.totalUsers ?? 0).toLocaleString()
-                      : (stats?.activeListingsCount ?? 0).toLocaleString()}
+                      : totalListings.toLocaleString()}
                   </p>
                   <p className="text-[11px] font-medium text-emerald-800">
-                    {analyticsTab === 'users' ? 'Registered users' : 'Listed properties'}
+                    {analyticsTab === 'users' ? 'Registered users' : 'Total listings (all time)'}
                   </p>
                 </div>
               </div>
