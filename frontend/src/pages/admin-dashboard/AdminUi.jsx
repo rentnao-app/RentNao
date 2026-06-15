@@ -6,9 +6,10 @@ export function Icon({ path, className = 'h-5 w-5' }) {
   );
 }
 
-export function StatCard({ title, value, accent = 'emerald', iconPath, footer }) {
+export function StatCard({ title, value, subtitle, accent = 'emerald', iconPath, footer }) {
   const iconShell = {
     emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+    teal: 'bg-teal-50 text-teal-700 ring-teal-100',
     amber: 'bg-amber-50 text-amber-800 ring-amber-100',
     sky: 'bg-sky-50 text-sky-700 ring-sky-100',
     rose: 'bg-rose-50 text-rose-700 ring-rose-100',
@@ -20,6 +21,7 @@ export function StatCard({ title, value, accent = 'emerald', iconPath, footer })
         <div className="min-w-0">
           <p className="text-xs font-medium text-gray-500">{title}</p>
           <p className="mt-1 truncate text-lg font-bold tracking-tight text-gray-900 sm:text-xl">{value}</p>
+          {subtitle ? <p className="mt-1 text-[11px] leading-snug text-gray-500 sm:text-xs">{subtitle}</p> : null}
         </div>
         <span
           className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ring-1 ring-inset ${iconShell[accent] || iconShell.emerald}`}

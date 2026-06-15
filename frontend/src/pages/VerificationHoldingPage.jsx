@@ -2,7 +2,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import BrandLogoLink from '../components/BrandLogoLink';
-import { apiFetch, clearAuthSession, getCurrentUser } from '../lib/api';
+import { apiFetch, clearAuthSession, getApiErrorMessage, getCurrentUser, getRequestErrorMessage } from '../lib/api';
 
 function normalizeStatus(status) {
   return String(status || 'PENDING').toUpperCase();
@@ -122,10 +122,11 @@ export default function VerificationHoldingPage() {
         setReviewedAt(submission?.reviewedAt || '');
         setError('');
       } else {
-        setError('Could not fetch your documents');
+        const body = await res.json().catch(() => ({}));
+        setError(getApiErrorMessage(body, 'Could not fetch your documents'));
       }
-    } catch {
-      setError('An error occurred while fetching verification status');
+    } catch (err) {
+      setError(getRequestErrorMessage(err, 'An error occurred while fetching verification status'));
     } finally {
       setLoading(false);
     }

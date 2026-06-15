@@ -175,13 +175,17 @@ export default function ListingDetailsPage() {
   }, [listing, id]);
 
   useEffect(() => {
+    if (!canWishlist) {
+      setWishlisted(false);
+      return undefined;
+    }
     const timer = setTimeout(() => {
       void getWishlistState().then((state) => {
         setWishlisted(state.ids.has(String(id)));
       });
     }, 0);
     return () => clearTimeout(timer);
-  }, [id]);
+  }, [canWishlist, id]);
 
   useEffect(() => {
     if (!isTenant) return;

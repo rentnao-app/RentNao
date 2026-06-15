@@ -121,6 +121,26 @@ export function getApiErrorMessage(body, fallback = 'Request failed') {
   return body?.error || body?.message || fallback;
 }
 
+/** Extract a user-facing message from a thrown Error, API body, or string. */
+export function getRequestErrorMessage(err, fallback = 'Request failed') {
+  if (!err) return fallback;
+  if (typeof err === 'string') {
+    const trimmed = err.trim();
+    return trimmed || fallback;
+  }
+  if (err.body && typeof err.body === 'object') {
+    const fromBody = getApiErrorMessage(err.body, '');
+    if (fromBody) return fromBody;
+  }
+  const message = typeof err.message === 'string' ? err.message.trim() : '';
+  if (message) return message;
+  return fallback;
+}
+
+export function isOwnerProfileMissingError(message) {
+  return /owner profile not found/i.test(String(message || ''));
+}
+
 export function splitName(fullName) {
   const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
   return {
