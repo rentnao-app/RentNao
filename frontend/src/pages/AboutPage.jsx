@@ -1,6 +1,10 @@
 ﻿import { Link } from 'react-router-dom';
+import { useTranslation } from '../lib/i18n';
 
 export default function AboutPage() {
+  const { messages } = useTranslation();
+  const about = messages.about;
+
   return (
     <div className="min-h-screen bg-[#f4f8f5]">
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
@@ -9,9 +13,9 @@ export default function AboutPage() {
             Rent Nao
           </Link>
           <nav className="flex gap-4 sm:gap-6">
-            <Link to="/listings" className="text-sm text-gray-600 hover:text-[#2f8444] transition">Listings</Link>
-            <Link to="/services" className="text-sm text-gray-600 hover:text-[#2f8444] transition">Services</Link>
-            <Link to="/signup" className="text-sm font-semibold text-[#2f8444] hover:text-[#256c38] transition">Sign Up</Link>
+            <Link to="/listings" className="text-sm text-gray-600 hover:text-[#2f8444] transition">{about.nav.listings}</Link>
+            <Link to="/services" className="text-sm text-gray-600 hover:text-[#2f8444] transition">{about.nav.services}</Link>
+            <Link to="/signup" className="text-sm font-semibold text-[#2f8444] hover:text-[#256c38] transition">{about.nav.signup}</Link>
           </nav>
         </div>
       </header>
@@ -23,15 +27,10 @@ export default function AboutPage() {
           <div className="relative z-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center">
             <div>
               <p className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
-                About Rent Nao
+                {about.hero.badge}
               </p>
-              <h1 className="mt-3 text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
-                Renting spaces in Bangladesh, made digital, trusted, and fast.
-              </h1>
-              <p className="mt-3 text-sm sm:text-base text-emerald-50/90 max-w-2xl leading-relaxed">
-                Rent Nao is a digital platform built to transform the way people rent spaces in Bangladesh - whether
-                it is a home, office, or commercial property.
-              </p>
+              <h1 className="mt-3 text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">{about.hero.title}</h1>
+              <p className="mt-3 text-sm sm:text-base text-emerald-50/90 max-w-2xl leading-relaxed">{about.hero.subtitle}</p>
             </div>
             <div className="hidden lg:flex items-center justify-center">
               <svg className="h-40 w-40 text-white/90" viewBox="0 0 120 120" fill="none" aria-hidden>
@@ -44,114 +43,87 @@ export default function AboutPage() {
         </section>
 
         <section className="mt-6 rounded-2xl border border-emerald-100 bg-white p-5 sm:p-7 shadow-sm">
-          <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
-            Finding a place to live or run a business has traditionally been time-consuming, uncertain, and inefficient.
-            People often rely on physical searching, To-let signs, or brokers, while property owners struggle with
-            unreliable tenants, vacancy losses, and lack of trust.
-          </p>
-          <p className="mt-4 text-sm sm:text-base text-gray-700 leading-relaxed">
-            Rent Nao solves these problems by creating a fast, trusted, and fully digital rental experience.
-          </p>
+          {about.intro.paragraphs.map((paragraph, index) => (
+            <p key={index} className={`text-sm sm:text-base text-gray-700 leading-relaxed ${index > 0 ? 'mt-4' : ''}`}>
+              {paragraph}
+            </p>
+          ))}
         </section>
 
         <section className="mt-6 rounded-2xl border border-emerald-100 bg-white p-5 sm:p-7 shadow-sm">
-          <h2 className="text-xl sm:text-2xl font-bold text-[#2f8444]">What We Do</h2>
-          <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">
-            We connect property owners and tenants directly through a seamless online platform where everything can be
-            managed in one place.
-          </p>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#2f8444]">{about.whatWeDo.title}</h2>
+          <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">{about.whatWeDo.intro}</p>
           <ul className="mt-4 space-y-3 text-sm sm:text-base text-gray-700">
-            <li>- Property owners can list their properties easily, find verified tenants, and manage listings without spending on promotions.</li>
-            <li>- Tenants can explore verified properties with complete details including images, videos, 3D walkthroughs, and exact locations.</li>
+            {about.whatWeDo.bullets.map((line, index) => (
+              <li key={index}>- {line}</li>
+            ))}
           </ul>
-          <p className="mt-4 text-sm sm:text-base text-gray-700 leading-relaxed">
-            Every user on Rent Nao goes through a verification process using real-time valid documents to ensure safety,
-            trust, and transparency across the platform.
-          </p>
+          <p className="mt-4 text-sm sm:text-base text-gray-700 leading-relaxed">{about.whatWeDo.outro}</p>
         </section>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <article className="rounded-2xl border border-emerald-100 bg-white p-5 sm:p-7 shadow-sm">
-            <h3 className="text-lg sm:text-xl font-bold text-[#2f8444]">A Smarter Rental Experience</h3>
-            <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">
-              Rent Nao is designed to reduce friction at every step of the rental journey:
-            </p>
+            <h3 className="text-lg sm:text-xl font-bold text-[#2f8444]">{about.smarter.title}</h3>
+            <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">{about.smarter.intro}</p>
             <ul className="mt-4 space-y-2 text-sm sm:text-base text-gray-700">
-              <li>- Instant connection between tenants and owners</li>
-              <li>- Direct in-platform communication</li>
-              <li>- Real-time availability and transparency</li>
-              <li>- Public ratings and reviews to maintain quality</li>
+              {about.smarter.bullets.map((line, index) => (
+                <li key={index}>- {line}</li>
+              ))}
             </ul>
-            <p className="mt-4 text-sm sm:text-base text-gray-700 leading-relaxed">
-              We aim to minimize unnecessary hassle and make renting faster, simpler, and more reliable.
-            </p>
+            <p className="mt-4 text-sm sm:text-base text-gray-700 leading-relaxed">{about.smarter.outro}</p>
           </article>
 
           <article className="rounded-2xl border border-emerald-100 bg-white p-5 sm:p-7 shadow-sm">
-            <h3 className="text-lg sm:text-xl font-bold text-[#2f8444]">Fintech-Enabled Ecosystem</h3>
-            <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">
-              Rent Nao goes beyond just property discovery. We are building a fintech-powered rental ecosystem where:
-            </p>
+            <h3 className="text-lg sm:text-xl font-bold text-[#2f8444]">{about.fintech.title}</h3>
+            <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">{about.fintech.intro}</p>
             <ul className="mt-4 space-y-2 text-sm sm:text-base text-gray-700">
-              <li>- Tenants can pay rent automatically through a secure wallet</li>
-              <li>- Owners receive payments without delays or follow-ups</li>
-              <li>- Users can easily cash in and cash out funds</li>
-              <li>- Transactions are recorded, transparent, and secure</li>
+              {about.fintech.bullets.map((line, index) => (
+                <li key={index}>- {line}</li>
+              ))}
             </ul>
-            <p className="mt-4 text-sm sm:text-base text-gray-700 leading-relaxed">
-              This transforms renting into a smooth, trackable, and efficient financial experience.
-            </p>
+            <p className="mt-4 text-sm sm:text-base text-gray-700 leading-relaxed">{about.fintech.outro}</p>
           </article>
         </section>
 
         <section className="mt-6 rounded-2xl border border-emerald-100 bg-white p-5 sm:p-7 shadow-sm">
-          <h2 className="text-xl sm:text-2xl font-bold text-[#2f8444]">Our Vision</h2>
-          <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">
-            Our vision is to become the default digital infrastructure for renting spaces across Bangladesh - from residential homes
-            to commercial properties.
-          </p>
-          <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">
-            We are not just a rental service. We are building a complete rental ecosystem that combines technology, trust,
-            and financial solutions to redefine how people access and manage space.
-          </p>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#2f8444]">{about.vision.title}</h2>
+          {about.vision.paragraphs.map((paragraph, index) => (
+            <p key={index} className={`text-sm sm:text-base text-gray-700 leading-relaxed ${index > 0 ? 'mt-3' : 'mt-3'}`}>
+              {paragraph}
+            </p>
+          ))}
         </section>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <article className="rounded-2xl border border-emerald-100 bg-white p-5 sm:p-7 shadow-sm">
-            <h3 className="text-lg sm:text-xl font-bold text-[#2f8444]">Our Mission</h3>
-            <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">
-              To eliminate the struggle, uncertainty, and inefficiency of renting by making it fast, trusted, and completely digital.
-            </p>
+            <h3 className="text-lg sm:text-xl font-bold text-[#2f8444]">{about.mission.title}</h3>
+            <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">{about.mission.text}</p>
           </article>
 
           <article className="rounded-2xl border border-emerald-100 bg-white p-5 sm:p-7 shadow-sm">
-            <h3 className="text-lg sm:text-xl font-bold text-[#2f8444]">Why Rent Nao?</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-[#2f8444]">{about.why.title}</h3>
             <ul className="mt-3 space-y-2 text-sm sm:text-base text-gray-700">
-              <li>- Verified users only</li>
-              <li>- No unnecessary middlemen</li>
-              <li>- Fast and simple process</li>
-              <li>- Transparent and secure system</li>
-              <li>- Built for both tenants and property owners</li>
+              {about.why.bullets.map((line, index) => (
+                <li key={index}>- {line}</li>
+              ))}
             </ul>
           </article>
         </section>
 
         <section className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 sm:p-7 text-center">
-          <p className="text-base sm:text-lg font-semibold text-[#1f5f31]">
-            Rent Nao is where renting becomes simple, trusted, and digital.
-          </p>
+          <p className="text-base sm:text-lg font-semibold text-[#1f5f31]">{about.cta.text}</p>
           <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               to="/listings"
               className="inline-flex items-center justify-center rounded-xl bg-[#2f8444] px-5 py-3 text-sm font-semibold text-white hover:bg-[#256c38] transition w-full sm:w-auto"
             >
-              Browse Listings
+              {about.cta.browseListings}
             </Link>
             <Link
               to="/signup"
               className="inline-flex items-center justify-center rounded-xl border border-[#2f8444] bg-white px-5 py-3 text-sm font-semibold text-[#2f8444] hover:bg-emerald-50 transition w-full sm:w-auto"
             >
-              Create Account
+              {about.cta.createAccount}
             </Link>
           </div>
         </section>
@@ -159,5 +131,3 @@ export default function AboutPage() {
     </div>
   );
 }
-
-

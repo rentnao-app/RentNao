@@ -1,3 +1,4 @@
+import { useTranslation } from '../../lib/i18n';
 import { formatDate, statusTone, toLabel } from './adminDashboardUtils';
 
 export default function AdminKycSection({
@@ -11,33 +12,41 @@ export default function AdminKycSection({
   handleReviewSubmission,
   busy,
 }) {
+  const { t } = useTranslation();
+
+  const statusOptions = [
+    { value: 'SUBMITTED', label: t('admin.kyc.submitted') },
+    { value: 'UNDER_REVIEW', label: t('admin.kyc.underReview') },
+    { value: 'APPROVED', label: t('admin.kyc.approved') },
+    { value: 'REJECTED', label: t('admin.kyc.rejected') },
+  ];
+
   return (
     <section className="mt-0 grid grid-cols-1 gap-6 xl:grid-cols-12">
       <div className="xl:col-span-12">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Submission status
+            {t('admin.kyc.submissionStatus')}
           </label>
           <select
             value={submissionStatusFilter}
             onChange={(e) => setSubmissionStatusFilter(e.target.value)}
             className="w-full max-w-md rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 md:w-auto"
           >
-            <option value="SUBMITTED">Submitted</option>
-            <option value="UNDER_REVIEW">Under review</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
+            {statusOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
       <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-4">
-        <h3 className="mb-3 text-lg font-bold text-slate-900">KYC submissions</h3>
+        <h3 className="mb-3 text-lg font-bold text-slate-900">{t('admin.kyc.title')}</h3>
         <div className="max-h-[480px] space-y-2 overflow-y-auto pr-1">
           {kycSubmissions.length === 0 ? (
-            <p className="rounded-xl bg-slate-50 py-8 text-center text-sm text-slate-500">
-              No submissions for this filter.
-            </p>
+            <p className="rounded-xl bg-slate-50 py-8 text-center text-sm text-slate-500">{t('admin.kyc.empty')}</p>
           ) : (
             kycSubmissions.map((submission) => (
               <button
@@ -57,12 +66,12 @@ export default function AdminKycSection({
                     <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-emerald-600" />
                   ) : (
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(submission.status)}`}>
-                      {toLabel(submission.status)}
+                      {toLabel(submission.status, t)}
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-slate-500">{toLabel(submission.userRole)}</p>
-                <p className="text-xs text-slate-500">{formatDate(submission.submittedAt)}</p>
+                <p className="mt-1 text-xs text-slate-500">{toLabel(submission.userRole, t)}</p>
+                <p className="text-xs text-slate-500">{formatDate(submission.submittedAt, t)}</p>
               </button>
             ))
           )}
@@ -73,24 +82,27 @@ export default function AdminKycSection({
         {selectedSubmissionDetails ? (
           <>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-              <h3 className="text-xl font-bold text-slate-900">Submission review</h3>
+              <h3 className="text-xl font-bold text-slate-900">{t('admin.kyc.reviewTitle')}</h3>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusTone(selectedSubmissionDetails.status)}`}>
-                {toLabel(selectedSubmissionDetails.status)}
+                {toLabel(selectedSubmissionDetails.status, t)}
               </span>
             </div>
 
             <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
               <p>
-                <span className="font-semibold">Name:</span> {selectedSubmissionDetails.displayName || selectedSubmissionDetails.userEmail}
+                <span className="font-semibold">{t('admin.kyc.name')}</span>{' '}
+                {selectedSubmissionDetails.displayName || selectedSubmissionDetails.userEmail}
               </p>
               <p>
-                <span className="font-semibold">Email:</span> {selectedSubmissionDetails.userEmail || 'N/A'}
+                <span className="font-semibold">{t('admin.kyc.email')}</span>{' '}
+                {selectedSubmissionDetails.userEmail || t('admin.labels.na')}
               </p>
               <p>
-                <span className="font-semibold">Phone:</span> {selectedSubmissionDetails.userPhone || 'N/A'}
+                <span className="font-semibold">{t('admin.kyc.phone')}</span>{' '}
+                {selectedSubmissionDetails.userPhone || t('admin.labels.na')}
               </p>
               <p>
-                <span className="font-semibold">Role:</span> {toLabel(selectedSubmissionDetails.userRole)}
+                <span className="font-semibold">{t('admin.kyc.role')}</span> {toLabel(selectedSubmissionDetails.userRole, t)}
               </p>
             </div>
 
@@ -98,13 +110,13 @@ export default function AdminKycSection({
               {(selectedSubmissionDetails.documents || []).map((doc) => (
                 <div key={doc.documentId} className="rounded-xl border border-slate-200 p-4">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-slate-900">{toLabel(doc.documentType)}</p>
+                    <p className="font-semibold text-slate-900">{toLabel(doc.documentType, t)}</p>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusTone(doc.verificationStatus)}`}>
-                      {toLabel(doc.verificationStatus)}
+                      {toLabel(doc.verificationStatus, t)}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">
-                    {doc.fileName || 'Unnamed file'}
+                    {doc.fileName || t('admin.kyc.unnamedFile')}
                     {doc.mimeType ? ` - ${doc.mimeType}` : ''}
                   </p>
                   {doc.signedUrl ? (
@@ -115,7 +127,7 @@ export default function AdminKycSection({
                         rel="noopener noreferrer"
                         className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
                       >
-                        Open document
+                        {t('admin.kyc.openDocument')}
                       </a>
                       {String(doc.mimeType || '').startsWith('image/') ? (
                         <img
@@ -137,7 +149,7 @@ export default function AdminKycSection({
                 onClick={() => handleReviewSubmission('APPROVED')}
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
-                Approve Submission
+                {t('admin.kyc.approve')}
               </button>
               <button
                 type="button"
@@ -145,13 +157,13 @@ export default function AdminKycSection({
                 onClick={() => handleReviewSubmission('REJECTED')}
                 className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
-                Reject Submission
+                {t('admin.kyc.reject')}
               </button>
             </div>
           </>
         ) : (
           <div className="grid min-h-[360px] place-items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50">
-            <p className="text-base font-medium text-slate-600">Select a KYC submission to review.</p>
+            <p className="text-base font-medium text-slate-600">{t('admin.kyc.selectPrompt')}</p>
           </div>
         )}
       </section>

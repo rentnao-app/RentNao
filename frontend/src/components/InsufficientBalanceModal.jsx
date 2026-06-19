@@ -1,4 +1,5 @@
 import { formatMoney } from "../lib/wallet";
+import { useTranslation } from '../lib/i18n';
 
 export default function InsufficientBalanceModal({
     open,
@@ -6,6 +7,8 @@ export default function InsufficientBalanceModal({
     onClose,
     onTopUp,
 }) {
+    const { t } = useTranslation();
+
     if (!open) return null;
 
     return (
@@ -27,19 +30,19 @@ export default function InsufficientBalanceModal({
                     </svg>
                 </div>
                 <h2 className="mt-4 text-xl font-bold text-gray-900">
-                    Not enough balance
+                    {t('wallet.insufficientBalance.title')}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-gray-600">
-                    Not enough balance, please top-up to proceed
+                    {t('wallet.insufficientBalance.message')}
                 </p>
                 {details ? (
                     <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                         <p>
-                            <span className="font-semibold">Required:</span>{" "}
+                            <span className="font-semibold">{t('wallet.insufficientBalance.required')}</span>{" "}
                             {formatMoney(details.requiredAmount, details.currency)}
                         </p>
                         <p>
-                            <span className="font-semibold">Available:</span>{" "}
+                            <span className="font-semibold">{t('wallet.insufficientBalance.available')}</span>{" "}
                             {formatMoney(details.availableBalance, details.currency)}
                         </p>
                     </div>
@@ -50,14 +53,14 @@ export default function InsufficientBalanceModal({
                         onClick={onClose}
                         className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </button>
                     <button
                         type="button"
                         onClick={onTopUp}
                         className="rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800"
                     >
-                        Top-up
+                        {t('wallet.topUp')}
                     </button>
                 </div>
             </div>

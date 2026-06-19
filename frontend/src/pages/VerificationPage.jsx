@@ -4,6 +4,7 @@ import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/Brand
 import { apiFetch, getCurrentUser } from '../lib/api';
 import { addLocalNotification } from '../lib/notifications';
 import { getAcceptValue, isAllowedFileByMimeAndExtension, KYC_UPLOAD_MIMES } from '../lib/fileValidation';
+import { useTranslation } from '../lib/i18n';
 
 function VerificationIllustration() {
   return (
@@ -62,6 +63,7 @@ function UploadCard({
   onDrop,
   onFileChange,
   onRemove,
+  t,
 }) {
   const isImagePreview = preview?.startsWith('data:image');
 
@@ -85,13 +87,13 @@ function UploadCard({
               <img src={preview} alt={title} className="max-h-52 mx-auto rounded-lg border border-emerald-100 mb-3" />
             ) : (
               <div className="mx-auto mb-3 w-full max-w-sm rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-left">
-                <p className="text-sm font-semibold text-emerald-800">PDF selected</p>
+                <p className="text-sm font-semibold text-emerald-800">{t('verification.upload.pdfSelected')}</p>
                 <p className="text-xs text-gray-600 mt-1 break-all">{file.name}</p>
               </div>
             )}
             <p className="text-sm text-gray-700">{file.name}</p>
             <button type="button" onClick={onRemove} className="mt-2 text-sm font-medium text-red-600 hover:text-red-700">
-              Remove file
+              {t('verification.upload.removeFile')}
             </button>
           </div>
         ) : (
@@ -102,9 +104,9 @@ function UploadCard({
                   <path d="M19 13v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6h2v6h10v-6zm-7-2V3l-4 4h3v4h2V7h3l-4-4z" />
                 </svg>
               </div>
-              <p className="text-xl sm:text-2xl font-semibold text-emerald-900">Drag &amp; drop or browse</p>
-              <p className="mt-2 text-sm sm:text-base text-gray-600">Upload clear photo of required document</p>
-              <p className="mt-1 text-sm text-gray-500">JPEG, PNG or PDF, Max size: 5MB</p>
+              <p className="text-xl sm:text-2xl font-semibold text-emerald-900">{t('verification.upload.dragDrop')}</p>
+              <p className="mt-2 text-sm sm:text-base text-gray-600">{t('verification.upload.uploadClearPhoto')}</p>
+              <p className="mt-1 text-sm text-gray-500">{t('verification.upload.fileTypes')}</p>
             </div>
             <input type="file" accept={getAcceptValue(KYC_UPLOAD_MIMES)} onChange={onFileChange} className="hidden" />
           </label>
@@ -115,6 +117,7 @@ function UploadCard({
 }
 
 export default function VerificationPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [role, setRole] = useState('');
@@ -136,12 +139,12 @@ export default function VerificationPage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('File must be less than 5MB');
+      setError(t('verification.upload.fileTooLarge'));
       return;
     }
 
     if (!isAllowedFileByMimeAndExtension(file, KYC_UPLOAD_MIMES)) {
-      setError('Only JPG, JPEG, PNG, or PDF files are allowed, and the file extension must match the file type');
+      setError(t('verification.upload.fileTypeInvalid'));
       return;
     }
 
@@ -180,17 +183,17 @@ export default function VerificationPage() {
     });
 
     const uploadBody = await uploadRes.json().catch(() => ({}));
-    if (!uploadRes.ok) throw new Error(uploadBody.error || 'Failed to get upload URL');
+    if (!uploadRes.ok) throw new Error(uploadBody.error || t('verification.upload.uploadUrlFailed'));
 
     const { uploadUrl, fileKey } = uploadBody?.data || {};
-    if (!uploadUrl || !fileKey) throw new Error('Invalid upload URL response');
+    if (!uploadUrl || !fileKey) throw new Error(t('verification.upload.invalidUploadResponse'));
 
     const putRes = await fetch(uploadUrl, {
       method: 'PUT',
       headers: { 'Content-Type': file.type },
       body: file,
     });
-    if (!putRes.ok) throw new Error(`Failed to upload ${file.name}`);
+    if (!putRes.ok) throw new Error(t('verification.upload.uploadFileFailed', { fileName: file.name }));
 
     return {
       documentType: docType,
@@ -209,16 +212,16 @@ export default function VerificationPage() {
 
     try {
       const user = getCurrentUser();
-      if (!user?.userId) throw new Error('Please login first');
+      if (!user?.userId) throw new Error(t('verification.upload.loginFirst'));
 
       if (!documents.nidFront) {
-        setError('Please upload the front side of your NID');
+        setError(t('verification.upload.nidFrontRequired'));
         setLoading(false);
         return;
       }
 
       if (isOwner && !documents.propertyCertificate) {
-        setError('Please upload your property ownership document');
+        setError(t('verification.upload.ownershipRequired'));
         setLoading(false);
         return;
       }
@@ -244,28 +247,28 @@ export default function VerificationPage() {
       });
 
       const submitBody = await submitRes.json().catch(() => ({}));
-      if (!submitRes.ok) throw new Error(submitBody.error || 'Failed to submit verification');
+      if (!submitRes.ok) throw new Error(submitBody.error || t('verification.upload.submitFailed'));
 
       addLocalNotification({
-        title: 'Verification Submitted',
-        message: 'Your KYC documents were submitted for admin review.',
+        title: t('verification.upload.submittedTitle'),
+        message: t('verification.upload.submittedMessage'),
         url: '/verification-holding',
         type: 'KYC',
       });
-      setSuccess('Documents uploaded successfully!');
+      setSuccess(t('verification.upload.uploadSuccess'));
       setTimeout(() => {
         window.location.href = '/verification-holding';
       }, 1800);
     } catch (err) {
-      setError(err.message || 'Failed to upload documents');
+      setError(err.message || t('verification.upload.uploadFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const headerSubtitle = isOwner
-    ? 'Upload your NID and proof of ownership. A second NID image is optional if the back side is separate.'
-    : 'Upload your NID. Add a second image only if the back side is separate.';
+    ? t('verification.upload.ownerSubtitle')
+    : t('verification.upload.tenantSubtitle');
 
   return (
     <div className="min-h-screen bg-[#f4f7f5]">
@@ -275,10 +278,10 @@ export default function VerificationPage() {
           <BrandLogoLink />
 
           <nav className="hidden lg:flex items-center gap-8 text-sm font-medium">
-            <Link to="/" className="text-gray-700 hover:text-emerald-700 transition">Home</Link>
-            <Link to="/listings" className="text-gray-700 hover:text-emerald-700 transition">Find Property</Link>
-            <Link to="/owner-dashboard/create-listing" className="text-gray-700 hover:text-emerald-700 transition">List Property</Link>
-            <Link to="/services" className="text-gray-700 hover:text-emerald-700 transition">Services</Link>
+            <Link to="/" className="text-gray-700 hover:text-emerald-700 transition">{t('common.home')}</Link>
+            <Link to="/listings" className="text-gray-700 hover:text-emerald-700 transition">{t('common.findProperty')}</Link>
+            <Link to="/owner-dashboard/create-listing" className="text-gray-700 hover:text-emerald-700 transition">{t('common.listProperty')}</Link>
+            <Link to="/services" className="text-gray-700 hover:text-emerald-700 transition">{t('common.services')}</Link>
           </nav>
 
           <div className="hidden lg:flex items-center gap-2">
@@ -286,13 +289,13 @@ export default function VerificationPage() {
               to="/login"
               className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
             >
-              Login
+              {t('common.login')}
             </Link>
             <Link
               to="/signup"
               className="px-5 py-2 rounded-xl bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition"
             >
-              Sign Up
+              {t('common.signUp')}
             </Link>
           </div>
 
@@ -300,7 +303,7 @@ export default function VerificationPage() {
             type="button"
             className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-800 shadow-sm hover:bg-emerald-50 transition"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={mobileMenuOpen ? t('common.closeMenu') : t('common.openMenu')}
             aria-expanded={mobileMenuOpen}
             aria-controls="verification-mobile-nav"
           >
@@ -322,7 +325,7 @@ export default function VerificationPage() {
           <button
             type="button"
             className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
-            aria-label="Close menu"
+            aria-label={t('common.closeMenu')}
             onClick={() => setMobileMenuOpen(false)}
           />
           <aside
@@ -339,14 +342,14 @@ export default function VerificationPage() {
                   onClick={() => setMobileMenuOpen(false)}
                 />
                 <span id="verification-mobile-nav-title" className="sr-only">
-                  Main menu
+                  {t('common.mainMenu')}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
-                aria-label="Close menu"
+                aria-label={t('common.closeMenu')}
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -354,48 +357,48 @@ export default function VerificationPage() {
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label={t('common.mobile')}>
               <Link
                 to="/"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-[#2f8444] bg-[#eef7ef]"
               >
-                Home
+                {t('common.home')}
               </Link>
               <Link
                 to="/listings"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                Find Property
+                {t('common.findProperty')}
               </Link>
               <Link
                 to="/owner-dashboard/create-listing"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                List Property
+                {t('common.listProperty')}
               </Link>
               <Link
                 to="/services"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                Services
+                {t('common.services')}
               </Link>
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                Login
+                {t('common.login')}
               </Link>
               <Link
                 to="/signup"
                 onClick={() => setMobileMenuOpen(false)}
                 className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
               >
-                Sign Up
+                {t('common.signUp')}
               </Link>
             </nav>
           </aside>
@@ -407,20 +410,20 @@ export default function VerificationPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-emerald-900">
-                {isOwner ? 'Verify Owner Identity' : 'Verify Your Identity'}
+                {isOwner ? t('verification.upload.ownerTitle') : t('verification.upload.tenantTitle')}
               </h1>
               <p className="mt-2 text-sm sm:text-base text-gray-600">{headerSubtitle}</p>
             </div>
 
             <div className="w-full md:w-56">
-              <p className="text-emerald-800 font-semibold text-sm mb-2 text-right">Document upload</p>
+              <p className="text-emerald-800 font-semibold text-sm mb-2 text-right">{t('verification.upload.documentUpload')}</p>
               <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
                 <div className={`h-full rounded-full bg-emerald-600 ${documents.nidBack ? 'w-full' : documents.nidFront ? 'w-2/3' : 'w-1/3'}`} />
               </div>
               <div className="mt-2 flex justify-between">
-                <StepPill number={1} label="Front" active={!documents.nidFront} />
-                <StepPill number={2} label="Back" active={Boolean(documents.nidFront) && !documents.nidBack} />
-                <StepPill number={3} label="Submit" active={Boolean(documents.nidFront) && Boolean(documents.nidBack)} />
+                <StepPill number={1} label={t('verification.upload.front')} active={!documents.nidFront} />
+                <StepPill number={2} label={t('verification.upload.back')} active={Boolean(documents.nidFront) && !documents.nidBack} />
+                <StepPill number={3} label={t('verification.upload.submit')} active={Boolean(documents.nidFront) && Boolean(documents.nidBack)} />
               </div>
             </div>
           </div>
@@ -448,18 +451,18 @@ export default function VerificationPage() {
                   </div>
                   <div>
                     <h2 className="text-lg sm:text-xl font-semibold text-emerald-900">
-                      Upload NID / Passport / Driving License
+                      {t('verification.upload.nidSectionTitle')}
                     </h2>
                     <p className="mt-1 text-sm sm:text-base text-gray-600 leading-relaxed">
-                      For proof of identity, upload a clear NID photo. If the back side is separate, add a second upload. A single photocopy showing both sides is also acceptable.
+                      {t('verification.upload.nidSectionDesc')}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-4">
                   <UploadCard
-                    title="NID front side"
-                    description="Required for all users. If both sides are on one page, upload that here."
+                    title={t('verification.upload.nidFrontTitle')}
+                    description={t('verification.upload.nidFrontDesc')}
                     file={documents.nidFront}
                     preview={previews.nidFront}
                     isDragging={draggingDoc === 'nidFront'}
@@ -483,13 +486,14 @@ export default function VerificationPage() {
                       setDocuments((p) => ({ ...p, nidFront: null }));
                       setPreviews((p) => ({ ...p, nidFront: null }));
                     }}
+                    t={t}
                   />
                 </div>
 
                 <div className="mt-4">
                   <UploadCard
-                    title="NID backside"
-                    description="If you already uploaded NID pdf containing both side, you can skip it"
+                    title={t('verification.upload.nidBackTitle')}
+                    description={t('verification.upload.nidBackDesc')}
                     file={documents.nidBack}
                     preview={previews.nidBack}
                     isDragging={draggingDoc === 'nidBack'}
@@ -513,14 +517,15 @@ export default function VerificationPage() {
                       setDocuments((p) => ({ ...p, nidBack: null }));
                       setPreviews((p) => ({ ...p, nidBack: null }));
                     }}
+                    t={t}
                   />
                 </div>
 
                 {isOwner && (
                   <div className="mt-4">
                     <UploadCard
-                      title="Electricy/Water Bill/Holding Tax Document"
-                      description="property ownership document"
+                      title={t('verification.upload.ownershipTitle')}
+                      description={t('verification.upload.ownershipDesc')}
                       file={documents.propertyCertificate}
                       preview={previews.propertyCertificate}
                       isDragging={draggingDoc === 'propertyCertificate'}
@@ -544,6 +549,7 @@ export default function VerificationPage() {
                         setDocuments((p) => ({ ...p, propertyCertificate: null }));
                         setPreviews((p) => ({ ...p, propertyCertificate: null }));
                       }}
+                      t={t}
                     />
                   </div>
                 )}
@@ -552,9 +558,7 @@ export default function VerificationPage() {
                   <svg className="w-5 h-5 shrink-0 mt-0.5 sm:mt-0" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2l7 3v6c0 5-3.4 9.7-7 11-3.6-1.3-7-6-7-11V5l7-3zm-1 13l5-5-1.4-1.4L11 12.2l-1.6-1.6L8 12l3 3z" />
                   </svg>
-                  <span>
-                    Your documents are <span className="font-semibold">secure &amp; verified only once.</span>
-                  </span>
+                  <span>{t('verification.upload.secureNote')}</span>
                 </p>
 
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -562,14 +566,14 @@ export default function VerificationPage() {
                     to={isTenant ? '/tenant-registration' : '/owner-registration'}
                     className="h-11 rounded-xl border border-emerald-200 bg-white text-emerald-700 font-semibold text-base flex items-center justify-center hover:bg-emerald-50 transition"
                   >
-                    Back
+                    {t('common.back')}
                   </Link>
                   <button
                     type="submit"
                     disabled={loading}
                     className="h-11 rounded-xl bg-emerald-700 text-white font-semibold text-base hover:bg-emerald-800 transition disabled:opacity-50"
                   >
-                    {loading ? 'Uploading...' : 'Finish'}
+                    {loading ? t('verification.upload.uploading') : t('common.finish')}
                   </button>
                 </div>
 

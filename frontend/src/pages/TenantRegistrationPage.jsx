@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from "../components/BrandLogoLink";
 import { apiFetch, getCurrentUser, splitName } from "../lib/api";
+import { useTranslation } from "../lib/i18n";
 import {
   clearPendingSignupPhone,
   clipPhoneInput,
@@ -50,6 +51,31 @@ const PROFESSION_OPTIONS = [
 
 const BLOOD_GROUP_OPTIONS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
+const PROFESSION_LABEL_KEYS = {
+  Job: "registration.options.job",
+  Finance: "registration.options.finance",
+  Accountant: "registration.options.accountant",
+  Engineer: "registration.options.engineer",
+  Architect: "registration.options.architect",
+  Banker: "registration.options.banker",
+  Lawyer: "registration.options.lawyer",
+  Doctor: "registration.options.doctor",
+  Teacher: "registration.options.teacher",
+  Business: "registration.options.business",
+  Student: "registration.options.student",
+  "Government Service": "registration.options.governmentService",
+  Freelancer: "registration.options.freelancer",
+  Other: "registration.options.other",
+};
+
+const RELIGION_LABEL_KEYS = {
+  Islam: "registration.options.islam",
+  Hinduism: "registration.options.hinduism",
+  Christianity: "registration.options.christianity",
+  Buddhism: "registration.options.buddhism",
+  Other: "registration.options.other",
+};
+
 const SIDE_IMAGE =
   "https://images.unsplash.com/photo-1616594039964-3f6d3b764de3?auto=format&fit=crop&w=1000&q=80";
 
@@ -81,6 +107,7 @@ function Icon({ children }) {
 }
 
 export default function TenantRegistrationPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
 
   const [form, setForm] = useState({
@@ -137,15 +164,13 @@ export default function TenantRegistrationPage() {
     try {
       const currentUser = getCurrentUser();
       if (!currentUser?.userId) {
-        setError("Not authenticated. Please log in again.");
+        setError(t("common.notAuthenticated"));
         return;
       }
 
       const suffix = digitsOnly(form.phoneNumber);
       if (!/^1[3-9]\d{8}$/.test(suffix)) {
-        setError(
-          "Enter the 10 digits after +880 (e.g. 1712345678). Your full number must be a valid 01… mobile."
-        );
+        setError(t("common.phoneAfter880Error"));
         return;
       }
 
@@ -185,12 +210,12 @@ export default function TenantRegistrationPage() {
 
       if (!tenantRes.ok) {
         const data = await tenantRes.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to create tenant profile");
+        throw new Error(data.error || t("registration.tenant.profileFailed"));
       }
 
       window.location.href = "/verification?role=TENANT";
     } catch (err) {
-      setError(err.message || "An unexpected error occurred");
+      setError(err.message || t("common.unexpectedError"));
     } finally {
       setLoading(false);
     }
@@ -211,25 +236,25 @@ export default function TenantRegistrationPage() {
               to="/"
               className="text-gray-700 hover:text-emerald-700 transition"
             >
-              Home
+              {t("common.home")}
             </Link>
             <Link
               to="/listings"
               className="text-gray-700 hover:text-emerald-700 transition"
             >
-              Find Property
+              {t("common.findProperty")}
             </Link>
             <Link
               to="/owner-dashboard/create-listing"
               className="text-gray-700 hover:text-emerald-700 transition"
             >
-              List Property
+              {t("common.listProperty")}
             </Link>
             <Link
               to="/services"
               className="text-gray-700 hover:text-emerald-700 transition"
             >
-              Services
+              {t("common.services")}
             </Link>
           </nav>
 
@@ -238,13 +263,13 @@ export default function TenantRegistrationPage() {
               to="/login"
               className="px-3 md:px-4 lg:px-5 py-2 rounded-xl border border-gray-200 text-xs md:text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
             >
-              Login
+              {t("common.login")}
             </Link>
             <Link
               to="/signup"
               className="px-3 md:px-4 lg:px-5 py-2 rounded-xl bg-emerald-700 text-white text-xs md:text-sm font-semibold hover:bg-emerald-800 transition"
             >
-              Sign Up
+              {t("common.signUp")}
             </Link>
           </div>
 
@@ -252,7 +277,7 @@ export default function TenantRegistrationPage() {
             type="button"
             className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-800 shadow-sm hover:bg-emerald-50 transition"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-label={mobileMenuOpen ? t("common.closeMenu") : t("common.openMenu")}
             aria-expanded={mobileMenuOpen}
             aria-controls="tenant-mobile-nav"
           >
@@ -274,7 +299,7 @@ export default function TenantRegistrationPage() {
           <button
             type="button"
             className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
-            aria-label="Close menu"
+            aria-label={t("common.closeMenu")}
             onClick={() => setMobileMenuOpen(false)}
           />
           <aside
@@ -291,14 +316,14 @@ export default function TenantRegistrationPage() {
                   onClick={() => setMobileMenuOpen(false)}
                 />
                 <span id="tenant-mobile-nav-title" className="sr-only">
-                  Main menu
+                  {t("common.mainMenu")}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
-                aria-label="Close menu"
+                aria-label={t("common.closeMenu")}
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -306,48 +331,48 @@ export default function TenantRegistrationPage() {
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label={t("common.mobile")}>
               <Link
                 to="/"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-[#2f8444] bg-[#eef7ef]"
               >
-                Home
+                {t("common.home")}
               </Link>
               <Link
                 to="/listings"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                Find Property
+                {t("common.findProperty")}
               </Link>
               <Link
                 to="/owner-dashboard/create-listing"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                List Property
+                {t("common.listProperty")}
               </Link>
               <Link
                 to="/services"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                Services
+                {t("common.services")}
               </Link>
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                Login
+                {t("common.login")}
               </Link>
               <Link
                 to="/signup"
                 onClick={() => setMobileMenuOpen(false)}
                 className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
               >
-                Sign Up
+                {t("common.signUp")}
               </Link>
             </nav>
           </aside>
@@ -360,10 +385,10 @@ export default function TenantRegistrationPage() {
           {/* Left panel */}
           <aside className="rounded-3xl bg-gradient-to-b from-[#eef8f1] to-[#e2f2e8] border border-emerald-100 p-5 shadow-sm">
             <h2 className="text-4xl font-extrabold leading-tight text-emerald-900">
-              Create Your Tenant Profile
+              {t("registration.tenant.sidebarTitle")}
             </h2>
             <p className="mt-4 text-emerald-700 text-lg">
-              Tell us about yourself to get the best matching properties
+              {t("registration.tenant.sidebarDesc")}
             </p>
 
             <div className="mt-6 grid grid-cols-3 gap-2">
@@ -378,7 +403,7 @@ export default function TenantRegistrationPage() {
                   </svg>
                 </div>
                 <p className="text-[11px] font-semibold text-gray-700">
-                  Verified Listings
+                  {t("registration.tenant.verifiedListings")}
                 </p>
               </div>
 
@@ -393,7 +418,7 @@ export default function TenantRegistrationPage() {
                   </svg>
                 </div>
                 <p className="text-[11px] font-semibold text-gray-700">
-                  Direct Contact
+                  {t("registration.tenant.directContact")}
                 </p>
               </div>
 
@@ -408,7 +433,7 @@ export default function TenantRegistrationPage() {
                   </svg>
                 </div>
                 <p className="text-[11px] font-semibold text-gray-700">
-                  Safe & Secure
+                  {t("registration.tenant.safeSecure")}
                 </p>
               </div>
             </div>
@@ -417,7 +442,7 @@ export default function TenantRegistrationPage() {
               <div className="relative h-[260px] sm:h-[300px] lg:h-[340px] overflow-hidden rounded-xl bg-gradient-to-b from-emerald-50 to-emerald-100">
                 <img
                   src="/side-image.jpg"
-                  alt="Tenant profile side visual"
+                  alt={t("registration.tenant.sidebarImageAlt")}
                   className="w-full h-90% object-center"
                 />
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
@@ -429,19 +454,19 @@ export default function TenantRegistrationPage() {
           <section className="rounded-3xl bg-white border border-gray-100 shadow-[0_10px_28px_rgba(15,23,42,0.08)] p-5 sm:p-7 lg:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
               <h3 className="text-2xl sm:text-3xl font-extrabold text-emerald-800 tracking-tight">
-                Tenant Information
+                {t("registration.tenant.pageTitle")}
               </h3>
               <div className="grid grid-cols-3 gap-2 w-full sm:w-auto sm:flex sm:items-center sm:gap-3">
                 <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <StepItem number={1} label="Details" active />
+                  <StepItem number={1} label={t("common.details")} active />
                   <span className="hidden sm:inline text-gray-300">-</span>
                 </div>
                 <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <StepItem number={2} label="Preferences" />
+                  <StepItem number={2} label={t("common.preferences")} />
                   <span className="hidden sm:inline text-gray-300">-</span>
                 </div>
                 <div className="flex items-center justify-center sm:justify-start">
-                  <StepItem number={3} label="Finish" />
+                  <StepItem number={3} label={t("common.finish")} />
                 </div>
               </div>
             </div>
@@ -457,7 +482,7 @@ export default function TenantRegistrationPage() {
                 {/* Full Name */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Full Name
+                    {t("common.fullName")}
                   </label>
                   <input
                     type="text"
@@ -465,7 +490,7 @@ export default function TenantRegistrationPage() {
                     value={form.fullName}
                     onChange={handleChange}
                     className={inputClass}
-                    placeholder="Enter your full name"
+                    placeholder={t("registration.tenant.fullNamePlaceholder")}
                     required
                   />
                 </div>
@@ -473,7 +498,7 @@ export default function TenantRegistrationPage() {
                 {/* Date of Birth */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Date of Birth
+                    {t("common.dateOfBirth")}
                   </label>
                   <input
                     type="date"
@@ -487,7 +512,7 @@ export default function TenantRegistrationPage() {
                 {/* Gender */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Gender
+                    {t("common.gender")}
                   </label>
                   <div className="flex items-center flex-wrap gap-5 min-h-[50px] rounded-xl border border-gray-200 bg-gray-50/40 px-3 py-2">
                     {["male", "female", "other"].map((g) => (
@@ -503,7 +528,7 @@ export default function TenantRegistrationPage() {
                           onChange={handleChange}
                           className="accent-emerald-700"
                         />
-                        <span className="capitalize">{g}</span>
+                        <span>{t(`common.${g}`)}</span>
                       </label>
                     ))}
                   </div>
@@ -512,7 +537,7 @@ export default function TenantRegistrationPage() {
                 {/* Phone */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Phone Number
+                    {t("registration.tenant.phoneNumber")}
                   </label>
                   <div className="flex rounded-xl border border-gray-200 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/30">
                     <div className="px-3 bg-gray-50 border-r border-gray-200 flex items-center text-sm text-gray-600">
@@ -529,7 +554,7 @@ export default function TenantRegistrationPage() {
                         setForm((prev) => ({ ...prev, phoneNumber: d }));
                       }}
                       className="w-full px-3 py-3 text-sm outline-none"
-                      placeholder="1712345678"
+                      placeholder={t("common.phoneAfter880Placeholder")}
                     />
                   </div>
                 </div>
@@ -537,7 +562,7 @@ export default function TenantRegistrationPage() {
                 {/* Family/Bachelor */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Family / Bachelor
+                    {t("registration.tenant.familyBachelor")}
                   </label>
                   <div className="flex items-center flex-wrap gap-6 min-h-[50px] rounded-xl border border-gray-200 bg-gray-50/40 px-3 py-2">
                     <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
@@ -549,7 +574,7 @@ export default function TenantRegistrationPage() {
                         onChange={handleChange}
                         className="accent-emerald-700"
                       />
-                      Family
+                      {t("registration.tenant.family")}
                     </label>
                     <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                       <input
@@ -560,7 +585,7 @@ export default function TenantRegistrationPage() {
                         onChange={handleChange}
                         className="accent-emerald-700"
                       />
-                      Bachelor
+                      {t("registration.tenant.bachelor")}
                     </label>
                   </div>
                 </div>
@@ -568,7 +593,7 @@ export default function TenantRegistrationPage() {
                 {/* Family size */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Family Size (if applicable)
+                    {t("registration.tenant.familySize")}
                   </label>
                   <div className="flex items-center gap-2">
                     <button
@@ -582,7 +607,7 @@ export default function TenantRegistrationPage() {
                     <input
                       type="text"
                       name="familySize"
-                      value={isFamilyType ? form.familySize || "1" : "N/A"}
+                      value={isFamilyType ? form.familySize || "1" : t("registration.tenant.notApplicable")}
                       readOnly
                       className={`${inputClass} text-center`}
                     />
@@ -600,7 +625,7 @@ export default function TenantRegistrationPage() {
                 {/* Blood group */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Blood Group
+                    {t("common.bloodGroup")}
                   </label>
                   <select
                     name="bloodGroup"
@@ -608,7 +633,7 @@ export default function TenantRegistrationPage() {
                     onChange={handleChange}
                     className={inputClass}
                   >
-                    <option value="">Select blood group</option>
+                    <option value="">{t("common.selectBloodGroup")}</option>
                     {BLOOD_GROUP_OPTIONS.map((item) => (
                       <option key={item} value={item}>
                         {item}
@@ -620,7 +645,7 @@ export default function TenantRegistrationPage() {
                 {/* Location */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Current Location
+                    {t("registration.tenant.currentLocation")}
                   </label>
                   <select
                     name="currentLocation"
@@ -628,7 +653,7 @@ export default function TenantRegistrationPage() {
                     onChange={handleChange}
                     className={inputClass}
                   >
-                    <option value="">City, Area, Flat No.</option>
+                    <option value="">{t("registration.tenant.locationPlaceholder")}</option>
                     {LOCATION_OPTIONS.map((item) => (
                       <option key={item} value={item}>
                         {item}
@@ -640,7 +665,7 @@ export default function TenantRegistrationPage() {
                 {/* Tenant category */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Tenant Category
+                    {t("registration.tenant.tenantCategory")}
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -657,7 +682,7 @@ export default function TenantRegistrationPage() {
                           : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                       }`}
                     >
-                      Residential
+                      {t("registration.tenant.residential")}
                     </button>
                     <button
                       type="button"
@@ -673,7 +698,7 @@ export default function TenantRegistrationPage() {
                           : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                       }`}
                     >
-                      Commercial
+                      {t("registration.tenant.commercial")}
                     </button>
                   </div>
                 </div>
@@ -681,7 +706,7 @@ export default function TenantRegistrationPage() {
                 {/* Income */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Income Range
+                    {t("registration.tenant.incomeRange")}
                   </label>
                   <select
                     name="incomeRange"
@@ -689,7 +714,7 @@ export default function TenantRegistrationPage() {
                     onChange={handleChange}
                     className={inputClass}
                   >
-                    <option value="">Select income range</option>
+                    <option value="">{t("registration.tenant.selectIncome")}</option>
                     <option value="0-20000">0 - 20,000</option>
                     <option value="20000-50000">20,000 - 50,000</option>
                     <option value="50000-100000">50,000 - 100,000</option>
@@ -700,7 +725,7 @@ export default function TenantRegistrationPage() {
                 {/* Religion */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Religion
+                    {t("common.religion")}
                   </label>
                   <select
                     name="religion"
@@ -708,10 +733,10 @@ export default function TenantRegistrationPage() {
                     onChange={handleChange}
                     className={inputClass}
                   >
-                    <option value="">Select religion</option>
+                    <option value="">{t("common.selectReligion")}</option>
                     {RELIGION_OPTIONS.map((item) => (
                       <option key={item} value={item}>
-                        {item}
+                        {t(RELIGION_LABEL_KEYS[item] || "registration.options.other")}
                       </option>
                     ))}
                   </select>
@@ -720,7 +745,7 @@ export default function TenantRegistrationPage() {
                 {/* Profession */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Profession
+                    {t("registration.tenant.profession")}
                   </label>
                   <select
                     name="profession"
@@ -728,10 +753,10 @@ export default function TenantRegistrationPage() {
                     onChange={handleChange}
                     className={inputClass}
                   >
-                    <option value="">Select profession</option>
+                    <option value="">{t("registration.tenant.selectProfession")}</option>
                     {PROFESSION_OPTIONS.map((item) => (
                       <option key={item} value={item}>
-                        {item}
+                        {t(PROFESSION_LABEL_KEYS[item] || "registration.options.other")}
                       </option>
                     ))}
                   </select>
@@ -745,7 +770,7 @@ export default function TenantRegistrationPage() {
                   disabled={loading}
                   className="w-full max-w-[340px] sm:w-[300px] h-12 rounded-full bg-emerald-700 hover:bg-emerald-800 shadow-[0_8px_20px_rgba(4,120,87,0.28)] text-white font-semibold text-base sm:text-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? "Saving..." : "Continue"}
+                  {loading ? t("common.saving") : t("common.continue")}
                 </button>
                 <p className="mt-3 text-sm text-emerald-700 flex items-center gap-2 justify-center text-center">
                   <svg
@@ -755,7 +780,7 @@ export default function TenantRegistrationPage() {
                   >
                     <path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 1 1 6 0v3H9z" />
                   </svg>
-                  Your information is safe and secure
+                  {t("common.infoSecure")}
                 </p>
               </div>
             </form>

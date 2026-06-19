@@ -8,8 +8,10 @@ import {
   resolveOnboardingRoute,
   setAuthSession,
 } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 
 export default function GoogleAuthCallbackPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const apiUrl = getApiUrl();
 
@@ -33,7 +35,7 @@ export default function GoogleAuthCallbackPage() {
           });
 
           const data = await res.json();
-          if (!res.ok) throw new Error(data.message || 'Exchange failed');
+          if (!res.ok) throw new Error(data.message || t('auth.googleCallback.exchangeFailed'));
 
           setAuthSession({
             accessToken: data.accessToken,
@@ -46,17 +48,17 @@ export default function GoogleAuthCallbackPage() {
           const localRole = getUserRole(user);
 
           if (!userId) {
-            throw new Error('Google login succeeded but user payload is incomplete');
+            throw new Error(t('auth.googleCallback.userIncomplete'));
           }
 
           const { res: statusRes, profileStatus, role, body: statusBody } = await fetchProfileStatus(userId);
           if (!statusRes.ok) {
-            throw new Error('Failed to load profile status');
+            throw new Error(t('auth.googleCallback.profileStatusFailed'));
           }
 
           window.location.href = resolveOnboardingRoute(profileStatus, role || localRole, statusBody?.data?.kycVerificationStatus || null);
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'Exchange failed';
+          const message = err instanceof Error ? err.message : t('auth.googleCallback.exchangeFailed');
           console.error('Code exchange failed:', err);
           window.location.search = `?error=exchange_failed&message=${encodeURIComponent(message)}`;
         }
@@ -64,25 +66,25 @@ export default function GoogleAuthCallbackPage() {
 
       exchangeCode();
     }
-  }, [apiUrl, callbackData.code, callbackData.error]);
+  }, [apiUrl, callbackData.code, callbackData.error, t]);
 
   const hasPayload = Boolean(callbackData.code);
   const isError = Boolean(callbackData.error);
   const status = callbackData.error
-    ? callbackData.message || callbackData.error || 'Google login failed'
+    ? callbackData.message || callbackData.error || t('auth.googleCallback.loginFailed')
     : hasPayload
-      ? 'Authenticating securely...'
-      : 'Missing authentication payload from Google.';
+      ? t('auth.googleCallback.authenticating')
+      : t('auth.googleCallback.missingPayload');
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
-        <h1 className="text-xl font-bold text-gray-900 mb-3">Google Authentication</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-3">{t('auth.googleCallback.title')}</h1>
         <p className={`text-sm ${isError ? 'text-red-600' : 'text-gray-600'}`}>{status}</p>
         {isError && (
           <div className="mt-5">
             <Link to="/login" className="text-teal-700 font-semibold hover:text-teal-800 text-sm">
-              Back to Login
+              {t('common.backToLogin')}
             </Link>
           </div>
         )}
@@ -90,4 +92,3 @@ export default function GoogleAuthCallbackPage() {
     </div>
   );
 }
-

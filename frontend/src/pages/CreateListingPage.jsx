@@ -7,44 +7,33 @@ import AppHeader from "../components/AppHeader";
 import { addLocalNotification } from "../lib/notifications";
 import { usePaymentGuard } from "../lib/usePaymentGuard";
 import { formatMoney } from "../lib/wallet";
+import { useTranslation } from "../lib/i18n";
 
 /** Fallback used if browser geolocation is unavailable and the user does not move the pin. */
 const DEFAULT_LOCATION = { lat: 23.8103, lng: 90.4125 };
 
-const RENTAL_TYPE_OPTIONS = [
-  {
-    value: "residential",
-    label: "Residential",
-    description: "Homes, flats, and apartments for tenants.",
-  },
-  {
-    value: "commercial",
-    label: "Commercial",
-    description: "Office, retail, warehouse, and service spaces.",
-  },
+const RENTAL_TYPE_VALUES = ["residential", "commercial"];
+
+const COMMERCIAL_PROPERTY_TYPE_VALUES = [
+  "OFFICE",
+  "RETAIL",
+  "WAREHOUSE",
+  "RESTAURANT",
+  "OTHER",
 ];
 
-const COMMERCIAL_PROPERTY_TYPE_OPTIONS = [
-  { value: "OFFICE", label: "Office space" },
-  { value: "RETAIL", label: "Retail shop" },
-  { value: "WAREHOUSE", label: "Warehouse" },
-  { value: "RESTAURANT", label: "Restaurant / cafe" },
-  { value: "OTHER", label: "Other commercial space" },
+const COMMERCIAL_AMENITY_NAMES = [
+  "commercial_amenity_parking",
+  "commercial_amenity_loading",
+  "commercial_amenity_frontage",
+  "commercial_amenity_washroom",
+  "commercial_amenity_power_backup",
+  "commercial_amenity_security",
 ];
 
-const COMMERCIAL_AMENITY_OPTIONS = [
-  { name: "commercial_amenity_parking", label: "Customer parking" },
-  { name: "commercial_amenity_loading", label: "Loading access" },
-  { name: "commercial_amenity_frontage", label: "Street frontage" },
-  { name: "commercial_amenity_washroom", label: "Private washroom" },
-  { name: "commercial_amenity_power_backup", label: "Power backup ready" },
-  { name: "commercial_amenity_security", label: "On-site security" },
-];
-
-const FORM_STEPS = [
+const FORM_STEP_DEFS = [
   {
-    title: "Property basics",
-    description: "Start with the details tenants read first.",
+    stepKey: "basics",
     requiredFields: [
       "title",
       "description",
@@ -55,36 +44,33 @@ const FORM_STEPS = [
     ],
   },
   {
-    title: "Location",
-    description: "Set the area, address, and map pin.",
+    stepKey: "location",
     requiredFields: ["area_name"],
   },
   {
-    title: "Building info",
-    description: "Add floor, facing, and amenity details.",
+    stepKey: "building",
     requiredFields: ["building_floors", "floor_no", "flat_no"],
   },
   {
-    title: "Tenant & rent",
-    description: "Set rent, add photos or videos, then publish.",
+    stepKey: "rent",
     requiredFields: ["rent"],
   },
 ];
 
-const FIELD_LABELS = {
+const FIELD_LABEL_KEYS = {
   title: "title",
   description: "description",
-  property_size: "size",
-  room_count: "rooms",
-  bathroom_count: "bathrooms",
-  balcony_count: "balconies",
-  commercial_property_type: "commercial property type",
-  commercial_square_footage: "square footage",
-  area_name: "area",
-  building_floors: "building floors",
-  floor_no: "floor number",
-  flat_no: "flat number",
-  rent: "monthly rent",
+  property_size: "property_size",
+  room_count: "room_count",
+  bathroom_count: "bathroom_count",
+  balcony_count: "balcony_count",
+  commercial_property_type: "commercial_property_type",
+  commercial_square_footage: "commercial_square_footage",
+  area_name: "area_name",
+  building_floors: "building_floors",
+  floor_no: "floor_no",
+  flat_no: "flat_no",
+  rent: "rent",
 };
 
 const FIELD_MINIMUMS = {
@@ -98,14 +84,26 @@ const FIELD_MINIMUMS = {
   rent: 0,
 };
 
-function RentalTypeSelector({ value, onChange }) {
+const AREA_OPTIONS = [
+  "DHANMONDI",
+  "GULSHAN",
+  "BANANI",
+  "UTTARA",
+  "MIRPUR",
+  "MOHAMMADPUR",
+  "BASHUNDHARA",
+  "BADDA",
+];
+
+const FACING_OPTIONS = ["NORTH", "SOUTH", "EAST", "WEST"];
+const TENANT_TYPE_OPTIONS = ["BOTH", "FAMILY", "BACHELOR"];
+
+function RentalTypeSelector({ value, onChange, label, options }) {
   return (
     <div>
-      <p className="block text-sm font-medium text-gray-700 mb-2">
-        Space for rent
-      </p>
+      <p className="block text-sm font-medium text-gray-700 mb-2">{label}</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {RENTAL_TYPE_OPTIONS.map((option) => {
+        {options.map((option) => {
           const selected = value === option.value;
           return (
             <label
@@ -143,24 +141,27 @@ function CommercialBasicsFields({
   onToggle,
   inputClass,
   labelClass,
+  labels,
+  commercialPropertyTypeOptions,
+  commercialAmenityOptions,
 }) {
   return (
     <>
       <div>
-        <label className={labelClass}>Listing title</label>
+        <label className={labelClass}>{labels.listingTitle}</label>
         <input
           type="text"
           name="title"
           value={form.title}
           onChange={onChange}
           className={inputClass}
-          placeholder="Ground floor retail space in Gulshan"
+          placeholder={labels.titleCommercialPlaceholder}
           required
         />
       </div>
 
       <div>
-        <label className={labelClass}>Commercial property type</label>
+        <label className={labelClass}>{labels.commercialPropertyType}</label>
         <select
           name="commercial_property_type"
           value={form.commercial_property_type}
@@ -168,8 +169,8 @@ function CommercialBasicsFields({
           className={inputClass}
           required
         >
-          <option value="">Select commercial type</option>
-          {COMMERCIAL_PROPERTY_TYPE_OPTIONS.map((option) => (
+          <option value="">{labels.selectCommercialType}</option>
+          {commercialPropertyTypeOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -178,35 +179,35 @@ function CommercialBasicsFields({
       </div>
 
       <div>
-        <label className={labelClass}>Square footage</label>
+        <label className={labelClass}>{labels.squareFootage}</label>
         <input
           type="number"
           name="commercial_square_footage"
           value={form.commercial_square_footage}
           onChange={onChange}
           className={inputClass}
-          placeholder="e.g. 2200"
+          placeholder={labels.squareFootagePlaceholder}
           min="1"
           required
         />
       </div>
 
       <div>
-        <label className={labelClass}>Commercial space description</label>
+        <label className={labelClass}>{labels.spaceDescription}</label>
         <textarea
           name="description"
           value={form.description}
           onChange={onChange}
           className={`${inputClass} min-h-24`}
-          placeholder="Describe storefront access, visibility, floor plan, utilities, and fit-out condition..."
+          placeholder={labels.descriptionCommercialPlaceholder}
           required
         />
       </div>
 
       <div>
-        <p className={labelClass}>Commercial amenities</p>
+        <p className={labelClass}>{labels.commercialAmenities}</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {COMMERCIAL_AMENITY_OPTIONS.map((amenity) => (
+          {commercialAmenityOptions.map((amenity) => (
             <label
               key={amenity.name}
               className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700"
@@ -226,13 +227,11 @@ function CommercialBasicsFields({
   );
 }
 
-function PropertyMediaUploadPanel({ propertyId, preparing }) {
+function PropertyMediaUploadPanel({ propertyId, preparing, labels }) {
   return (
     <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4">
-      <h3 className="text-sm font-bold text-teal-900">Photos and videos</h3>
-      <p className="mt-1 text-sm text-teal-800">
-        Add listing media before you publish.
-      </p>
+      <h3 className="text-sm font-bold text-teal-900">{labels.mediaTitle}</h3>
+      <p className="mt-1 text-sm text-teal-800">{labels.mediaSubtitle}</p>
       <div className="mt-3">
         {propertyId ? (
           <ImageUploader
@@ -242,11 +241,11 @@ function PropertyMediaUploadPanel({ propertyId, preparing }) {
           />
         ) : preparing ? (
           <div className="rounded-lg border border-dashed border-teal-200 bg-white/70 px-4 py-3 text-sm text-teal-800">
-            Preparing uploads…
+            {labels.mediaPreparing}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-teal-200 bg-white/70 px-4 py-3 text-sm text-teal-800">
-            Complete the previous steps to enable uploads.
+            {labels.mediaCompleteStepsFirst}
           </div>
         )}
       </div>
@@ -262,31 +261,32 @@ function formatApiError(body) {
   return body.error || body.message || "";
 }
 
-function getCommercialTypeLabel(value) {
+function getCommercialTypeLabel(value, commercialPropertyTypeOptions, defaultLabel) {
   return (
-    COMMERCIAL_PROPERTY_TYPE_OPTIONS.find((option) => option.value === value)
-      ?.label || "Commercial space"
+    commercialPropertyTypeOptions.find((option) => option.value === value)
+      ?.label || defaultLabel
   );
 }
 
-function getSelectedCommercialAmenities(form) {
-  return COMMERCIAL_AMENITY_OPTIONS.filter((amenity) => form[amenity.name]).map(
+function getSelectedCommercialAmenities(form, commercialAmenityOptions) {
+  return commercialAmenityOptions.filter((amenity) => form[amenity.name]).map(
     (amenity) => amenity.label,
   );
 }
 
-function buildCommercialDescription(form) {
+function buildCommercialDescription(form, commercialPropertyTypeOptions, commercialAmenityOptions, defaultSpaceLabel) {
   const details = [
-    `Commercial type: ${getCommercialTypeLabel(form.commercial_property_type)}`,
+    `Commercial type: ${getCommercialTypeLabel(form.commercial_property_type, commercialPropertyTypeOptions, defaultSpaceLabel)}`,
     `Square footage: ${form.commercial_square_footage} sqft`,
   ];
-  const amenities = getSelectedCommercialAmenities(form);
+  const amenities = getSelectedCommercialAmenities(form, commercialAmenityOptions);
   if (amenities.length > 0) details.push(`Amenities: ${amenities.join(", ")}`);
 
   return `${form.description.trim()}\n\n${details.join("\n")}`;
 }
 
 export default function CreateListingPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     rental_type: "residential",
@@ -324,9 +324,110 @@ export default function CreateListingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const finalStepEnabledAtRef = useRef(0);
 
+  const formSteps = useMemo(
+    () =>
+      FORM_STEP_DEFS.map((step) => ({
+        ...step,
+        title: t(`createListing.steps.${step.stepKey}.title`),
+        description: t(`createListing.steps.${step.stepKey}.description`),
+      })),
+    [t]
+  );
+
+  const fieldLabels = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(FIELD_LABEL_KEYS).map(([field, key]) => [
+          field,
+          t(`createListing.fieldLabels.${key}`),
+        ])
+      ),
+    [t]
+  );
+
+  const rentalTypeOptions = useMemo(
+    () =>
+      RENTAL_TYPE_VALUES.map((value) => ({
+        value,
+        label: t(`createListing.rentalType.${value}`),
+        description: t(`createListing.rentalType.${value}Desc`),
+      })),
+    [t]
+  );
+
+  const commercialPropertyTypeOptions = useMemo(
+    () =>
+      COMMERCIAL_PROPERTY_TYPE_VALUES.map((value) => ({
+        value,
+        label: t(`createListing.commercial.types.${value}`),
+      })),
+    [t]
+  );
+
+  const commercialAmenityOptions = useMemo(
+    () =>
+      COMMERCIAL_AMENITY_NAMES.map((name) => ({
+        name,
+        label: t(`createListing.commercial.amenityLabels.${name}`),
+      })),
+    [t]
+  );
+
+  const areaOptions = useMemo(
+    () =>
+      AREA_OPTIONS.map((value) => ({
+        value,
+        label: t(`common.areas.${value}`, value),
+      })),
+    [t]
+  );
+
+  const facingOptions = useMemo(
+    () =>
+      FACING_OPTIONS.map((value) => ({
+        value,
+        label: t(`common.enums.facing.${value}`, value),
+      })),
+    [t]
+  );
+
+  const tenantTypeOptions = useMemo(
+    () =>
+      TENANT_TYPE_OPTIONS.map((value) => ({
+        value,
+        label: t(`common.enums.tenantType.${value}`, value),
+      })),
+    [t]
+  );
+
+  const commercialBasicsLabels = useMemo(
+    () => ({
+      listingTitle: t("createListing.fields.listingTitle"),
+      commercialPropertyType: t("createListing.commercial.propertyType"),
+      selectCommercialType: t("createListing.commercial.selectType"),
+      squareFootage: t("createListing.commercial.squareFootage"),
+      squareFootagePlaceholder: t("createListing.placeholders.squareFootage"),
+      spaceDescription: t("createListing.commercial.spaceDescription"),
+      commercialAmenities: t("createListing.commercial.amenities"),
+      titleCommercialPlaceholder: t("createListing.placeholders.titleCommercial"),
+      descriptionCommercialPlaceholder: t("createListing.placeholders.descriptionCommercial"),
+    }),
+    [t]
+  );
+
+  const mediaPanelLabels = useMemo(
+    () => ({
+      mediaTitle: t("createListing.media.title"),
+      mediaSubtitle: t("createListing.media.subtitle"),
+      mediaPreparing: t("createListing.media.preparing"),
+      mediaCompleteStepsFirst: t("createListing.media.completeStepsFirst"),
+    }),
+    [t]
+  );
+
   const isCommercialFlow = form.rental_type === "commercial";
-  const currentStepConfig = FORM_STEPS[currentStep];
-  const isLastStep = currentStep === FORM_STEPS.length - 1;
+  const currentStepConfig = formSteps[currentStep];
+  const isLastStep = currentStep === formSteps.length - 1;
   const listingRentForFee = useMemo(() => {
     const rent = Number(form.rent);
     return Number.isFinite(rent) && rent > 0 ? rent : undefined;
@@ -341,7 +442,12 @@ export default function CreateListingPage() {
   const buildPropertyBody = () => ({
     title: form.title,
     description: isCommercialFlow
-      ? buildCommercialDescription(form)
+      ? buildCommercialDescription(
+          form,
+          commercialPropertyTypeOptions,
+          commercialAmenityOptions,
+          t("createListing.commercial.defaultSpace")
+        )
       : form.description,
     propertySizeSqft: parseFloat(
       isCommercialFlow ? form.commercial_square_footage : form.property_size,
@@ -374,7 +480,7 @@ export default function CreateListingPage() {
     if (draftPropertyId) return draftPropertyId;
 
     if (!isLoggedIn()) {
-      throw new Error("Not authenticated. Please log in again.");
+      throw new Error(t("common.notAuthenticated"));
     }
 
     const createPropertyRes = await apiFetch("/properties", {
@@ -387,13 +493,13 @@ export default function CreateListingPage() {
       throw new Error(
         formatApiError(createPropertyBody) ||
           createPropertyBody?.message ||
-          "Failed to prepare property for media upload",
+          t("createListing.errors.prepareMedia"),
       );
     }
 
     const propertyId = createPropertyBody?.data?.propertyId;
     if (!propertyId) {
-      throw new Error("Property draft created but property ID missing.");
+      throw new Error(t("createListing.errors.propertyIdMissing"));
     }
 
     setDraftPropertyId(propertyId);
@@ -425,7 +531,7 @@ export default function CreateListingPage() {
         : ["building_floors", "floor_no", "flat_no"];
     }
 
-    return FORM_STEPS[stepIndex].requiredFields;
+    return formSteps[stepIndex].requiredFields;
   };
 
   const handleFormKeyDown = (e) => {
@@ -437,10 +543,10 @@ export default function CreateListingPage() {
   const getValidationMessage = (fieldNames) => {
     for (const fieldName of fieldNames) {
       const value = form[fieldName];
-      const label = FIELD_LABELS[fieldName] || fieldName;
+      const label = fieldLabels[fieldName] || fieldName;
 
       if (String(value ?? "").trim() === "") {
-        return `Please complete the ${label} before continuing.`;
+        return t("createListing.validation.incomplete", { field: label });
       }
 
       if (Object.prototype.hasOwnProperty.call(FIELD_MINIMUMS, fieldName)) {
@@ -449,7 +555,7 @@ export default function CreateListingPage() {
           Number.isNaN(numericValue) ||
           numericValue < FIELD_MINIMUMS[fieldName]
         ) {
-          return `Please enter a valid ${label}.`;
+          return t("createListing.validation.invalid", { field: label });
         }
       }
     }
@@ -474,14 +580,14 @@ export default function CreateListingPage() {
     }
 
     setError("");
-    const nextStep = Math.min(currentStep + 1, FORM_STEPS.length - 1);
+    const nextStep = Math.min(currentStep + 1, formSteps.length - 1);
 
-    if (nextStep === FORM_STEPS.length - 1 && nextStep !== currentStep) {
+    if (nextStep === formSteps.length - 1 && nextStep !== currentStep) {
       setDraftSaving(true);
       try {
         await ensureDraftProperty();
       } catch (err) {
-        setError(err.message || "Failed to prepare property for uploads");
+        setError(err.message || t("createListing.errors.prepareUploads"));
         scrollToPageTop();
         return;
       } finally {
@@ -513,7 +619,7 @@ export default function CreateListingPage() {
       return;
     }
 
-    for (let stepIndex = 0; stepIndex < FORM_STEPS.length; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < formSteps.length; stepIndex += 1) {
       const validationMessage = getValidationMessage(
         getStepRequiredFields(stepIndex),
       );
@@ -527,7 +633,7 @@ export default function CreateListingPage() {
 
     try {
       if (!isLoggedIn()) {
-        setError("Not authenticated. Please log in again.");
+        setError(t("common.notAuthenticated"));
         return;
       }
 
@@ -550,7 +656,7 @@ export default function CreateListingPage() {
           throw new Error(
             formatApiError(updatePropertyBody) ||
               updatePropertyBody?.message ||
-              "Failed to update property",
+              t("createListing.errors.updateProperty"),
           );
         }
       } else {
@@ -566,12 +672,12 @@ export default function CreateListingPage() {
           throw new Error(
             formatApiError(createPropertyBody) ||
               createPropertyBody?.message ||
-              "Failed to create property",
+              t("createListing.errors.createProperty"),
           );
         }
         propertyId = createPropertyBody?.data?.propertyId;
         if (!propertyId) {
-          throw new Error("Property created but property ID missing.");
+          throw new Error(t("createListing.errors.propertyIdMissing"));
         }
       }
 
@@ -603,18 +709,18 @@ export default function CreateListingPage() {
         throw new Error(
           formatApiError(createListingBody) ||
           createListingBody?.message ||
-          "Property created but listing creation failed",
+          t("createListing.errors.listingFailed"),
         );
       }
       addLocalNotification({
-        title: "Listing Created",
-        message: "Your property listing was created successfully.",
+        title: t("createListing.notification.createdTitle"),
+        message: t("createListing.notification.createdMessage"),
         url: "/owner-dashboard/my-properties",
         type: "LISTING",
       });
       navigate("/owner-dashboard/my-properties");
     } catch (err) {
-      setError(err.message || "An unexpected error occurred");
+      setError(err.message || t("common.unexpectedError"));
     } finally {
       setLoading(false);
     }
@@ -633,25 +739,25 @@ export default function CreateListingPage() {
       <main className="max-w-3xl mx-auto px-6 py-10">
         <div className="mb-8">
           <p className="text-sm font-semibold text-teal-700 mb-2">
-            Step {currentStep + 1} of {FORM_STEPS.length}
+            {t("createListing.stepIndicator", {
+              current: currentStep + 1,
+              total: formSteps.length,
+            })}
           </p>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Create New Listing
+            {t("createListing.title")}
           </h1>
-          <p className="text-gray-500">
-            Create a property first, then publish its listing section by
-            section.
-          </p>
+          <p className="text-gray-500">{t("createListing.subtitle")}</p>
         </div>
 
         <div className="mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            {FORM_STEPS.map((step, index) => {
+            {formSteps.map((step, index) => {
               const isActive = index === currentStep;
               const isComplete = index < currentStep;
               return (
                 <div
-                  key={step.title}
+                  key={step.stepKey}
                   className={`rounded-xl border p-3 ${isActive
                       ? "border-teal-600 bg-teal-50 text-teal-900"
                       : isComplete
@@ -693,7 +799,7 @@ export default function CreateListingPage() {
             <section className={sectionClass}>
               <div>
                 <p className="text-sm font-semibold text-teal-700">
-                  Section {currentStep + 1}
+                  {t("createListing.sectionLabel", { n: currentStep + 1 })}
                 </p>
                 <h2 className="text-xl font-bold text-gray-900 mt-1">
                   {currentStepConfig.title}
@@ -708,6 +814,8 @@ export default function CreateListingPage() {
                   <RentalTypeSelector
                     value={form.rental_type}
                     onChange={handleChange}
+                    label={t("createListing.rentalType.label")}
+                    options={rentalTypeOptions}
                   />
 
                   {isCommercialFlow ? (
@@ -717,76 +825,79 @@ export default function CreateListingPage() {
                       onToggle={handleToggle}
                       inputClass={inputClass}
                       labelClass={labelClass}
+                      labels={commercialBasicsLabels}
+                      commercialPropertyTypeOptions={commercialPropertyTypeOptions}
+                      commercialAmenityOptions={commercialAmenityOptions}
                     />
                   ) : (
                     <>
                       <div>
-                        <label className={labelClass}>Title</label>
+                        <label className={labelClass}>{t("createListing.fields.title")}</label>
                         <input
                           type="text"
                           name="title"
                           value={form.title}
                           onChange={handleChange}
                           className={inputClass}
-                          placeholder="3 Bedroom Apartment in Dhanmondi"
+                          placeholder={t("createListing.placeholders.titleResidential")}
                           required
                         />
                       </div>
 
                       <div>
-                        <label className={labelClass}>Description</label>
+                        <label className={labelClass}>{t("createListing.fields.description")}</label>
                         <textarea
                           name="description"
                           value={form.description}
                           onChange={handleChange}
                           className={`${inputClass} min-h-24`}
-                          placeholder="Describe the property..."
+                          placeholder={t("createListing.placeholders.description")}
                           required
                         />
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className={labelClass}>Size (sqft)</label>
+                          <label className={labelClass}>{t("createListing.fields.size")}</label>
                           <input
                             type="number"
                             name="property_size"
                             value={form.property_size}
                             onChange={handleChange}
                             className={inputClass}
-                            placeholder="e.g. 1450"
+                            placeholder={t("createListing.placeholders.size")}
                             min="0"
                             required
                           />
                         </div>
                         <div>
-                          <label className={labelClass}>Rooms / Beds</label>
+                          <label className={labelClass}>{t("createListing.fields.rooms")}</label>
                           <input
                             type="number"
                             name="room_count"
                             value={form.room_count}
                             onChange={handleChange}
                             className={inputClass}
-                            placeholder="e.g. 3"
+                            placeholder={t("createListing.placeholders.rooms")}
                             min="0"
                             required
                           />
                         </div>
                         <div>
-                          <label className={labelClass}>Bathrooms</label>
+                          <label className={labelClass}>{t("createListing.fields.bathrooms")}</label>
                           <input
                             type="number"
                             name="bathroom_count"
                             value={form.bathroom_count}
                             onChange={handleChange}
                             className={inputClass}
-                            placeholder="e.g. 2"
+                            placeholder={t("createListing.placeholders.bathrooms")}
                             min="0"
                             required
                           />
                         </div>
                         <div>
-                          <label className={labelClass}>Balconies</label>
+                          <label className={labelClass}>{t("createListing.fields.balconies")}</label>
                           <input
                             type="number"
                             name="balcony_count"
@@ -806,7 +917,7 @@ export default function CreateListingPage() {
               {currentStep === 1 && (
                 <>
                   <div>
-                    <label className={labelClass}>Area / Location</label>
+                    <label className={labelClass}>{t("createListing.fields.areaLocation")}</label>
                     <select
                       name="area_name"
                       value={form.area_name}
@@ -814,35 +925,29 @@ export default function CreateListingPage() {
                       className={inputClass}
                       required
                     >
-                      <option value="">Select area</option>
-                      <option value="DHANMONDI">Dhanmondi</option>
-                      <option value="GULSHAN">Gulshan</option>
-                      <option value="BANANI">Banani</option>
-                      <option value="UTTARA">Uttara</option>
-                      <option value="MIRPUR">Mirpur</option>
-                      <option value="MOHAMMADPUR">Mohammadpur</option>
-                      <option value="BASHUNDHARA">Bashundhara</option>
-                      <option value="BADDA">Badda</option>
+                      <option value="">{t("common.selectArea")}</option>
+                      {areaOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className={labelClass}>Address</label>
+                    <label className={labelClass}>{t("createListing.fields.address")}</label>
                     <input
                       type="text"
                       name="address"
                       value={form.address}
                       onChange={handleChange}
                       className={inputClass}
-                      placeholder="Street, building, area"
+                      placeholder={t("createListing.placeholders.address")}
                     />
                   </div>
 
                   <div>
-                    <label className={labelClass}>
-                      Map location (uses your current location when allowed;
-                      click to adjust pin)
-                    </label>
+                    <label className={labelClass}>{t("createListing.fields.mapLocation")}</label>
                     <div
                       className="rounded-xl overflow-hidden border border-gray-200"
                       style={{ height: "280px" }}
@@ -861,7 +966,7 @@ export default function CreateListingPage() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>Building Floors</label>
+                      <label className={labelClass}>{t("createListing.fields.buildingFloors")}</label>
                       <input
                         type="number"
                         name="building_floors"
@@ -873,24 +978,25 @@ export default function CreateListingPage() {
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Building Facing</label>
+                      <label className={labelClass}>{t("createListing.fields.buildingFacing")}</label>
                       <select
                         name="building_facing"
                         value={form.building_facing}
                         onChange={handleChange}
                         className={inputClass}
                       >
-                        <option value="NORTH">North</option>
-                        <option value="SOUTH">South</option>
-                        <option value="EAST">East</option>
-                        <option value="WEST">West</option>
+                        {facingOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>Floor Number</label>
+                      <label className={labelClass}>{t("createListing.fields.floorNumber")}</label>
                       <input
                         type="number"
                         name="floor_no"
@@ -898,13 +1004,15 @@ export default function CreateListingPage() {
                         onChange={handleChange}
                         className={inputClass}
                         min="1"
-                        placeholder="e.g. 4"
+                        placeholder={t("createListing.placeholders.floorNo")}
                         required
                       />
                     </div>
                     <div>
                       <label className={labelClass}>
-                        Flat / Unit Number {isCommercialFlow && "(Optional)"}
+                        {isCommercialFlow
+                          ? t("createListing.fields.flatUnitOptional")
+                          : t("createListing.fields.flatUnit")}
                       </label>
                       <input
                         type="text"
@@ -912,7 +1020,7 @@ export default function CreateListingPage() {
                         value={form.flat_no}
                         onChange={handleChange}
                         className={inputClass}
-                        placeholder="e.g. 4B"
+                        placeholder={t("createListing.placeholders.flatNo")}
                         required={!isCommercialFlow}
                       />
                     </div>
@@ -931,7 +1039,7 @@ export default function CreateListingPage() {
                           }))
                         }
                       />
-                      Lift
+                      {t("createListing.amenities.lift")}
                     </label>
                     <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
                       <input
@@ -945,7 +1053,7 @@ export default function CreateListingPage() {
                           }))
                         }
                       />
-                      Generator
+                      {t("createListing.amenities.generator")}
                     </label>
                     <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
                       <input
@@ -959,7 +1067,7 @@ export default function CreateListingPage() {
                           }))
                         }
                       />
-                      Security Guard
+                      {t("createListing.amenities.securityGuard")}
                     </label>
                   </div>
                 </>
@@ -968,28 +1076,30 @@ export default function CreateListingPage() {
               {currentStep === 3 && (
                 <>
                   <div>
-                    <label className={labelClass}>Intended Tenant Type</label>
+                    <label className={labelClass}>{t("createListing.fields.intendedTenantType")}</label>
                     <select
                       name="intended_tenant_type"
                       value={form.intended_tenant_type}
                       onChange={handleChange}
                       className={inputClass}
                     >
-                      <option value="BOTH">Both</option>
-                      <option value="FAMILY">Family</option>
-                      <option value="BACHELOR">Bachelor</option>
+                      {tenantTypeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className={labelClass}>Monthly Rent ($)</label>
+                    <label className={labelClass}>{t("createListing.fields.monthlyRent")}</label>
                     <input
                       type="number"
                       name="rent"
                       value={form.rent}
                       onChange={handleChange}
                       className={inputClass}
-                      placeholder="e.g. 15000"
+                      placeholder={t("createListing.placeholders.rent")}
                       min="0"
                       required
                     />
@@ -998,24 +1108,25 @@ export default function CreateListingPage() {
                   <PropertyMediaUploadPanel
                     propertyId={draftPropertyId}
                     preparing={draftSaving}
+                    labels={mediaPanelLabels}
                   />
 
                   <div className="rounded-xl border border-teal-100 bg-teal-50/70 px-4 py-3 text-sm text-teal-900">
                       <p className="font-semibold">
-                        Payment required before publishing
+                        {t("createListing.payment.title")}
                       </p>
                       <p className="mt-1">
-                        Listing creation fee:{" "}
+                        {t("createListing.payment.fee")}{" "}
                         {createListingPayment.fee
                           ? formatMoney(
                               createListingPayment.requiredAmount,
                               createListingPayment.currency,
                             )
-                          : "Loading payment amount..."}
+                          : t("common.loadingPaymentAmount")}
                       </p>
                       {createListingPayment.availableBalance ? (
                         <p className="mt-1">
-                          Wallet balance:{" "}
+                          {t("createListing.payment.balance")}{" "}
                           {formatMoney(
                             createListingPayment.availableBalance,
                             createListingPayment.currency,
@@ -1039,7 +1150,7 @@ export default function CreateListingPage() {
                 disabled={currentStep === 0 || loading || draftSaving}
                 className="px-5 py-3 rounded-lg border border-gray-200 text-gray-700 font-semibold transition hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Back
+                {t("createListing.actions.back")}
               </button>
 
               {isLastStep ? (
@@ -1054,10 +1165,10 @@ export default function CreateListingPage() {
                   className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading || createListingPayment.loading
-                    ? "Checking wallet..."
+                    ? t("createListing.actions.checkingWallet")
                     : draftSaving
-                      ? "Preparing..."
-                      : "Create Property & Listing"}
+                      ? t("createListing.actions.preparing")
+                      : t("createListing.actions.createPropertyListing")}
                 </button>
               ) : (
                 <button
@@ -1066,7 +1177,7 @@ export default function CreateListingPage() {
                   disabled={loading || draftSaving}
                   className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {draftSaving ? "Preparing..." : "Continue"}
+                  {draftSaving ? t("createListing.actions.preparing") : t("createListing.actions.continue")}
                 </button>
               )}
             </div>

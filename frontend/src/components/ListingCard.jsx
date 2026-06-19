@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { recordListingView } from '../lib/listingViews';
+import { useTranslation } from '../lib/i18n';
 
 function EyeIcon({ className = 'h-4 w-4' }) {
   return (
@@ -36,12 +37,13 @@ export default function ListingCard({
   onViewCountUpdate,
   showArea = false,
 }) {
+  const { t } = useTranslation();
   const listingId = item?.listingId;
   const imageUrl = item?.primaryImageUrl || null;
   const area = item?.areaName ? String(item.areaName).replaceAll('_', ' ') : '';
   const title = item?.title
     ? `${item.title.slice(0, 56)}${item.title.length > 56 ? '...' : ''}`
-    : `Apartment - ${item?.roomCount ?? '?'} beds`;
+    : t('components.listingCard.fallbackTitle', { beds: item?.roomCount ?? '?' });
   const rent = Number(item?.rent || 0).toLocaleString();
   const beds = item?.roomCount ?? '?';
   const baths = item?.bathroomCount ?? '?';
@@ -69,7 +71,11 @@ export default function ListingCard({
             onToggleWishlist?.(item);
           }}
           className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/95 shadow-sm transition hover:bg-white"
-          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          aria-label={
+            isWishlisted
+              ? t('components.listingCard.removeFromWishlist')
+              : t('components.listingCard.addToWishlist')
+          }
         >
           <svg className={`h-5 w-5 ${isWishlisted ? 'fill-current text-rose-500' : 'text-slate-500'}`} viewBox="0 0 24 24">
             <path d="M12.001 20.729l-1.09-.992C6.14 15.39 3 12.548 3 9.06 3 6.219 5.24 4 8.05 4c1.59 0 3.115.74 4.05 1.9C13.835 4.74 15.36 4 16.95 4 19.76 4 22 6.219 22 9.06c0 3.488-3.14 6.33-7.91 10.677l-1.089.992z" />
@@ -80,7 +86,11 @@ export default function ListingCard({
       <Link to={`/listings/${listingId}`} className="block" onClick={handleCardClick}>
         <div className="flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-100 to-emerald-50 sm:h-48">
           {imageUrl ? (
-            <img src={imageUrl} alt={item?.title || 'Property'} className="h-full w-full object-cover" />
+            <img
+              src={imageUrl}
+              alt={item?.title || t('components.listingCard.propertyAlt')}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <PlaceholderImage />
           )}
@@ -94,21 +104,23 @@ export default function ListingCard({
           <div className="flex items-center justify-between gap-3">
             <p className="text-lg font-bold text-emerald-800">
               BDT {rent}
-              <span className="ml-1 text-sm font-normal text-slate-500">/month</span>
+              <span className="ml-1 text-sm font-normal text-slate-500">{t('components.listingCard.perMonth')}</span>
             </p>
             <p className="flex shrink-0 items-center gap-1.5 text-sm text-slate-600">
               <EyeIcon className="h-4 w-4 shrink-0" />
               <span>
-                Property Viewed {viewCount.toLocaleString()}
+                {t('components.listingCard.propertyViewed', { count: viewCount.toLocaleString() })}
               </span>
             </p>
           </div>
           <div className="flex items-center justify-between gap-3">
             <p className="min-w-0 text-base text-slate-600">
-              {beds} Beds, {baths} Baths, {size} sqft
+              {t('components.listingCard.specs', { beds, baths, size })}
             </p>
             {listedOn ? (
-              <p className="shrink-0 text-right text-xs text-slate-400">Listed on {listedOn}</p>
+              <p className="shrink-0 text-right text-xs text-slate-400">
+                {t('components.listingCard.listedOn', { date: listedOn })}
+              </p>
             ) : null}
           </div>
         </div>

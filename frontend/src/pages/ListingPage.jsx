@@ -7,6 +7,7 @@ import ListingCard from '../components/ListingCard';
 import { buildListingsQuery, expandAreasForQuery } from '../lib/listingSearchQuery';
 import { toggleWishlist } from '../lib/wishlist';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../lib/i18n';
 
 const VALID_MAX_TIERS = new Set(['20000', '35000', '50000', '80000', '100000', '200000']);
 
@@ -39,6 +40,7 @@ function parseFiltersFromSearchParams(searchParams) {
 }
 
 export default function ListingsPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +111,7 @@ export default function ListingsPage() {
 
             const res = await apiFetch(`/properties/public/listings?${q.toString()}`);
             const body = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(body?.error || body?.message || 'Failed to load listings');
+            if (!res.ok) throw new Error(body?.error || body?.message || t('listings.errors.loadFailed'));
             return body.data?.items || [];
           })
         );
@@ -131,7 +133,7 @@ export default function ListingsPage() {
 
         setListings(merged);
       } catch (e) {
-        setError(e.message || 'Failed to load listings.');
+        setError(e.message || t('listings.errors.loadFailed'));
       } finally {
         setLoading(false);
       }
@@ -158,7 +160,7 @@ export default function ListingsPage() {
       else next.delete(id);
       return next;
     });
-    toast.success(nextSave ? 'Saved to wishlist' : 'Removed from wishlist');
+    toast.success(nextSave ? t('listings.toast.saved') : t('listings.toast.removed'));
   };
 
   const handleViewCountUpdate = (listingId, viewCount) => {
@@ -173,8 +175,8 @@ export default function ListingsPage() {
 
       <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-5 sm:py-6 lg:px-6 lg:py-8">
         <section className="mb-5 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Available Listings</h1>
-          <p className="mt-1 text-sm text-slate-500">Browse verified properties with flexible filters and quick actions.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{t('listings.title')}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t('listings.subtitle')}</p>
           <div className="mt-4">
             <PropertySearchBar
               key={paramsKey}
@@ -195,7 +197,7 @@ export default function ListingsPage() {
           </div>
         ) : listings.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-14 text-center text-slate-500">
-            No listings found for this filter set.
+            {t('listings.empty')}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -4,8 +4,10 @@ import AppHeader from '../components/AppHeader';
 import toast from 'react-hot-toast';
 import { listTenantRequests, withdrawTenantRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
+import { useTranslation } from '../lib/i18n';
 
 export default function MyApplicationsPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [remoteAvailable, setRemoteAvailable] = useState(false);
@@ -31,26 +33,26 @@ export default function MyApplicationsPage() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Applications</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t('requests.applications.title')}</h1>
           <button
             type="button"
             onClick={load}
             className="text-sm font-medium text-emerald-800 hover:text-emerald-900"
           >
-            Refresh
+            {t('common.refresh')}
           </button>
         </div>
         <p className="text-sm text-gray-500 mb-5 sm:mb-6">
-          {remoteAvailable ? 'Applications synced with backend.' : 'Using local interaction fallback for requests.'}
+          {remoteAvailable ? t('requests.applications.syncRemote') : t('requests.applications.syncLocal')}
         </p>
 
         {loading ? (
-          <div className="text-sm text-gray-500">Loading applications...</div>
+          <div className="text-sm text-gray-500">{t('requests.applications.loading')}</div>
         ) : items.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-100 p-8 text-center">
-            <p className="text-gray-500 mb-4">No applications yet.</p>
+            <p className="text-gray-500 mb-4">{t('requests.applications.empty')}</p>
             <Link to="/listings" className="inline-block bg-teal-700 hover:bg-teal-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold">
-              Find a Listing
+              {t('requests.applications.findListing')}
             </Link>
           </div>
         ) : (
@@ -60,20 +62,20 @@ export default function MyApplicationsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                   <div className="min-w-0">
                     <Link to={`/listings/${item.listingId}`} className="font-semibold text-gray-900 hover:text-teal-700">
-                      Listing #{item.listingId}
+                      {t('common.listingNumber', { id: item.listingId })}
                     </Link>
                     <p className="text-sm text-gray-500 mt-1">
-                      {item.listing?.areaName || 'Unknown area'} - {item.listing?.rent ? `$${item.listing.rent}/mo` : 'Rent N/A'}
+                      {item.listing?.areaName || t('common.unknownArea')} - {item.listing?.rent ? `$${item.listing.rent}${t('common.perMonth')}` : t('common.rentNa')}
                     </p>
                     {item.ownerUserId && (
                       <p className="text-sm mt-1">
                         <Link to={`/profile/${item.ownerUserId}`} className="text-teal-700 hover:text-teal-800 font-medium">
-                          View Owner Profile
+                          {t('requests.applications.viewOwnerProfile')}
                         </Link>
                       </p>
                     )}
                     <p className="text-xs text-gray-400 mt-1">
-                      Requested on {new Date(item.requestedAt).toLocaleString()}
+                      {t('requests.applications.requestedOn', { date: new Date(item.requestedAt).toLocaleString() })}
                     </p>
                   </div>
                   <span className={`self-start px-3 py-1 rounded-full text-xs font-semibold ${
@@ -85,7 +87,7 @@ export default function MyApplicationsPage() {
                           ? 'bg-gray-100 text-gray-600'
                           : 'bg-amber-100 text-amber-700'
                   }`}>
-                    {item.requestStatus}
+                    {t(`common.status.request.${item.requestStatus}`, item.requestStatus)}
                   </span>
                 </div>
                 {item.requestStatus === 'PENDING' && (
@@ -95,21 +97,21 @@ export default function MyApplicationsPage() {
                       onClick={async () => {
                         const result = await withdrawTenantRequest(item.requestId);
                         if (!result.ok) {
-                          toast.error('Failed to withdraw request');
+                          toast.error(t('requests.applications.toast.withdrawFailed'));
                           return;
                         }
                         addLocalNotification({
-                          title: 'Request Withdrawn',
-                          message: 'You withdrew a pending tenant request.',
+                          title: t('requests.applications.notification.withdrawnTitle'),
+                          message: t('requests.applications.notification.withdrawnMessage'),
                           url: '/tenant-dashboard/applications',
                           type: 'REQUEST',
                         });
-                        toast.success('Request withdrawn');
+                        toast.success(t('requests.applications.toast.withdrawn'));
                         await load();
                       }}
                       className="w-full sm:w-auto text-left text-sm font-semibold text-red-600 hover:text-red-700"
                     >
-                      Withdraw Request
+                      {t('requests.applications.withdraw')}
                     </button>
                   </div>
                 )}
@@ -121,4 +123,3 @@ export default function MyApplicationsPage() {
     </div>
   );
 }
-

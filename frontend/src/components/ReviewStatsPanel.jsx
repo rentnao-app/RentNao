@@ -1,3 +1,5 @@
+import { useTranslation } from '../lib/i18n';
+
 function StarIcon({ className = 'h-4 w-4', filled = true }) {
   return (
     <svg
@@ -33,6 +35,8 @@ function StatsSkeleton() {
 }
 
 export default function ReviewStatsPanel({ stats, loading, error, onRetry }) {
+  const { t } = useTranslation();
+
   if (loading) return <StatsSkeleton />;
 
   if (error) {
@@ -41,7 +45,7 @@ export default function ReviewStatsPanel({ stats, loading, error, onRetry }) {
         {error}{' '}
         {onRetry ? (
           <button type="button" className="font-semibold underline" onClick={onRetry}>
-            Try again
+            {t('common.tryAgain')}
           </button>
         ) : null}
       </div>
@@ -57,7 +61,7 @@ export default function ReviewStatsPanel({ stats, loading, error, onRetry }) {
     <div className="rounded-2xl border border-emerald-100 bg-white p-7 sm:p-8 shadow-sm">
       <div className="flex items-center gap-3 text-emerald-800">
         <StarIcon className="h-7 w-7 text-amber-400" />
-        <h2 className="text-xl font-bold text-gray-900">Overall Rating</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t('reviews.stats.overallRating')}</h2>
       </div>
 
       <div className="mt-6 flex items-end gap-4">
@@ -74,7 +78,9 @@ export default function ReviewStatsPanel({ stats, loading, error, onRetry }) {
             ))}
           </div>
           <p className="mt-2 text-base text-gray-500">
-            {totalReviews.toLocaleString()} review{totalReviews === 1 ? '' : 's'}
+            {t(totalReviews === 1 ? 'reviews.stats.reviewCount' : 'reviews.stats.reviewCount_other', {
+              count: totalReviews.toLocaleString(),
+            })}
           </p>
         </div>
       </div>

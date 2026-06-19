@@ -1,12 +1,21 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import StarRating from './StarRating';
+import { useTranslation } from '../lib/i18n';
 
 export default function ReviewCard({ review }) {
-  const categories = [
-    { key: 'cleanliness_rating', label: 'Cleanliness' },
-    { key: 'communication_rating', label: 'Communication' },
-    { key: 'timeliness_rating', label: 'Timeliness' },
-  ].filter((c) => review[c.key] != null);
+  const { t } = useTranslation();
+  const categories = useMemo(
+    () =>
+      [
+        { key: 'cleanliness_rating', labelKey: 'reviews.categories.cleanliness' },
+        { key: 'communication_rating', labelKey: 'reviews.categories.communication' },
+        { key: 'timeliness_rating', labelKey: 'reviews.categories.timeliness' },
+      ]
+        .filter((c) => review[c.key] != null)
+        .map(({ key, labelKey }) => ({ key, label: t(labelKey) })),
+    [review, t]
+  );
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -16,7 +25,7 @@ export default function ReviewCard({ review }) {
             to={`/profile/${review.reviewer_user_id}`}
             className="font-medium text-gray-900 hover:text-teal-700 transition text-sm"
           >
-            {review.reviewer_username || 'Anonymous'}
+            {review.reviewer_username || t('reviews.card.anonymousShort')}
           </Link>
           <p className="text-xs text-gray-400 mt-0.5">
             {new Date(review.created_at).toLocaleDateString()}
@@ -40,4 +49,3 @@ export default function ReviewCard({ review }) {
     </div>
   );
 }
-

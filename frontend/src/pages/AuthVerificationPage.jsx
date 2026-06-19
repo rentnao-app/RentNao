@@ -11,6 +11,7 @@ import {
   isLoggedIn,
   resolveOnboardingRoute,
 } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 import {
   clipPhoneInput,
   isValidBdMobileLocal11,
@@ -20,8 +21,9 @@ import {
 } from '../lib/phone';
 
 export default function AuthVerificationPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
-  
+
   const [identifier, setIdentifier] = useState('');
   const [phoneOtp, setPhoneOtp] = useState('');
   const [otpTtlSeconds, setOtpTtlSeconds] = useState(0);
@@ -37,7 +39,6 @@ export default function AuthVerificationPage() {
     ? `${identifier.slice(0, 3)}${'*'.repeat(Math.max(0, identifier.length - 6))}${identifier.slice(-3)}`
     : '';
 
-  // Load stored phone on mount
   useEffect(() => {
     if (!isLoggedIn()) {
       window.location.href = '/login';
@@ -61,7 +62,7 @@ export default function AuthVerificationPage() {
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok || !body?.data?.phone) {
-      throw new Error(getApiErrorMessage(body, 'No pending phone verification found'));
+      throw new Error(getApiErrorMessage(body, t('auth.otp.noPending')));
     }
     const local11 = toLocal11Digits(clipPhoneInput(body.data.phone));
     if (local11 && isValidBdMobileLocal11(local11)) {
@@ -86,7 +87,7 @@ export default function AuthVerificationPage() {
       setOtpTtlSeconds(body?.data?.otpTtlSeconds || 0);
       setResendCooldownSeconds(body?.data?.rateResetSeconds || 0);
     } catch {
-      setError('Unable to load OTP verification. Please try again.');
+      setError(t('auth.otp.loadFailed'));
     }
   };
 
@@ -137,12 +138,12 @@ export default function AuthVerificationPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(getApiErrorMessage(body, 'Could not resend verification'));
+        throw new Error(getApiErrorMessage(body, t('auth.otp.resendFailed')));
       }
-      setSuccess(body?.message || 'Verification OTP sent');
+      setSuccess(body?.message || t('auth.otp.otpSent'));
       await refreshPending();
     } catch (err) {
-      setError(err.message || 'Resend failed');
+      setError(err.message || t('auth.otp.resendError'));
     } finally {
       setLoading(false);
     }
@@ -161,9 +162,9 @@ export default function AuthVerificationPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(getApiErrorMessage(body, 'Verification failed'));
+        throw new Error(getApiErrorMessage(body, t('auth.otp.verifyFailed')));
       }
-      setSuccess(body?.message || 'Verification successful.');
+      setSuccess(body?.message || t('auth.otp.verifySuccess'));
       setPhoneOtp('');
       setOtpTtlSeconds(0);
       setResendCooldownSeconds(0);
@@ -178,12 +179,12 @@ export default function AuthVerificationPage() {
 
       const { res: statusRes, profileStatus, role, body: statusBody } = await fetchProfileStatus(userId);
       if (!statusRes.ok) {
-        throw new Error('Verification succeeded but profile status could not be loaded');
+        throw new Error(t('auth.otp.profileStatusFailed'));
       }
 
       window.location.href = resolveOnboardingRoute(profileStatus, role || localRole, statusBody?.data?.kycVerificationStatus || null);
     } catch (err) {
-      setError(err.message || 'Verification failed');
+      setError(err.message || t('auth.otp.verifyFailed'));
     } finally {
       setLoading(false);
     }
@@ -197,14 +198,14 @@ export default function AuthVerificationPage() {
 
     const local11 = toLocal11Digits(clipPhoneInput(changePhone));
     if (!isValidBdMobileLocal11(local11)) {
-      setError('Enter a valid Bangladesh mobile number.');
+      setError(t('auth.otp.invalidPhone'));
       setChangeLoading(false);
       return;
     }
 
     const forApi = normalizeBdPhoneForApi(local11);
     if (!forApi) {
-      setError('Enter a valid Bangladesh mobile number.');
+      setError(t('auth.otp.invalidPhone'));
       setChangeLoading(false);
       return;
     }
@@ -217,16 +218,16 @@ export default function AuthVerificationPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(getApiErrorMessage(body, 'Could not change phone number'));
+        throw new Error(getApiErrorMessage(body, t('auth.otp.changeFailed')));
       }
       setIdentifier(local11);
       setChangePhone('');
       setShowChangePhone(false);
       setOtpTtlSeconds(body?.data?.otpTtlSeconds || 0);
       setResendCooldownSeconds(body?.data?.rateResetSeconds || 0);
-      setSuccess(body?.message || 'OTP sent to your new phone number.');
+      setSuccess(body?.message || t('auth.otp.otpSentNew'));
     } catch (err) {
-      setError(err.message || 'Could not change phone number');
+      setError(err.message || t('auth.otp.changeFailed'));
     } finally {
       setChangeLoading(false);
     }
@@ -238,17 +239,15 @@ export default function AuthVerificationPage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <BrandLogoLink />
           <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-teal-700 transition">
-            Back to Login
+            {t('common.backToLogin')}
           </Link>
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">Verify mobile</h1>
-          <p className="text-gray-500 text-center mb-8">
-            Enter the 6-digit OTP sent to your mobile number.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">{t('auth.otp.title')}</h1>
+          <p className="text-gray-500 text-center mb-8">{t('auth.otp.subtitle')}</p>
 
           {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
           {success && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{success}</div>}
@@ -256,13 +255,13 @@ export default function AuthVerificationPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
             <form onSubmit={handleVerify} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">SMS OTP (6 digits)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('auth.otp.smsOtp')}</label>
                 <input
                   type="text"
                   inputMode="numeric"
                   value={phoneOtp}
                   onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="Enter 6-digit OTP"
+                  placeholder={t('auth.otp.otpPlaceholder')}
                   maxLength={6}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                   required
@@ -270,7 +269,7 @@ export default function AuthVerificationPage() {
               </div>
               {maskedIdentifier && (
                 <p className="text-xs text-gray-500">
-                  OTP sent to {maskedIdentifier}
+                  {t('auth.otp.sentTo', { phone: maskedIdentifier })}
                 </p>
               )}
               <button
@@ -278,13 +277,13 @@ export default function AuthVerificationPage() {
                 disabled={loading}
                 className="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
               >
-                {loading ? 'Verifying...' : 'Verify now'}
+                {loading ? t('auth.otp.verifying') : t('auth.otp.verifyNow')}
               </button>
             </form>
 
             {otpTtlSeconds > 0 && (
               <p className="mt-3 text-xs text-gray-500">
-                Code expires in {formatCountdown(otpTtlSeconds)}
+                {t('auth.otp.expiresIn', { time: formatCountdown(otpTtlSeconds) })}
               </p>
             )}
 
@@ -296,8 +295,8 @@ export default function AuthVerificationPage() {
                 className="w-full text-sm text-teal-700 hover:text-teal-800 font-semibold py-2 disabled:opacity-50"
               >
                 {resendCooldownSeconds > 0
-                  ? `Resend available in ${formatCountdown(resendCooldownSeconds)}`
-                  : "Didn't get the code? Resend"}
+                  ? t('auth.otp.resendIn', { time: formatCountdown(resendCooldownSeconds) })
+                  : t('auth.otp.resend')}
               </button>
             </div>
 
@@ -307,7 +306,7 @@ export default function AuthVerificationPage() {
                 onClick={() => setShowChangePhone((prev) => !prev)}
                 className="w-full text-sm text-gray-600 hover:text-teal-700 font-semibold py-2"
               >
-                {showChangePhone ? 'Cancel phone change' : 'Change phone number'}
+                {showChangePhone ? t('auth.otp.cancelPhoneChange') : t('auth.otp.changePhone')}
               </button>
 
               {showChangePhone && (
@@ -318,7 +317,7 @@ export default function AuthVerificationPage() {
                     autoComplete="tel"
                     value={changePhone}
                     onChange={(e) => setChangePhone(clipPhoneInput(e.target.value))}
-                    placeholder="01XXXXXXXXX"
+                    placeholder={t('common.phonePlaceholder')}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                     required
                   />
@@ -327,7 +326,7 @@ export default function AuthVerificationPage() {
                     disabled={changeLoading}
                     className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
                   >
-                    {changeLoading ? 'Updating...' : 'Send OTP to new number'}
+                    {changeLoading ? t('auth.otp.updating') : t('auth.otp.sendOtpNew')}
                   </button>
                 </form>
               )}

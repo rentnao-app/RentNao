@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { logout } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 
 function isHttpUrl(s) {
   if (!s || typeof s !== 'string') return false;
@@ -14,11 +15,11 @@ function dashboardPathFor(role) {
   return '/';
 }
 
-function roleLabel(role) {
-  if (role === 'OWNER') return 'Owner';
-  if (role === 'TENANT') return 'Tenant';
-  if (role === 'ADMIN') return 'Admin';
-  return 'Member';
+function roleLabel(role, t) {
+  if (role === 'OWNER') return t('roles.owner');
+  if (role === 'TENANT') return t('roles.tenant');
+  if (role === 'ADMIN') return t('roles.admin');
+  return t('roles.member');
 }
 
 /**
@@ -31,6 +32,7 @@ function roleLabel(role) {
  *  - avatarUrl: optional presigned HTTPS URL for profile photo
  */
 export default function UserMenu({ name = '', email = '', role = '', initials = '?', avatarUrl = '' }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [imgErr, setImgErr] = useState(false);
   const wrapRef = useRef(null);
@@ -67,8 +69,8 @@ export default function UserMenu({ name = '', email = '', role = '', initials = 
         className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-emerald-700 text-xs font-semibold text-white shadow-sm ring-2 ring-white/0 transition hover:ring-emerald-200 focus:outline-none focus:ring-emerald-300 sm:h-10 sm:w-10 sm:text-sm"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Open user menu"
-        title={name || 'Account'}
+        aria-label={t('header.openUserMenu')}
+        title={name || t('header.account')}
       >
         {showPhoto ? (
           <img
@@ -91,10 +93,10 @@ export default function UserMenu({ name = '', email = '', role = '', initials = 
           className="absolute right-0 z-[120] mt-2 w-64 origin-top-right overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl ring-1 ring-black/5"
         >
           <div className="border-b border-gray-100 bg-emerald-50/40 px-4 py-3">
-            <p className="truncate text-sm font-semibold text-gray-900">{name || 'Account'}</p>
+            <p className="truncate text-sm font-semibold text-gray-900">{name || t('header.account')}</p>
             {email ? <p className="truncate text-xs text-gray-500">{email}</p> : null}
             <p className="mt-1 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
-              {roleLabel(role)}
+              {roleLabel(role, t)}
             </p>
           </div>
 
@@ -107,7 +109,7 @@ export default function UserMenu({ name = '', email = '', role = '', initials = 
                 role="menuitem"
               >
                 <Icon path="M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z" />
-                Dashboard
+                {t('userMenu.dashboard')}
               </Link>
             </li>
             <li>
@@ -118,7 +120,7 @@ export default function UserMenu({ name = '', email = '', role = '', initials = 
                 role="menuitem"
               >
                 <Icon path="M5.121 17.804A13.937 13.937 0 0 1 12 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                Account Settings
+                {t('userMenu.accountSettings')}
               </Link>
             </li>
             <li>
@@ -129,7 +131,7 @@ export default function UserMenu({ name = '', email = '', role = '', initials = 
                 role="menuitem"
               >
                 <Icon path="M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
-                Wallet
+                {t('userMenu.wallet')}
               </Link>
             </li>
             <li>
@@ -140,7 +142,7 @@ export default function UserMenu({ name = '', email = '', role = '', initials = 
                 role="menuitem"
               >
                 <Icon path="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6.002 6.002 0 0 0-4-5.659V5a2 2 0 1 0-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9" />
-                Notifications
+                {t('userMenu.notifications')}
               </Link>
             </li>
           </ul>
@@ -156,7 +158,7 @@ export default function UserMenu({ name = '', email = '', role = '', initials = 
               role="menuitem"
             >
               <Icon path="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v1" />
-              Logout
+              {t('userMenu.logout')}
             </button>
           </div>
         </div>

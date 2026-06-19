@@ -1,7 +1,14 @@
+import { useTranslation } from '../lib/i18n';
+
 const GOOGLE_AUTH_URL = import.meta.env.VITE_GOOGLE_AUTH_URL || '';
 
 export default function GoogleAuthButton({ mode = 'login', role = 'TENANT' }) {
-  const label = mode === 'signup' ? `Sign up as ${role.toLowerCase()} with Google` : 'Continue with Google';
+  const { t } = useTranslation();
+  const roleLabel = role === 'OWNER' ? t('auth.signup.owner') : t('auth.signup.tenant');
+  const label =
+    mode === 'signup'
+      ? t('auth.googleButton.signUpAs', { role: roleLabel })
+      : t('auth.googleButton.continueWithGoogle');
   const isConfigured = Boolean(GOOGLE_AUTH_URL.trim());
 
   const handleClick = () => {
@@ -18,7 +25,7 @@ export default function GoogleAuthButton({ mode = 'login', role = 'TENANT' }) {
       type="button"
       onClick={handleClick}
       disabled={!isConfigured}
-      title={isConfigured ? 'Continue with Google' : 'Google auth is not configured yet'}
+      title={isConfigured ? t('auth.googleButton.continueWithGoogle') : t('auth.googleButton.notConfigured')}
       className="w-full border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">

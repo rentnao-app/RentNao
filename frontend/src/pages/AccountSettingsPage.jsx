@@ -5,16 +5,9 @@ import { apiFetch, getApiErrorMessage, getCurrentUser, getUserId, getUserRole, i
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
 import { getAcceptValue, isAllowedFileByMimeAndExtension, PROFILE_PHOTO_MIMES } from '../lib/fileValidation';
+import { useTranslation } from '../lib/i18n';
 
 const INCOME_RANGES = ['BELOW_20K', 'RANGE_20K_40K', 'RANGE_40K_60K', 'RANGE_60K_100K', 'RANGE_100K_200K', 'ABOVE_200K'];
-const INCOME_RANGE_LABELS = {
-  BELOW_20K: 'Below 20K',
-  RANGE_20K_40K: '20K - 40K',
-  RANGE_40K_60K: '40K - 60K',
-  RANGE_60K_100K: '60K - 100K',
-  RANGE_100K_200K: '100K - 200K',
-  ABOVE_200K: 'Above 200K',
-};
 const EMPLOYMENT_STATUSES = ['EMPLOYED', 'SELF_EMPLOYED', 'UNEMPLOYED', 'STUDENT', 'RETIRED'];
 const FAMILY_STATUSES = ['FAMILY', 'BACHELOR'];
 const OWNER_CATEGORIES = ['RESIDENTIAL', 'COMMERCIAL'];
@@ -23,37 +16,59 @@ const JOB_CATEGORIES = ['TECHNOLOGY', 'HEALTHCARE', 'EDUCATION', 'FINANCE', 'CON
 const AREA_OPTIONS = ['DHANMONDI', 'GULSHAN', 'BANANI', 'UTTARA', 'MIRPUR', 'MOHAMMADPUR', 'BASHUNDHARA', 'BADDA'];
 const RELIGION_OPTIONS = ['Islam', 'Hinduism', 'Christianity', 'Buddhism', 'Other'];
 const PROFESSION_OPTIONS = ['Software Engineer', 'Doctor', 'Teacher', 'Banker', 'Business', 'Student', 'Government Service', 'Freelancer', 'Other'];
-const ENUM_LABELS = {
-  BELOW_20K: 'Below 20K',
-  RANGE_20K_40K: '20K - 40K',
-  RANGE_40K_60K: '40K - 60K',
-  RANGE_60K_100K: '60K - 100K',
-  RANGE_100K_200K: '100K - 200K',
-  ABOVE_200K: 'Above 200K',
-  SELF_EMPLOYED: 'Self Employed',
-  AUTH_PENDING: 'Auth Pending',
-  PROFILE_PENDING: 'Profile Pending',
-  UNDER_REVIEW: 'Under Review',
+
+const RELIGION_VALUE_TO_KEY = {
+  Islam: 'ISLAM',
+  Hinduism: 'HINDUISM',
+  Christianity: 'CHRISTIANITY',
+  Buddhism: 'BUDDHISM',
+  Other: 'OTHER',
 };
 
-function getLocalUserId(user) {
-  return getUserId(user);
-}
+function translateEnum(value, t) {
+  if (value == null || value === '') return t('common.na');
 
-function toLabel(value) {
-  if (value == null || value === '') return 'N/A';
-  if (ENUM_LABELS[value]) return ENUM_LABELS[value];
+  const groups = ['incomeRange', 'employment', 'familyStatus', 'ownerCategory', 'gender', 'jobCategory'];
+  for (const group of groups) {
+    const key = `common.enums.${group}.${value}`;
+    const translated = t(key);
+    if (translated !== key) return translated;
+  }
+
+  const areaKey = `common.areas.${value}`;
+  const areaTranslated = t(areaKey);
+  if (areaTranslated !== areaKey) return areaTranslated;
+
+  const religionKey = RELIGION_VALUE_TO_KEY[value];
+  if (religionKey) {
+    const relKey = `common.enums.religion.${religionKey}`;
+    const relTranslated = t(relKey);
+    if (relTranslated !== relKey) return relTranslated;
+  }
+
+  const kycKey = `common.enums.kyc.${value}`;
+  const kycTranslated = t(kycKey);
+  if (kycTranslated !== kycKey) return kycTranslated;
+
   return String(value)
     .replaceAll('_', ' ')
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function toDateLabel(value) {
-  if (!value) return 'N/A';
+function toLabel(value, t) {
+  return translateEnum(value, t);
+}
+
+function toDateLabel(value, t) {
+  if (!value) return t('common.na');
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleDateString();
+}
+
+function getLocalUserId(user) {
+  return getUserId(user);
 }
 
 function toDateInputValue(value) {
@@ -103,6 +118,7 @@ function buildProfileFormFromDetails(profile = {}) {
 }
 
 export default function AccountSettingsPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [error, setError] = useState('');
@@ -149,14 +165,14 @@ export default function AccountSettingsPage() {
         }
 
         if (!localUserId) {
-          throw new Error('User session is missing ID. Please login again.');
+          throw new Error(t('account.errors.sessionMissing'));
         }
 
         setUser(localUser);
 
         const statusRes = await apiFetch(`/users/${localUserId}/profile-status`);
         const statusBody = await statusRes.json().catch(() => ({}));
-        if (!statusRes.ok) throw new Error(getApiErrorMessage(statusBody, 'Failed to load profile status'));
+        if (!statusRes.ok) throw new Error(getApiErrorMessage(statusBody, t('account.errors.updateFailed')));
         setStatusData(statusBody?.data || null);
         const profile = statusBody?.data?.profile || {};
         setProfileForm(buildProfileFormFromDetails(profile));
@@ -172,14 +188,14 @@ export default function AccountSettingsPage() {
           verificationStatus: statusBody?.data?.kycVerificationStatus || '',
         });
       } catch (e) {
-        setError(e.message || 'Failed to load account settings.');
+        setError(e.message || t('account.errors.updateFailed'));
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [localUserId, localUser]);
+  }, [localUserId, localUser, t]);
 
   const onChange = (field, value) => {
     setProfileForm((prev) => {
@@ -232,12 +248,12 @@ export default function AccountSettingsPage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('Profile photo must be less than 5MB.');
+      setError(t('account.errors.photoTooLarge'));
       return;
     }
 
     if (!isAllowedFileByMimeAndExtension(file, PROFILE_PHOTO_MIMES)) {
-      setError('Only JPG, JPEG, PNG, or WebP profile photos are allowed, and the file extension must match the file type.');
+      setError(t('account.errors.photoFormat'));
       return;
     }
 
@@ -249,7 +265,7 @@ export default function AccountSettingsPage() {
   };
 
   const uploadProfilePhoto = async (file) => {
-    if (!localUserId) throw new Error('User ID not found.');
+    if (!localUserId) throw new Error(t('account.errors.userIdNotFound'));
 
     const uploadRes = await apiFetch(`/users/${localUserId}/profile-photo/upload-url`, {
       method: 'POST',
@@ -292,7 +308,7 @@ export default function AccountSettingsPage() {
       await loadProfilePhotoUrl(updatedProfile?.profilePhotoKey);
     }
 
-    return body?.message || 'Profile photo updated successfully.';
+    return body?.message || t('account.toast.photoUpdated');
   };
 
   const handleProfilePhotoOnlyChange = async (e) => {
@@ -301,12 +317,12 @@ export default function AccountSettingsPage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('Profile photo must be less than 5MB.');
+      setError(t('account.errors.photoTooLarge'));
       return;
     }
 
     if (!isAllowedFileByMimeAndExtension(file, PROFILE_PHOTO_MIMES)) {
-      setError('Only JPG, JPEG, PNG, or WebP profile photos are allowed, and the file extension must match the file type.');
+      setError(t('account.errors.photoFormat'));
       return;
     }
 
@@ -317,14 +333,14 @@ export default function AccountSettingsPage() {
     try {
       const message = await uploadProfilePhoto(file);
       addLocalNotification({
-        title: 'Profile Photo Updated',
-        message: 'Your profile picture was updated successfully.',
+        title: t('account.notification.photoUpdatedTitle'),
+        message: t('account.toast.photoUpdated'),
         url: '/account',
         type: 'PROFILE',
       });
       setSuccess(message);
     } catch (err) {
-      setError(err?.message || 'Failed to update profile photo.');
+      setError(err?.message || t('account.errors.updateFailed'));
     } finally {
       setSavingPhoto(false);
     }
@@ -337,7 +353,7 @@ export default function AccountSettingsPage() {
     setSuccess('');
 
     try {
-      if (!localUserId) throw new Error('User ID not found.');
+      if (!localUserId) throw new Error(t('account.errors.userIdNotFound'));
 
       const payload = {};
       Object.entries(profileForm).forEach(([key, value]) => {
@@ -380,7 +396,7 @@ export default function AccountSettingsPage() {
       }
 
       if (Object.keys(payload).length === 0) {
-        throw new Error('Fill at least one field to update your profile.');
+        throw new Error(t('account.errors.fillOneField'));
       }
 
       const res = await apiFetch(`/users/${localUserId}/profile`, {
@@ -390,7 +406,7 @@ export default function AccountSettingsPage() {
       });
 
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(getApiErrorMessage(body, 'Failed to update profile'));
+      if (!res.ok) throw new Error(getApiErrorMessage(body, t('account.errors.updateFailed')));
 
       const statusRes = await apiFetch(`/users/${localUserId}/profile-status`);
       const statusBody = await statusRes.json().catch(() => ({}));
@@ -412,17 +428,17 @@ export default function AccountSettingsPage() {
       }
 
       addLocalNotification({
-        title: 'Profile Updated',
-        message: 'Your account profile details were updated successfully.',
+        title: t('account.notification.profileUpdatedTitle'),
+        message: t('account.toast.profileUpdated'),
         url: '/account',
         type: 'PROFILE',
       });
-      setSuccess(body?.message || 'Profile updated successfully.');
+      setSuccess(body?.message || t('account.toast.profileUpdated'));
       setProfilePhotoFile(null);
       setProfilePhotoPreview('');
       setIsEditingProfile(false);
     } catch (e) {
-      setError(e.message || 'Failed to update profile.');
+      setError(e.message || t('account.errors.updateFailed'));
     } finally {
       setSavingProfile(false);
     }
@@ -433,7 +449,7 @@ export default function AccountSettingsPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading account settings...</p>
+          <p className="text-gray-600">{t('account.loading')}</p>
         </div>
       </div>
     );
@@ -453,13 +469,13 @@ export default function AccountSettingsPage() {
       <main className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-xl font-bold text-gray-900 md:text-2xl lg:text-3xl">
-            Account Settings
+            {t('account.title')}
           </h1>
           <Link
             to={dashboardPath}
             className="inline-flex items-center justify-center gap-1.5 self-start rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 sm:self-auto"
           >
-            <span aria-hidden>&larr;</span> Back to dashboard
+            <span aria-hidden>&larr;</span> {t('account.backToDashboard')}
           </Link>
         </div>
         {error && (
@@ -474,18 +490,18 @@ export default function AccountSettingsPage() {
         )}
 
         <section className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Profile Details</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">{t('account.profileDetails.title')}</h2>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-[12rem_minmax(0,1fr)_minmax(0,1fr)] md:gap-x-10 lg:gap-x-14 md:items-start">
             <div className="mx-auto flex w-full max-w-[12rem] flex-col items-center text-center md:mx-0">
               <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50">
                 {profilePhotoUrl ? (
                   <img
                     src={profilePhotoUrl}
-                    alt="Profile"
+                    alt={t('account.photo.alt')}
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="px-2 text-center text-xs text-gray-400">No photo</span>
+                  <span className="px-2 text-center text-xs text-gray-400">{t('account.photo.noPhoto')}</span>
                 )}
               </div>
               <input
@@ -501,36 +517,36 @@ export default function AccountSettingsPage() {
                 disabled={savingPhoto}
                 className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold leading-snug text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {savingPhoto ? 'Uploading…' : 'Update profile picture'}
+                {savingPhoto ? t('account.photo.uploading') : t('account.photo.updateButton')}
               </button>
             </div>
 
             <div className="space-y-3 text-sm md:pl-2 lg:pl-4">
-              <p><span className="text-gray-500">Email:</span> {statusData?.contactEmail || user.contactEmail || user.contact_email || user.email || 'N/A'}</p>
-              <p><span className="text-gray-500">Full Name:</span> {profile.firstName || profile.lastName ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'N/A'}</p>
-              <p><span className="text-gray-500">Gender:</span> {toLabel(profile.gender)}</p>
-              <p><span className="text-gray-500">Profession:</span> {profile.profession || 'N/A'}</p>
-              <p><span className="text-gray-500">Current Area:</span> {profile.currentArea || 'N/A'}</p>
+              <p><span className="text-gray-500">{t('account.fields.email')}</span> {statusData?.contactEmail || user.contactEmail || user.contact_email || user.email || t('common.na')}</p>
+              <p><span className="text-gray-500">{t('account.fields.fullName')}</span> {profile.firstName || profile.lastName ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : t('common.na')}</p>
+              <p><span className="text-gray-500">{t('account.fields.gender')}</span> {toLabel(profile.gender, t)}</p>
+              <p><span className="text-gray-500">{t('account.fields.profession')}</span> {profile.profession || t('common.na')}</p>
+              <p><span className="text-gray-500">{t('account.fields.currentArea')}</span> {profile.currentArea ? toLabel(profile.currentArea, t) : t('common.na')}</p>
               {role === 'TENANT' && (
                 <>
-                  <p><span className="text-gray-500">Income Range:</span> {toLabel(profile.incomeRange)}</p>
-                  <p><span className="text-gray-500">Employment Status:</span> {toLabel(profile.employmentStatus)}</p>
+                  <p><span className="text-gray-500">{t('account.fields.incomeRange')}</span> {toLabel(profile.incomeRange, t)}</p>
+                  <p><span className="text-gray-500">{t('account.fields.employmentStatus')}</span> {toLabel(profile.employmentStatus, t)}</p>
                 </>
               )}
             </div>
 
             <div className="space-y-3 text-sm md:pl-2 lg:pl-4">
-              <p><span className="text-gray-500">Phone:</span> {statusData?.contactPhone || user.contactPhone || user.contact_phone || user.contactNumber || user.contact_number || 'N/A'}</p>
-              <p><span className="text-gray-500">Date of Birth:</span> {toDateLabel(profile.dateOfBirth)}</p>
-              <p><span className="text-gray-500">Religion:</span> {profile.religion || 'N/A'}</p>
-              <p><span className="text-gray-500">Job Category:</span> {toLabel(profile.jobCategory)}</p>
+              <p><span className="text-gray-500">{t('account.fields.phone')}</span> {statusData?.contactPhone || user.contactPhone || user.contact_phone || user.contactNumber || user.contact_number || t('common.na')}</p>
+              <p><span className="text-gray-500">{t('account.fields.dateOfBirth')}</span> {toDateLabel(profile.dateOfBirth, t)}</p>
+              <p><span className="text-gray-500">{t('account.fields.religion')}</span> {profile.religion ? toLabel(profile.religion, t) : t('common.na')}</p>
+              <p><span className="text-gray-500">{t('account.fields.jobCategory')}</span> {toLabel(profile.jobCategory, t)}</p>
               {role === 'OWNER' && (
-                <p><span className="text-gray-500">Owner Category:</span> {toLabel(profile.ownerCategory)}</p>
+                <p><span className="text-gray-500">{t('account.fields.ownerCategory')}</span> {toLabel(profile.ownerCategory, t)}</p>
               )}
               {role === 'TENANT' && (
                 <>
-                  <p><span className="text-gray-500">Family Status:</span> {toLabel(profile.familyStatus)}</p>
-                  <p><span className="text-gray-500">Family Size:</span> {profile.familySize ?? 'N/A'}</p>
+                  <p><span className="text-gray-500">{t('account.fields.familyStatus')}</span> {toLabel(profile.familyStatus, t)}</p>
+                  <p><span className="text-gray-500">{t('account.fields.familySize')}</span> {profile.familySize ?? t('common.na')}</p>
                 </>
               )}
             </div>
@@ -543,34 +559,34 @@ export default function AccountSettingsPage() {
             onClick={startEditingProfile}
             className="mb-8 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
           >
-            Edit Profile
+            {t('account.editProfile')}
           </button>
         ) : (
         <form onSubmit={saveProfile} className="bg-white shadow rounded-lg p-6 space-y-4 mb-8">
-          <h2 className="text-xl font-bold text-gray-900">Update Profile</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('account.updateForm.title')}</h2>
           <p className="text-sm text-gray-500">
-            Update the fields below, then click Update Profile to save your changes.
+            {t('account.updateForm.subtitle')}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="text" placeholder="First name" value={profileForm.firstName} onChange={(e) => onChange('firstName', e.target.value)} className={fieldClass} />
-            <input type="text" placeholder="Last name" value={profileForm.lastName} onChange={(e) => onChange('lastName', e.target.value)} className={fieldClass} />
+            <input type="text" placeholder={t('account.placeholders.firstName')} value={profileForm.firstName} onChange={(e) => onChange('firstName', e.target.value)} className={fieldClass} />
+            <input type="text" placeholder={t('account.placeholders.lastName')} value={profileForm.lastName} onChange={(e) => onChange('lastName', e.target.value)} className={fieldClass} />
             <input type="date" value={profileForm.dateOfBirth} onChange={(e) => onChange('dateOfBirth', e.target.value)} className={fieldClass} />
             <select value={profileForm.gender} onChange={(e) => onChange('gender', e.target.value)} className={fieldClass}>
-              <option value="">Select gender</option>
-              {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
+              <option value="">{t('account.placeholders.selectGender')}</option>
+              {GENDERS.map((g) => <option key={g} value={g}>{toLabel(g, t)}</option>)}
             </select>
             <select value={profileForm.religion} onChange={(e) => onChange('religion', e.target.value)} className={fieldClass}>
-              <option value="">Select religion</option>
-              {RELIGION_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+              <option value="">{t('account.placeholders.selectReligion')}</option>
+              {RELIGION_OPTIONS.map((item) => <option key={item} value={item}>{toLabel(item, t)}</option>)}
             </select>
             <select value={profileForm.profession} onChange={(e) => onChange('profession', e.target.value)} className={fieldClass}>
-              <option value="">Select profession</option>
+              <option value="">{t('account.placeholders.selectProfession')}</option>
               {PROFESSION_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
             <select value={profileForm.jobCategory} onChange={(e) => onChange('jobCategory', e.target.value)} className={fieldClass}>
-              <option value="">Select job category</option>
-              {JOB_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
+              <option value="">{t('account.placeholders.selectJobCategory')}</option>
+              {JOB_CATEGORIES.map((item) => <option key={item} value={item}>{toLabel(item, t)}</option>)}
             </select>
             <div className="md:col-span-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -578,16 +594,16 @@ export default function AccountSettingsPage() {
                   {profilePhotoPreview || profilePhotoUrl ? (
                     <img
                       src={profilePhotoPreview || profilePhotoUrl}
-                      alt="Profile"
+                      alt={t('account.photo.alt')}
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span className="text-xs text-gray-400 text-center px-2">No image selected</span>
+                    <span className="text-xs text-gray-400 text-center px-2">{t('account.photoForm.none')}</span>
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-900">Profile photo</p>
-                  <p className="text-sm text-gray-600 mt-1">Upload a JPG, PNG, or WebP image. We will store it as your avatar.</p>
+                  <p className="text-sm font-semibold text-gray-900">{t('account.photoForm.title')}</p>
+                  <p className="text-sm text-gray-600 mt-1">{t('account.photoForm.hint')}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <label className="inline-flex items-center justify-center rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 cursor-pointer transition">
                       <input
@@ -596,7 +612,7 @@ export default function AccountSettingsPage() {
                         className="hidden"
                         onChange={handleProfilePhotoChange}
                       />
-                      Choose image
+                      {t('account.photoForm.choose')}
                     </label>
                     {profilePhotoFile && (
                       <button
@@ -607,35 +623,35 @@ export default function AccountSettingsPage() {
                         }}
                         className="text-sm font-semibold text-rose-600 hover:text-rose-700"
                       >
-                        Remove image
+                        {t('account.photoForm.remove')}
                       </button>
                     )}
                   </div>
                   {profilePhotoFile && (
-                    <p className="mt-2 text-xs text-gray-500 break-all">Selected: {profilePhotoFile.name}</p>
+                    <p className="mt-2 text-xs text-gray-500 break-all">{t('account.photoForm.selected', { name: profilePhotoFile.name })}</p>
                   )}
                 </div>
               </div>
             </div>
             <select value={profileForm.currentArea} onChange={(e) => onChange('currentArea', e.target.value)} className={`${fieldClass} md:col-span-2`}>
-              <option value="">Select current area</option>
-              {AREA_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+              <option value="">{t('account.placeholders.selectArea')}</option>
+              {AREA_OPTIONS.map((item) => <option key={item} value={item}>{toLabel(item, t)}</option>)}
             </select>
           </div>
 
           {role === 'TENANT' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
               <select value={profileForm.incomeRange} onChange={(e) => onChange('incomeRange', e.target.value)} className={fieldClass}>
-                <option value="">Select income range</option>
-                {INCOME_RANGES.map((item) => <option key={item} value={item}>{INCOME_RANGE_LABELS[item] || item}</option>)}
+                <option value="">{t('account.placeholders.selectIncomeRange')}</option>
+                {INCOME_RANGES.map((item) => <option key={item} value={item}>{toLabel(item, t)}</option>)}
               </select>
               <select value={profileForm.employmentStatus} onChange={(e) => onChange('employmentStatus', e.target.value)} className={fieldClass}>
-                <option value="">Select employment status</option>
-                {EMPLOYMENT_STATUSES.map((item) => <option key={item} value={item}>{toLabel(item)}</option>)}
+                <option value="">{t('account.placeholders.selectEmployment')}</option>
+                {EMPLOYMENT_STATUSES.map((item) => <option key={item} value={item}>{toLabel(item, t)}</option>)}
               </select>
               <select value={profileForm.familyStatus} onChange={(e) => onChange('familyStatus', e.target.value)} className={fieldClass}>
-                <option value="">Select family status</option>
-                {FAMILY_STATUSES.map((item) => <option key={item} value={item}>{toLabel(item)}</option>)}
+                <option value="">{t('account.placeholders.selectFamilyStatus')}</option>
+                {FAMILY_STATUSES.map((item) => <option key={item} value={item}>{toLabel(item, t)}</option>)}
               </select>
               <div>
                 <div className="flex items-center gap-2">
@@ -650,7 +666,7 @@ export default function AccountSettingsPage() {
                   <input
                     type="text"
                     readOnly
-                    value={isFamilyStatus ? (profileForm.familySize || '1') : 'N/A'}
+                    value={isFamilyStatus ? (profileForm.familySize || '1') : t('common.na')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-center"
                   />
                   <button
@@ -662,7 +678,7 @@ export default function AccountSettingsPage() {
                     +
                   </button>
                 </div>
-                {!isFamilyStatus && <p className="text-xs text-gray-400 mt-1">Family size is N/A unless family status is FAMILY.</p>}
+                {!isFamilyStatus && <p className="text-xs text-gray-400 mt-1">{t('account.familySizeHint')}</p>}
               </div>
             </div>
           )}
@@ -670,8 +686,8 @@ export default function AccountSettingsPage() {
           {role === 'OWNER' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
               <select value={profileForm.ownerCategory} onChange={(e) => onChange('ownerCategory', e.target.value)} className={fieldClass}>
-                <option value="">Select owner category</option>
-                {OWNER_CATEGORIES.map((item) => <option key={item} value={item}>{toLabel(item)}</option>)}
+                <option value="">{t('account.placeholders.selectOwnerCategory')}</option>
+                {OWNER_CATEGORIES.map((item) => <option key={item} value={item}>{toLabel(item, t)}</option>)}
               </select>
             </div>
           )}
@@ -682,7 +698,7 @@ export default function AccountSettingsPage() {
               disabled={savingProfile}
               className="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-50"
             >
-              {savingProfile ? 'Updating...' : 'Update Profile'}
+              {savingProfile ? t('account.actions.updating') : t('account.actions.updateProfile')}
             </button>
             <button
               type="button"
@@ -690,7 +706,7 @@ export default function AccountSettingsPage() {
               disabled={savingProfile}
               className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
             >
-              Cancel
+              {t('account.actions.cancel')}
             </button>
           </div>
         </form>
