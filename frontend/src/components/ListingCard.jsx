@@ -101,28 +101,24 @@ export default function ListingCard({
             <p className="text-right text-xs font-medium uppercase tracking-wide text-slate-400">{area}</p>
           ) : null}
           <h2 className="text-base font-bold text-slate-900 transition group-hover:text-emerald-800 sm:text-lg">{title}</h2>
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-lg font-bold text-emerald-800">
-              BDT {rent}
-              <span className="ml-1 text-sm font-normal text-slate-500">{t('components.listingCard.perMonth')}</span>
+          <p className="text-lg font-bold text-emerald-800">
+            BDT {rent}
+            <span className="ml-1 text-sm font-normal text-slate-500">{t('components.listingCard.perMonth')}</span>
+          </p>
+          <p className="text-base text-slate-600">
+            {t('components.listingCard.specs', { beds, baths, size })}
+          </p>
+          <p className="flex items-center gap-1.5 text-sm text-slate-600">
+            <EyeIcon className="h-4 w-4 shrink-0" />
+            <span>
+              {t('components.listingCard.propertyViewed', { count: viewCount.toLocaleString() })}
+            </span>
+          </p>
+          {listedOn ? (
+            <p className="text-xs text-slate-400">
+              {t('components.listingCard.listedOn', { date: listedOn })}
             </p>
-            <p className="flex shrink-0 items-center gap-1.5 text-sm text-slate-600">
-              <EyeIcon className="h-4 w-4 shrink-0" />
-              <span>
-                {t('components.listingCard.propertyViewed', { count: viewCount.toLocaleString() })}
-              </span>
-            </p>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <p className="min-w-0 text-base text-slate-600">
-              {t('components.listingCard.specs', { beds, baths, size })}
-            </p>
-            {listedOn ? (
-              <p className="shrink-0 text-right text-xs text-slate-400">
-                {t('components.listingCard.listedOn', { date: listedOn })}
-              </p>
-            ) : null}
-          </div>
+          ) : null}
         </div>
       </Link>
     </div>

@@ -579,6 +579,12 @@ export default function CreateListingPage() {
       return;
     }
 
+    if (currentStep === 1 && !location) {
+      setError(t("createListing.validation.mapPinRequired"));
+      scrollToPageTop();
+      return;
+    }
+
     setError("");
     const nextStep = Math.min(currentStep + 1, formSteps.length - 1);
 

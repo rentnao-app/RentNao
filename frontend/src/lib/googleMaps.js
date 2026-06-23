@@ -78,7 +78,7 @@ export async function loadGoogleMaps() {
 
       const script = document.createElement('script');
       script.dataset.rentnaoGoogleMaps = 'true';
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=${callbackName}`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&loading=async&callback=${callbackName}`;
       script.async = true;
       script.defer = true;
       script.onerror = () => {

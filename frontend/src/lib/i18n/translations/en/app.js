@@ -503,7 +503,7 @@ export default {
       balconies: 'Balconies',
       areaLocation: 'Area / Location',
       address: 'Address',
-      mapLocation: 'Map location (uses your current location when allowed; click to adjust pin)',
+      mapLocation: 'Property location on map',
       buildingFloors: 'Building Floors',
       buildingFacing: 'Building Facing',
       floorNumber: 'Floor Number',
@@ -582,6 +582,7 @@ export default {
     validation: {
       incomplete: 'Please complete the {field} before continuing.',
       invalid: 'Please enter a valid {field}.',
+      mapPinRequired: 'Please set the property location on the map using "Use my location" or by tapping the map.',
     },
     fieldLabels: {
       title: 'title',
@@ -1048,6 +1049,25 @@ export default {
       description: 'This feature is not available yet in the current backend API.',
       goBack: 'Go Back',
       footerNote: 'This page is intentionally disabled to avoid broken behavior until matching backend endpoints are available.',
+    },
+    mapPicker: {
+      promptTitle: 'Share your location',
+      promptBody:
+        'Turn on GPS on your phone or allow location access in your browser. We will place the pin at your current spot automatically — no need to search the map.',
+      useMyLocation: 'Use my current location',
+      useMyLocationShort: 'Use my location',
+      pickManually: 'I will place the pin on the map myself',
+      manualHint: 'Tap on the map where the property is',
+      locating: 'Finding your location…',
+      adjustHint: 'Pin set. Tap elsewhere on the map if you need to fine-tune.',
+      errors: {
+        permissionDenied:
+          'Location access was blocked. Please allow location in your browser or device settings, then try again.',
+        unavailable: 'Could not detect your location. Check that GPS is on and try again.',
+        timeout: 'Location took too long. Move to an open area, turn on GPS, and try again.',
+        unsupported: 'Your browser does not support location sharing. Use the map to place the pin manually.',
+        unknown: 'Could not get your location. Please try again or place the pin on the map.',
+      },
     },
   },
 };
