@@ -6,8 +6,10 @@ import { apiFetch } from '../lib/api';
 import { listOwnerIncomingRequests, reviewOwnerRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
+import { useTranslation } from '../lib/i18n';
 
 export default function IncomingRequestsPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [remoteAvailable, setRemoteAvailable] = useState(false);
@@ -79,13 +81,13 @@ export default function IncomingRequestsPage() {
           to="/owner-dashboard"
           className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 mb-3"
         >
-          <span aria-hidden>&larr;</span> Owner dashboard
+          <span aria-hidden>&larr;</span> {t('requests.incoming.backToDashboard')}
         </Link>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">Incoming Tenant Requests</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('requests.incoming.title')}</h1>
             <p className="text-sm text-gray-500">
-              {remoteAvailable ? 'Incoming requests synced with backend.' : 'Using local interaction fallback for requests.'}
+              {remoteAvailable ? t('requests.incoming.syncRemote') : t('requests.incoming.syncLocal')}
             </p>
           </div>
           <button
@@ -93,15 +95,15 @@ export default function IncomingRequestsPage() {
             onClick={() => load()}
             className="self-start sm:self-auto inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
           >
-            Refresh
+            {t('common.refresh')}
           </button>
         </div>
 
         {loading ? (
-          <div className="text-sm text-gray-500">Loading requests...</div>
+          <div className="text-sm text-gray-500">{t('requests.incoming.loading')}</div>
         ) : items.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-500">
-            No incoming requests yet.
+            {t('requests.incoming.empty')}
           </div>
         ) : (
           <div className="space-y-4">
@@ -110,21 +112,21 @@ export default function IncomingRequestsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <Link to={`/listings/${item.listingId}`} className="font-semibold text-gray-900 hover:text-teal-700">
-                      Listing #{item.listingId}
+                      {t('common.listingNumber', { id: item.listingId })}
                     </Link>
                     <p className="text-sm text-gray-500 mt-1">
-                      Tenant:{' '}
+                      {t('requests.incoming.tenantLabel')}{' '}
                       {item.tenant?.userId ? (
                         <Link to={`/profile/${item.tenant.userId}`} className="text-teal-700 hover:text-teal-800 font-medium">
-                          {item.tenant?.name || 'Tenant'}
+                          {item.tenant?.name || t('roles.tenant')}
                         </Link>
                       ) : (
-                        <span>{item.tenant?.name || 'Tenant'}</span>
+                        <span>{item.tenant?.name || t('roles.tenant')}</span>
                       )}{' '}
                       {item.tenant?.email ? `(${item.tenant.email})` : ''}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      Requested on {new Date(item.requestedAt).toLocaleString()}
+                      {t('requests.applications.requestedOn', { date: new Date(item.requestedAt).toLocaleString() })}
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -136,7 +138,7 @@ export default function IncomingRequestsPage() {
                           ? 'bg-gray-100 text-gray-600'
                           : 'bg-amber-100 text-amber-700'
                   }`}>
-                    {item.requestStatus}
+                    {t(`common.status.request.${item.requestStatus}`, item.requestStatus)}
                   </span>
                 </div>
 
@@ -147,42 +149,42 @@ export default function IncomingRequestsPage() {
                       onClick={async () => {
                         const result = await reviewOwnerRequest(item.requestId, 'ACCEPT');
                         if (!result.ok) {
-                          toast.error('Failed to accept request');
+                          toast.error(t('requests.incoming.toast.acceptFailed'));
                           return;
                         }
                         addLocalNotification({
-                          title: 'Request Accepted',
-                          message: `You accepted tenant request for listing #${item.listingId}.`,
+                          title: t('requests.incoming.notification.acceptedTitle'),
+                          message: t('requests.incoming.notification.acceptedMessage', { id: item.listingId }),
                           url: '/owner-dashboard/requests',
                           type: 'REQUEST',
                         });
-                        toast.success('Request accepted');
+                        toast.success(t('requests.incoming.toast.accepted'));
                         await load();
                       }}
                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg"
                     >
-                      Accept
+                      {t('requests.incoming.accept')}
                     </button>
                     <button
                       type="button"
                       onClick={async () => {
                         const result = await reviewOwnerRequest(item.requestId, 'REJECT');
                         if (!result.ok) {
-                          toast.error('Failed to reject request');
+                          toast.error(t('requests.incoming.toast.rejectFailed'));
                           return;
                         }
                         addLocalNotification({
-                          title: 'Request Rejected',
-                          message: `You rejected tenant request for listing #${item.listingId}.`,
+                          title: t('requests.incoming.notification.rejectedTitle'),
+                          message: t('requests.incoming.notification.rejectedMessage', { id: item.listingId }),
                           url: '/owner-dashboard/requests',
                           type: 'REQUEST',
                         });
-                        toast.success('Request rejected');
+                        toast.success(t('requests.incoming.toast.rejected'));
                         await load();
                       }}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg"
                     >
-                      Reject
+                      {t('requests.incoming.reject')}
                     </button>
                   </div>
                 )}
@@ -194,4 +196,3 @@ export default function IncomingRequestsPage() {
     </div>
   );
 }
-

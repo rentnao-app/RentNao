@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getWishlistState, removeFromWishlist } from '../lib/wishlist';
 import toast from 'react-hot-toast';
 import AppHeader from '../components/AppHeader';
+import { useTranslation } from '../lib/i18n';
 
 function formatBdt(n) {
   if (n == null || Number.isNaN(Number(n))) return '-';
@@ -17,12 +18,16 @@ function formatBdt(n) {
   }
 }
 
-function areaLabel(name) {
-  if (!name) return 'Unknown area';
+function areaLabel(name, t) {
+  if (!name) return t('common.unknownArea');
+  const key = `common.areas.${name}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
   return String(name).replaceAll('_', ' ');
 }
 
 export default function WishlistPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [remoteAvailable, setRemoteAvailable] = useState(false);
   const [items, setItems] = useState([]);
@@ -48,7 +53,7 @@ export default function WishlistPage() {
   const handleRemove = async (listingId) => {
     await removeFromWishlist(listingId);
     setItems((prev) => prev.filter((entry) => entry.listingId !== listingId));
-    toast.success('Removed from wishlist');
+    toast.success(t('wishlist.toast.removed'));
   };
 
   return (
@@ -59,13 +64,13 @@ export default function WishlistPage() {
         <section className="mb-5 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Wishlist</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{t('wishlist.title')}</h1>
               <p className="mt-1 text-sm text-slate-500">
-                Saved homes you want to revisit. Open a card for full details or remove when you are done.
+                {t('wishlist.subtitle')}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-100">
-                  {items.length} saved
+                  {t('wishlist.savedCount', { n: items.length })}
                 </span>
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ring-1 ${
@@ -74,7 +79,7 @@ export default function WishlistPage() {
                       : 'bg-amber-50 text-amber-900 ring-amber-100'
                   }`}
                 >
-                  {remoteAvailable ? 'Synced' : 'Local only'}
+                  {remoteAvailable ? t('wishlist.sync.synced') : t('wishlist.sync.localOnly')}
                 </span>
               </div>
             </div>
@@ -93,19 +98,19 @@ export default function WishlistPage() {
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                   />
                 </svg>
-                Refresh
+                {t('common.refresh')}
               </button>
               <Link
                 to="/listings"
                 className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
               >
-                Find more
+                {t('wishlist.findMore')}
               </Link>
             </div>
           </div>
           {!remoteAvailable ? (
             <p className="mt-4 rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 text-xs text-amber-950">
-              Wishlist is stored on this device until the account wishlist API is available. Sign in as a tenant for cloud sync when supported.
+              {t('wishlist.localWarning')}
             </p>
           ) : null}
         </section>
@@ -113,7 +118,7 @@ export default function WishlistPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200/80 bg-white py-16 shadow-sm">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-700 border-t-transparent" />
-            <p className="text-sm text-slate-500">Loading your saved listings...</p>
+            <p className="text-sm text-slate-500">{t('wishlist.loading')}</p>
           </div>
         ) : items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center shadow-sm">
@@ -127,15 +132,15 @@ export default function WishlistPage() {
                 />
               </svg>
             </div>
-            <p className="text-base font-semibold text-slate-900">No saved listings yet</p>
+            <p className="text-base font-semibold text-slate-900">{t('wishlist.empty.title')}</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-              Tap the heart on any listing while signed in as a tenant. Your picks will show up here.
+              {t('wishlist.empty.body')}
             </p>
             <Link
               to="/listings"
               className="mt-6 inline-flex items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
             >
-              Browse listings
+              {t('wishlist.empty.browse')}
             </Link>
           </div>
         ) : (
@@ -143,7 +148,7 @@ export default function WishlistPage() {
             {items.map((item) => {
               const title =
                 item.title?.trim() ||
-                `Apartment - ${item.roomCount != null ? item.roomCount : '?'} beds`;
+                t('wishlist.fallbackTitle', { beds: item.roomCount != null ? item.roomCount : '?' });
               const rentLabel = formatBdt(item.rent);
               return (
                 <li
@@ -165,19 +170,23 @@ export default function WishlistPage() {
                         </svg>
                       )}
                       <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800 shadow-sm ring-1 ring-emerald-100">
-                        Saved
+                        {t('wishlist.badge.saved')}
                       </span>
                     </div>
                     <div className="p-4 sm:p-5">
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">{areaLabel(item.areaName)}</p>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">{areaLabel(item.areaName, t)}</p>
                       <h2 className="line-clamp-2 text-base font-bold text-slate-900 transition group-hover:text-emerald-800 sm:text-lg">
                         {title}
                       </h2>
-                      <p className="mt-1 text-lg font-bold text-emerald-800">{rentLabel}/mo</p>
+                      <p className="mt-1 text-lg font-bold text-emerald-800">{rentLabel}{t('common.perMonth')}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                        <span>{item.bathroomCount ?? '?'} baths</span>
+                        <span>{t('wishlist.specs.baths', { n: item.bathroomCount ?? '?' })}</span>
                         <span className="hidden sm:inline">-</span>
-                        <span>{item.propertySizeSqft != null ? `${item.propertySizeSqft.toLocaleString()} sq.ft` : '- sq.ft'}</span>
+                        <span>
+                          {item.propertySizeSqft != null
+                            ? t('wishlist.specs.sqft', { n: item.propertySizeSqft.toLocaleString() })
+                            : t('wishlist.specs.sqftMissing')}
+                        </span>
                       </div>
                     </div>
                   </Link>
@@ -186,14 +195,14 @@ export default function WishlistPage() {
                       to={`/listings/${item.listingId}`}
                       className="inline-flex flex-1 items-center justify-center rounded-xl bg-emerald-700 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 min-[380px]:flex-none"
                     >
-                      View details
+                      {t('wishlist.actions.viewDetails')}
                     </Link>
                     <button
                       type="button"
                       onClick={() => void handleRemove(item.listingId)}
                       className="inline-flex flex-1 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50 min-[380px]:flex-none"
                     >
-                      Remove
+                      {t('wishlist.actions.remove')}
                     </button>
                   </div>
                 </li>
@@ -206,4 +215,3 @@ export default function WishlistPage() {
     </div>
   );
 }
-

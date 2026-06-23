@@ -6,8 +6,10 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../lib/notifications';
+import { useTranslation } from '../lib/i18n';
 
 export default function NotificationsPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [remoteAvailable, setRemoteAvailable] = useState(false);
@@ -44,9 +46,9 @@ export default function NotificationsPage() {
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">Notifications</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('notifications.title')}</h1>
             <p className="text-sm text-gray-500">
-              {remoteAvailable ? 'Live updates from backend are active.' : 'Showing local notifications until backend notification API is available.'}
+              {remoteAvailable ? t('notifications.syncRemote') : t('notifications.syncLocal')}
             </p>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -55,23 +57,23 @@ export default function NotificationsPage() {
               onClick={handleMarkAll}
               className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition"
             >
-              Mark all read
+              {t('notifications.markAllRead')}
             </button>
             <button
               type="button"
               onClick={load}
               className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
             >
-              Refresh
+              {t('common.refresh')}
             </button>
           </div>
         </div>
 
         {loading ? (
-          <div className="text-sm text-gray-500">Loading notifications...</div>
+          <div className="text-sm text-gray-500">{t('notifications.loading')}</div>
         ) : items.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-500">
-            No notifications yet.
+            {t('notifications.empty')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -87,7 +89,11 @@ export default function NotificationsPage() {
                     <p className="font-semibold text-gray-900">{item.title}</p>
                     <p className="text-sm text-gray-600 mt-1">{item.message}</p>
                   </div>
-                  {!item.isRead && <span className="text-xs px-2 py-1 rounded-full bg-teal-100 text-teal-700 font-semibold">New</span>}
+                  {!item.isRead && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-teal-100 text-teal-700 font-semibold">
+                      {t('notifications.badge.new')}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-gray-400 mt-3">{new Date(item.createdAt).toLocaleString()}</p>
               </Link>
@@ -98,4 +104,3 @@ export default function NotificationsPage() {
     </div>
   );
 }
-

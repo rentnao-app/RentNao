@@ -3,18 +3,20 @@ import { Link } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { apiFetch, getApiErrorMessage, getRequestErrorMessage, isLoggedIn, isOwnerProfileMissingError } from '../lib/api';
 import toast from 'react-hot-toast';
-
-function areaLabel(areaName) {
-  if (!areaName) return 'Area not set';
-  return String(areaName).replaceAll('_', ' ');
-}
+import { useTranslation } from '../lib/i18n';
 
 export default function MyPropertiesPage() {
+  const { t } = useTranslation();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [listingBusyKey, setListingBusyKey] = useState(null);
+
+  const areaLabel = (areaName) => {
+    if (!areaName) return t('common.areaNotSet');
+    return t(`common.areas.${areaName}`, String(areaName).replaceAll('_', ' '));
+  };
 
   const getImageSrc = (image) =>
     image?.url ||
@@ -77,10 +79,12 @@ export default function MyPropertiesPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(getApiErrorMessage(body, 'Update failed'));
-      toast.success(listingStatus === 'UNLISTED' ? 'Listing paused (inactive)' : 'Listing is active again');
+      toast.success(
+        listingStatus === 'UNLISTED' ? t('myProperties.toast.paused') : t('myProperties.toast.active')
+      );
       await loadProperties();
     } catch (e) {
-      toast.error(e?.message || 'Could not update listing');
+      toast.error(e?.message || t('myProperties.toast.updateFailed'));
     } finally {
       setListingBusyKey(null);
     }
@@ -88,22 +92,25 @@ export default function MyPropertiesPage() {
 
   const handleDeleteProperty = async (propertyId) => {
     if (!propertyId) return;
-    const ok = window.confirm(
-      'Permanently delete this property from the database? All listings, images, and related data will be removed. This cannot be undone.'
-    );
+    const ok = window.confirm(t('myProperties.confirm.delete'));
     if (!ok) return;
     setDeletingId(propertyId);
     try {
       const res = await apiFetch(`/properties/${propertyId}`, { method: 'DELETE' });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(getApiErrorMessage(body, 'Delete failed'));
-      toast.success('Property permanently deleted');
+      if (!res.ok) throw new Error(getApiErrorMessage(body, t('myProperties.toast.deleteFailed')));
+      toast.success(t('myProperties.toast.propertyDeleted'));
       await loadProperties();
     } catch (e) {
-      toast.error(e?.message || 'Could not delete property');
+      toast.error(e?.message || t('myProperties.toast.deleteFailed'));
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const listingStatusLabel = (status) => {
+    if (status === 'UNLISTED') return t('common.status.listing.paused');
+    return t(`common.status.listing.${status}`, status);
   };
 
   const anyBusy = Boolean(listingBusyKey) || Boolean(deletingId);
@@ -127,18 +134,16 @@ export default function MyPropertiesPage() {
               to="/owner-dashboard"
               className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 mb-2"
             >
-              <span aria-hidden>&larr;</span> Owner dashboard
+              <span aria-hidden>&larr;</span> {t('myProperties.backToDashboard')}
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">My Properties</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Pause sets a listing to inactive (hidden from search). Delete removes the whole property permanently from the database.
-            </p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('myProperties.title')}</h1>
+            <p className="text-sm text-gray-500 mt-1">{t('myProperties.subtitle')}</p>
           </div>
           <Link
             to="/owner-dashboard/create-listing"
             className="self-start sm:self-auto inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 transition whitespace-nowrap"
           >
-            <span aria-hidden>+</span> List New Property
+            <span aria-hidden>+</span> {t('myProperties.listNew')}
           </Link>
         </div>
 
@@ -151,9 +156,9 @@ export default function MyPropertiesPage() {
             {isOwnerProfileMissingError(error) ? (
               <p className="mt-2">
                 <Link to="/owner-registration" className="font-semibold underline hover:text-red-900">
-                  Complete owner registration
+                  {t('myProperties.errors.completeRegistration')}
                 </Link>{' '}
-                to load and manage your properties.
+                {t('myProperties.errors.completeRegistrationHint')}
               </p>
             ) : null}
           </div>
@@ -161,12 +166,12 @@ export default function MyPropertiesPage() {
 
         {properties.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-            <p className="text-gray-500 mb-4">You have not listed any properties yet.</p>
+            <p className="text-gray-500 mb-4">{t('myProperties.empty')}</p>
             <Link
               to="/owner-dashboard/create-listing"
               className="inline-block bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-lg transition"
             >
-              Create your first listing
+              {t('myProperties.createFirst')}
             </Link>
           </div>
         ) : (
@@ -179,7 +184,6 @@ export default function MyPropertiesPage() {
                   key={property.propertyId}
                   className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow isolate"
                 >
-                  {/* Top half is clickable to the main listing */}
                   <Link
                     to={property.listings?.[0] ? `/listings/${property.listings[0].listingId}` : `/owner-dashboard/my-properties/${property.propertyId}/edit`}
                     className="block hover:opacity-95 transition-opacity"
@@ -193,25 +197,25 @@ export default function MyPropertiesPage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
-                        No photo yet
+                        {t('common.noPhotoYet')}
                       </div>
                     )}
                     {imgCount > 0 && (
                       <span className="absolute bottom-2 right-2 rounded-full border border-white/30 bg-black/60 text-white text-xs font-medium px-2.5 py-1 shadow-sm">
-                        {imgCount} photo{imgCount === 1 ? '' : 's'}
+                        {t('myProperties.photoCount', { n: imgCount })}
                       </span>
                     )}
                   </div>
 
                   <div className="p-5 flex-1 flex flex-col">
                     <h2 className="font-bold text-gray-900 text-lg leading-snug line-clamp-2">
-                      {property.title || 'Untitled property'}
+                      {property.title || t('common.untitledProperty')}
                     </h2>
                     <p className="text-sm text-gray-500 mt-1">{areaLabel(property.areaName)}</p>
                     <p className="text-xs text-gray-400 mt-2">
-                      {property.roomCount != null ? `${property.roomCount} beds` : '-'} -{' '}
-                      {property.bathroomCount != null ? `${property.bathroomCount} baths` : '-'} -{' '}
-                      {property.propertySizeSqft != null ? `${property.propertySizeSqft} sqft` : '-'}
+                      {property.roomCount != null ? t('myProperties.specs.beds', { n: property.roomCount }) : t('common.dash')} -{' '}
+                      {property.bathroomCount != null ? t('myProperties.specs.baths', { n: property.bathroomCount }) : t('common.dash')} -{' '}
+                      {property.propertySizeSqft != null ? t('myProperties.specs.sqft', { n: property.propertySizeSqft }) : t('common.dash')}
                     </p>
                   </div>
                   </Link>
@@ -241,19 +245,21 @@ export default function MyPropertiesPage() {
                             >
                               <div className="min-w-0 flex-1">
                                 <p className="font-semibold text-teal-700 truncate">
-                                  BDT {Number(listing.rent || 0).toLocaleString()}/mo
+                                  {t('myProperties.rentPerMonth', { rent: Number(listing.rent || 0).toLocaleString() })}
                                 </p>
                                 <p className="text-xs text-gray-500 truncate">
                                   {listing.listingStartDate
-                                    ? `Starts ${new Date(listing.listingStartDate).toLocaleDateString()}`
-                                    : 'Available now'}
+                                    ? t('myProperties.startsDate', {
+                                        date: new Date(listing.listingStartDate).toLocaleDateString(),
+                                      })
+                                    : t('myProperties.availableNow')}
                                 </p>
                               </div>
                               <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                                 <span
                                   className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${statusClass}`}
                                 >
-                                  {listing.listingStatus === 'UNLISTED' ? 'Paused' : listing.listingStatus}
+                                  {listingStatusLabel(listing.listingStatus)}
                                 </span>
                                 {canPause ? (
                                   <button
@@ -265,7 +271,7 @@ export default function MyPropertiesPage() {
                                     }}
                                     className="shrink-0 rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-900 hover:bg-amber-50 disabled:opacity-50"
                                   >
-                                    {busyPause ? 'Pausing' : 'Pause'}
+                                    {busyPause ? t('myProperties.actions.pausing') : t('myProperties.actions.pause')}
                                   </button>
                                 ) : null}
                                 {canResume ? (
@@ -278,7 +284,7 @@ export default function MyPropertiesPage() {
                                     }}
                                     className="shrink-0 rounded-md border border-teal-300 bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-800 hover:bg-teal-100 disabled:opacity-50"
                                   >
-                                    {busyResume ? 'Resuming...' : 'Resume'}
+                                    {busyResume ? t('myProperties.actions.resuming') : t('myProperties.actions.resume')}
                                   </button>
                                 ) : null}
                               </div>
@@ -286,7 +292,7 @@ export default function MyPropertiesPage() {
                           );
                         })
                       ) : (
-                        <p className="text-sm text-gray-400">No listings for this property.</p>
+                        <p className="text-sm text-gray-400">{t('myProperties.noListings')}</p>
                       )}
                     </div>
 
@@ -295,7 +301,7 @@ export default function MyPropertiesPage() {
                         to={`/owner-dashboard/my-properties/${property.propertyId}/edit`}
                         className="w-full text-center bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold py-2.5 rounded-lg transition"
                       >
-                        Edit details &amp; photos
+                        {t('myProperties.editDetailsPhotos')}
                       </Link>
                       <button
                         type="button"
@@ -303,7 +309,9 @@ export default function MyPropertiesPage() {
                         onClick={() => handleDeleteProperty(property.propertyId)}
                         className="w-full text-sm font-semibold text-red-600 hover:text-red-700 disabled:opacity-50 py-1"
                       >
-                        {deletingId === property.propertyId ? 'Deleting' : 'Delete property (permanent)'}
+                        {deletingId === property.propertyId
+                          ? t('myProperties.actions.deleting')
+                          : t('myProperties.deleteProperty')}
                       </button>
                     </div>
                   </div>
@@ -316,5 +324,4 @@ export default function MyPropertiesPage() {
     </div>
   );
 }
-
 

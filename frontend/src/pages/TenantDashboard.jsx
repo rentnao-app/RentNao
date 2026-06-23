@@ -4,32 +4,25 @@ import { apiFetch, getCurrentUser, logout } from "../lib/api";
 import AppHeader from "../components/AppHeader";
 import { listTenantRequests } from "../lib/requests";
 import { fetchNotifications } from "../lib/notifications";
+import { useTranslation } from "../lib/i18n";
 
-function toLabel(value) {
-  if (value == null || value === "") return "N/A";
-  const map = {
-    BELOW_20K: "Below 20K",
-    RANGE_20K_40K: "20K - 40K",
-    RANGE_40K_60K: "40K - 60K",
-    RANGE_60K_100K: "60K - 100K",
-    RANGE_100K_200K: "100K - 200K",
-    ABOVE_200K: "Above 200K",
-    SELF_EMPLOYED: "Self Employed",
-    UNDER_REVIEW: "Under Review",
-  };
-  return map[value] || String(value).replaceAll("_", " ");
+function toLabel(value, t) {
+  if (value == null || value === "") return t("common.na");
+  const enumGroups = ["incomeRange", "employment", "kyc"];
+  for (const group of enumGroups) {
+    const key = `common.enums.${group}.${value}`;
+    const translated = t(key);
+    if (translated !== key) return translated;
+  }
+  return String(value).replaceAll("_", " ");
 }
 
-function budgetFromIncomeRange(incomeRange) {
-  const map = {
-    BELOW_20K: "BDT 20,000",
-    RANGE_20K_40K: "BDT 40,000",
-    RANGE_40K_60K: "BDT 60,000",
-    RANGE_60K_100K: "BDT 100,000",
-    RANGE_100K_200K: "BDT 200,000",
-    ABOVE_200K: "BDT 300,000+",
-  };
-  return map[incomeRange] || "BDT 50,000";
+function budgetFromIncomeRange(incomeRange, t) {
+  if (!incomeRange) return t("common.enums.budget.default");
+  const key = `common.enums.budget.${incomeRange}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
+  return t("common.enums.budget.default");
 }
 
 function formatBdt(n) {
@@ -45,18 +38,18 @@ function formatBdt(n) {
   }
 }
 
-function formatRelativeTime(iso) {
+function formatRelativeTime(iso, t) {
   if (!iso) return "";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "";
-  const diff = Date.now() - t;
+  const time = new Date(iso).getTime();
+  if (Number.isNaN(time)) return "";
+  const diff = Date.now() - time;
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "Just now";
-  if (m < 60) return `${m} min ago`;
+  if (m < 1) return t("common.time.justNow");
+  if (m < 60) return t("common.time.minutesAgo", { m });
   const h = Math.floor(m / 60);
-  if (h < 48) return `${h} hour${h === 1 ? "" : "s"} ago`;
+  if (h < 48) return t(h === 1 ? "common.time.hoursAgo" : "common.time.hoursAgo_other", { h });
   const d = Math.floor(h / 24);
-  return `${d} day${d === 1 ? "" : "s"} ago`;
+  return t(d === 1 ? "common.time.daysAgo" : "common.time.daysAgo_other", { d });
 }
 
 function SidebarItem({ to, label, icon, active, onNavigate }) {
@@ -83,6 +76,7 @@ function SidebarItem({ to, label, icon, active, onNavigate }) {
 }
 
 export default function TenantDashboard() {
+  const { t } = useTranslation();
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -91,71 +85,81 @@ export default function TenantDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [transactions, setTransactions] = useState([]);
 
-  const menuItems = [
-    {
-      label: "Dashboard",
-      to: "/tenant-dashboard",
-      icon: (
-        <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z" />
-        </svg>
-      ),
-    },
-    {
-      label: "My Applications",
-      to: "/tenant-dashboard/applications",
-      icon: (
-        <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
-    },
-    {
-      label: "Saved Properties",
-      to: "/tenant-dashboard/wishlist",
-      icon: (
-        <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 21l-1.45-1.32C5.4 15.04 2 12.03 2 8.5A4.5 4.5 0 0 1 6.5 4 5.3 5.3 0 0 1 12 7.09 5.3 5.3 0 0 1 17.5 4 4.5 4.5 0 0 1 22 8.5c0 3.53-3.4 6.54-8.55 11.18z" />
-        </svg>
-      ),
-    },
-    {
-      label: "Rental requests",
-      to: "/tenant-dashboard/applications",
-      icon: (
-        <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 18H6V4h7v5h5v11zM8 12h8v2H8v-2zm0 4h8v2H8v-2z" />
-        </svg>
-      ),
-    },
-    {
-      label: "Profile",
-      to: "/account",
-      icon: (
-        <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.42 0-8 2.01-8 4.5V21h16v-2.5C20 16.01 16.42 14 12 14z" />
-        </svg>
-      ),
-    },
-    {
-      label: "Settings",
-      to: "/account",
-      icon: (
-        <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.94L14.4 2.7a.5.5 0 0 0-.49-.4h-3.82a.5.5 0 0 0-.49.4L9.25 5.32c-.57.23-1.11.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.03.31-.05.63-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.52.4 1.06.71 1.63.94l.35 2.62a.5.5 0 0 0 .49.4h3.82a.5.5 0 0 0 .49-.4l.35-2.62c.57-.23 1.11-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 3.5-3.5A3.5 3.5 0 0 1 12 15.5z" />
-        </svg>
-      ),
-    },
-    {
-      label: "Support",
-      to: "/faq",
-      icon: (
-        <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm.1 15.5a1.4 1.4 0 1 1 1.4-1.4 1.4 1.4 0 0 1-1.4 1.4zM14.2 11c-.9.7-1.4 1.1-1.4 2v.3h-1.6v-.4c0-1.4.8-2.1 1.7-2.8.7-.5 1.2-.9 1.2-1.5a1.7 1.7 0 0 0-3.3-.6l-1.6-.4a3.3 3.3 0 1 1 6.5 1c0 1.4-.8 2-1.5 2.4z" />
-        </svg>
-      ),
-    },
-  ];
+  const menuItems = useMemo(
+    () => [
+      {
+        key: "dashboard",
+        label: t("nav.dashboard"),
+        to: "/tenant-dashboard",
+        icon: (
+          <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z" />
+          </svg>
+        ),
+      },
+      {
+        key: "applications",
+        label: t("nav.myApplications"),
+        to: "/tenant-dashboard/applications",
+        icon: (
+          <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        ),
+      },
+      {
+        key: "wishlist",
+        label: t("dashboard.tenant.sidebar.savedProperties"),
+        to: "/tenant-dashboard/wishlist",
+        icon: (
+          <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 21l-1.45-1.32C5.4 15.04 2 12.03 2 8.5A4.5 4.5 0 0 1 6.5 4 5.3 5.3 0 0 1 12 7.09 5.3 5.3 0 0 1 17.5 4 4.5 4.5 0 0 1 22 8.5c0 3.53-3.4 6.54-8.55 11.18z" />
+          </svg>
+        ),
+      },
+      {
+        key: "rentalRequests",
+        label: t("dashboard.tenant.sidebar.rentalRequests"),
+        to: "/tenant-dashboard/applications",
+        icon: (
+          <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 18H6V4h7v5h5v11zM8 12h8v2H8v-2zm0 4h8v2H8v-2z" />
+          </svg>
+        ),
+      },
+      {
+        key: "profile",
+        label: t("dashboard.tenant.sidebar.profile"),
+        to: "/account",
+        icon: (
+          <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.42 0-8 2.01-8 4.5V21h16v-2.5C20 16.01 16.42 14 12 14z" />
+          </svg>
+        ),
+      },
+      {
+        key: "settings",
+        label: t("dashboard.tenant.sidebar.settings"),
+        to: "/account",
+        icon: (
+          <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.94L14.4 2.7a.5.5 0 0 0-.49-.4h-3.82a.5.5 0 0 0-.49.4L9.25 5.32c-.57.23-1.11.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.03.31-.05.63-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.52.4 1.06.71 1.63.94l.35 2.62a.5.5 0 0 0 .49.4h3.82a.5.5 0 0 0 .49-.4l.35-2.62c.57-.23 1.11-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 3.5-3.5A3.5 3.5 0 0 1 12 15.5z" />
+          </svg>
+        ),
+      },
+      {
+        key: "support",
+        label: t("dashboard.tenant.sidebar.support"),
+        to: "/faq",
+        icon: (
+          <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm.1 15.5a1.4 1.4 0 1 1 1.4-1.4 1.4 1.4 0 0 1-1.4 1.4zM14.2 11c-.9.7-1.4 1.1-1.4 2v.3h-1.6v-.4c0-1.4.8-2.1 1.7-2.8.7-.5 1.2-.9 1.2-1.5a1.7 1.7 0 0 0-3.3-.6l-1.6-.4a3.3 3.3 0 1 1 6.5 1c0 1.4-.8 2-1.5 2.4z" />
+          </svg>
+        ),
+      },
+    ],
+    [t]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -237,9 +241,9 @@ export default function TenantDashboard() {
       user?.username ||
       user?.contactEmail?.split("@")?.[0] ||
       user?.contact_email?.split("@")?.[0] ||
-      "Tenant"
+      t("roles.tenant")
     );
-  }, [user]);
+  }, [user, t]);
 
   const incomeRangeFromProfile = useMemo(() => {
     const p = user?.profile;
@@ -248,8 +252,8 @@ export default function TenantDashboard() {
 
   const monthlyBudgetFromDb = useMemo(() => {
     if (incomeRangeFromProfile == null || incomeRangeFromProfile === "") return null;
-    return budgetFromIncomeRange(incomeRangeFromProfile);
-  }, [incomeRangeFromProfile]);
+    return budgetFromIncomeRange(incomeRangeFromProfile, t);
+  }, [incomeRangeFromProfile, t]);
 
   const pendingRequests = useMemo(
     () => tenantRequests.filter((item) => item?.requestStatus === "PENDING"),
@@ -282,7 +286,7 @@ export default function TenantDashboard() {
 
               return (
                 <SidebarItem
-                  key={item.label}
+                  key={item.key}
                   to={item.to}
                   label={item.label}
                   icon={item.icon}
@@ -297,19 +301,19 @@ export default function TenantDashboard() {
               onClick={logout}
               className="w-full rounded-xl bg-red-50 text-red-600 border border-red-100 py-2.5 text-sm font-semibold hover:bg-red-100 transition"
             >
-              Logout
+              {t("header.logout")}
             </button>
 
             {/* Clean minimal helper card instead of image */}
             <div className="mt-4 rounded-2xl border border-emerald-100 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-gray-500">Profile Status</p>
+              <p className="text-xs uppercase tracking-wide text-gray-500">{t("dashboard.profileStatus.title")}</p>
               <p className="mt-1 text-sm font-medium text-gray-800">
-                {toLabel(user?.kycVerificationStatus)}
+                {toLabel(user?.kycVerificationStatus, t)}
               </p>
               <div className="mt-3 h-2 rounded-full bg-emerald-100">
                 <div className="h-2 w-2/3 rounded-full bg-emerald-600" />
               </div>
-              <p className="mt-2 text-xs text-gray-500">Keep profile updated for better matches.</p>
+              <p className="mt-2 text-xs text-gray-500">{t("dashboard.profileStatus.hint")}</p>
             </div>
           </div>
         </aside>
@@ -319,10 +323,10 @@ export default function TenantDashboard() {
           {/* Welcome + stats */}
           <section className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-white via-white to-emerald-50 shadow-sm p-4 sm:p-6">
             <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-gray-900">
-              Welcome, {welcomeName}!
+              {t("dashboard.tenant.welcome", { name: welcomeName })}
             </h1>
             <p className="mt-1.5 text-gray-600 text-sm sm:text-base">
-              Find the best properties matched to your preferences.
+              {t("dashboard.tenant.subtitle")}
             </p>
 
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -337,7 +341,7 @@ export default function TenantDashboard() {
                     <p className="text-lg font-semibold text-gray-900">
                       {pendingRequests.length}
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-500">Pending rental requests</p>
+                    <p className="text-xs sm:text-sm text-gray-500">{t("dashboard.tenant.stats.pendingRequests")}</p>
                   </div>
                 </div>
               </div>
@@ -351,9 +355,9 @@ export default function TenantDashboard() {
                   </span>
                   <div>
                     <p className="text-lg font-semibold text-gray-900">
-                      {wishlistCount} {wishlistCount === 1 ? "Saved Listing" : "Saved Listings"}
+                      {wishlistCount} {wishlistCount === 1 ? t("dashboard.tenant.stats.savedListing") : t("dashboard.tenant.stats.savedListings")}
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-500">From your wishlist</p>
+                    <p className="text-xs sm:text-sm text-gray-500">{t("dashboard.tenant.stats.fromWishlist")}</p>
                   </div>
                 </div>
               </div>
@@ -367,12 +371,12 @@ export default function TenantDashboard() {
                   </span>
                   <div>
                     <p className="text-lg font-semibold text-gray-900">
-                      {monthlyBudgetFromDb ? `${monthlyBudgetFromDb} / mo` : "Not set"}
+                      {monthlyBudgetFromDb ? t("dashboard.tenant.stats.budgetPerMonth", { amount: monthlyBudgetFromDb }) : t("dashboard.tenant.stats.budgetNotSet")}
                     </p>
                     <p className="text-xs sm:text-sm text-gray-500">
                       {monthlyBudgetFromDb
-                        ? `Income range (profile): ${toLabel(incomeRangeFromProfile)}`
-                        : "Set your income range in account settings to see a rent budget."}
+                        ? t("dashboard.tenant.stats.incomeRangeProfile", { range: toLabel(incomeRangeFromProfile, t) })
+                        : t("dashboard.tenant.stats.setIncomeHint")}
                     </p>
                   </div>
                 </div>
@@ -385,27 +389,27 @@ export default function TenantDashboard() {
             <div className="rounded-2xl border border-emerald-100 bg-white shadow-sm p-4 sm:p-5 lg:col-span-7">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Rental Requests</h2>
-                  <p className="text-gray-500 mt-1 text-xs sm:text-sm">Your request history and current statuses.</p>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">{t("dashboard.tenant.rentalRequests.title")}</h2>
+                  <p className="text-gray-500 mt-1 text-xs sm:text-sm">{t("dashboard.tenant.rentalRequests.subtitle")}</p>
                 </div>
                 <Link to="/tenant-dashboard/applications" className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition">
-                  View all
+                  {t("common.viewAll")}
                 </Link>
               </div>
 
               <div className="space-y-3">
                 {recentRequests.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-8 text-center text-sm text-gray-500">
-                    No rental requests yet. Browse listings to send your first request.
+                    {t("dashboard.tenant.rentalRequests.empty")}
                   </p>
                 ) : (
                   recentRequests.map((req) => (
                     <div key={req.requestId} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-gray-900">Listing #{req.listingId}</p>
+                          <p className="truncate text-sm font-semibold text-gray-900">{t("common.listingNumber", { id: req.listingId })}</p>
                           <p className="mt-1 text-xs text-gray-500">
-                            {req.listing?.areaName ? String(req.listing.areaName).replaceAll("_", " ") : "Area not specified"}
+                            {req.listing?.areaName ? String(req.listing.areaName).replaceAll("_", " ") : t("common.areaNotSpecified")}
                           </p>
                         </div>
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -415,7 +419,7 @@ export default function TenantDashboard() {
                               ? "bg-emerald-100 text-emerald-800"
                               : "bg-slate-200 text-slate-700"
                         }`}>
-                          {req.requestStatus}
+                          {t(`common.status.request.${req.requestStatus}`, req.requestStatus)}
                         </span>
                       </div>
                     </div>
@@ -425,21 +429,21 @@ export default function TenantDashboard() {
 
               <div className="mt-6 border-t border-gray-100 pt-5">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="text-base font-semibold text-gray-900">Recent Notifications</h3>
+                  <h3 className="text-base font-semibold text-gray-900">{t("dashboard.tenant.notifications.title")}</h3>
                   <Link to="/notifications" className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition">
-                    Open inbox
+                    {t("dashboard.tenant.notifications.openInbox")}
                   </Link>
                 </div>
                 {recentNotifications.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-6 text-sm text-gray-500">
-                    No notifications yet.
+                    {t("dashboard.tenant.notifications.empty")}
                   </p>
                 ) : (
                   <ul className="space-y-2">
                     {recentNotifications.map((item) => (
                       <li key={item.id} className="rounded-xl border border-gray-100 bg-white px-3 py-2.5">
                         <p className="truncate text-sm font-medium text-gray-900">{item.title}</p>
-                        <p className="truncate text-xs text-gray-500">{item.message || "No details"}</p>
+                        <p className="truncate text-xs text-gray-500">{item.message || t("common.noDetails")}</p>
                       </li>
                     ))}
                   </ul>
@@ -451,13 +455,13 @@ export default function TenantDashboard() {
                   to="/listings"
                   className="rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2.5 text-sm font-semibold transition"
                 >
-                  Browse Listings
+                  {t("dashboard.tenant.actions.browseListings")}
                 </Link>
                 <Link
                   to="/tenant-dashboard/wishlist"
                   className="rounded-lg border border-emerald-200 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 transition"
                 >
-                  Open Wishlist
+                  {t("dashboard.tenant.actions.openWishlist")}
                 </Link>
               </div>
             </div>
@@ -465,23 +469,23 @@ export default function TenantDashboard() {
             <aside className="space-y-4 lg:col-span-5">
               <section className="rounded-2xl border border-emerald-100 bg-white shadow-sm">
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 sm:p-5">
-                  <h2 className="text-lg font-bold text-gray-900">Pending owner requests</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{t("dashboard.tenant.pendingOwnerRequests.title")}</h2>
                   <Link to="/tenant-dashboard/applications" className="text-sm font-semibold text-emerald-700 hover:text-emerald-900">
-                    View all
+                    {t("common.viewAll")}
                   </Link>
                 </div>
                 <div className="p-3 sm:p-4">
                   {pendingOwnerRequests.length === 0 ? (
                     <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-8 text-center text-sm text-gray-500">
-                      No pending owner responses.
+                      {t("dashboard.tenant.pendingOwnerRequests.empty")}
                     </p>
                   ) : (
                     <ul className="space-y-3">
                       {pendingOwnerRequests.slice(0, 5).map((item) => (
                         <li key={item.requestId} className="rounded-xl border border-gray-100 bg-gray-50/50 p-3">
-                          <p className="truncate text-sm font-semibold text-gray-900">Listing #{item.listingId}</p>
-                          <p className="mt-1 text-xs text-gray-500">{item.listing?.areaName ? String(item.listing.areaName).replaceAll("_", " ") : "Area not specified"}</p>
-                          <p className="mt-1 text-xs text-amber-700 font-medium">Waiting for owner review</p>
+                          <p className="truncate text-sm font-semibold text-gray-900">{t("common.listingNumber", { id: item.listingId })}</p>
+                          <p className="mt-1 text-xs text-gray-500">{item.listing?.areaName ? String(item.listing.areaName).replaceAll("_", " ") : t("common.areaNotSpecified")}</p>
+                          <p className="mt-1 text-xs text-amber-700 font-medium">{t("dashboard.tenant.pendingOwnerRequests.waiting")}</p>
                         </li>
                       ))}
                     </ul>
@@ -491,24 +495,24 @@ export default function TenantDashboard() {
 
               <section className="rounded-2xl border border-emerald-100 bg-white shadow-sm">
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 sm:p-5">
-                  <h2 className="text-lg font-bold text-gray-900">Recent payments</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{t("dashboard.tenant.payments.title")}</h2>
                   <Link to="/wallet" className="text-sm font-semibold text-emerald-700 hover:text-emerald-900">
-                    View all
+                    {t("common.viewAll")}
                   </Link>
                 </div>
                 <div className="p-3 sm:p-4">
                   {transactions.length === 0 ? (
                     <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-8 text-center text-sm text-gray-500">
-                      No wallet activity yet.
+                      {t("dashboard.tenant.payments.empty")}
                     </p>
                   ) : (
                     <ul className="space-y-3">
                       {transactions.map((txn) => (
                         <li key={txn.transactionId || txn.id} className="flex items-start justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-3">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-gray-900">{txn.description || txn.type || "Transaction"}</p>
-                            <p className="mt-0.5 text-xs text-gray-500">{txn.type} - {txn.status || "-"}</p>
-                            <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(txn.createdAt)}</p>
+                            <p className="truncate text-sm font-semibold text-gray-900">{txn.description || txn.type || t("common.transaction")}</p>
+                            <p className="mt-0.5 text-xs text-gray-500">{txn.type} - {txn.status || t("common.dash")}</p>
+                            <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(txn.createdAt, t)}</p>
                           </div>
                           <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${
                             txn.direction === "CREDIT"
@@ -531,5 +535,3 @@ export default function TenantDashboard() {
     </div>
   );
 }
-
-

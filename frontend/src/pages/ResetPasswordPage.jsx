@@ -2,8 +2,10 @@
 import { Link } from 'react-router-dom';
 import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, getApiErrorMessage } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 
 export default function ResetPasswordPage() {
+  const { t } = useTranslation();
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -25,15 +27,15 @@ export default function ResetPasswordPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(getApiErrorMessage(body, 'Reset token is invalid or expired'));
+        throw new Error(getApiErrorMessage(body, t('auth.resetPassword.tokenInvalid')));
       }
       setTokenChecked(true);
       setTokenValid(true);
-      setSuccess(body?.message || 'Token is valid. You can now reset password.');
+      setSuccess(body?.message || t('auth.resetPassword.tokenValid'));
     } catch (err) {
       setTokenChecked(true);
       setTokenValid(false);
-      setError(err.message || 'Token verification failed');
+      setError(err.message || t('auth.resetPassword.verifyFailed'));
     } finally {
       setLoading(false);
     }
@@ -45,15 +47,15 @@ export default function ResetPasswordPage() {
     setSuccess('');
 
     if (!tokenValid) {
-      setError('Please verify your token first.');
+      setError(t('auth.resetPassword.verifyFirst'));
       return;
     }
     if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('auth.resetPassword.passwordMinLength'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('auth.resetPassword.passwordsMismatch'));
       return;
     }
 
@@ -70,13 +72,13 @@ export default function ResetPasswordPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(getApiErrorMessage(body, 'Password reset failed'));
+        throw new Error(getApiErrorMessage(body, t('auth.resetPassword.resetFailed')));
       }
-      setSuccess(body?.message || 'Password reset successful. You can login now.');
+      setSuccess(body?.message || t('auth.resetPassword.resetSuccess'));
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setError(err.message || 'Could not reset password');
+      setError(err.message || t('auth.resetPassword.couldNotReset'));
     } finally {
       setLoading(false);
     }
@@ -88,15 +90,15 @@ export default function ResetPasswordPage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <BrandLogoLink />
           <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-teal-700 transition">
-            Back to Login
+            {t('common.backToLogin')}
           </Link>
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">Reset Password</h1>
-          <p className="text-gray-500 text-center mb-8">Verify reset token and set a new password.</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">{t('auth.resetPassword.title')}</h1>
+          <p className="text-gray-500 text-center mb-8">{t('auth.resetPassword.subtitle')}</p>
 
           {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
           {success && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{success}</div>}
@@ -104,7 +106,7 @@ export default function ResetPasswordPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
             <form onSubmit={resetPassword} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Reset Token</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('auth.resetPassword.resetToken')}</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -114,7 +116,7 @@ export default function ResetPasswordPage() {
                       setTokenChecked(false);
                       setTokenValid(false);
                     }}
-                    placeholder="Enter token from SMS"
+                    placeholder={t('auth.resetPassword.tokenPlaceholder')}
                     className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                     required
                   />
@@ -124,18 +126,18 @@ export default function ResetPasswordPage() {
                     disabled={loading || !token.trim()}
                     className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg disabled:opacity-50"
                   >
-                    Verify
+                    {t('auth.resetPassword.verify')}
                   </button>
                 </div>
                 {tokenChecked && (
                   <p className={`mt-2 text-xs ${tokenValid ? 'text-green-600' : 'text-red-600'}`}>
-                    {tokenValid ? 'Token verified' : 'Token verification failed'}
+                    {tokenValid ? t('auth.resetPassword.tokenVerified') : t('auth.resetPassword.verifyFailed')}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('auth.resetPassword.newPassword')}</label>
                 <input
                   type="password"
                   value={newPassword}
@@ -146,7 +148,7 @@ export default function ResetPasswordPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('auth.resetPassword.confirmPassword')}</label>
                 <input
                   type="password"
                   value={confirmPassword}
@@ -162,15 +164,15 @@ export default function ResetPasswordPage() {
                 disabled={loading}
                 className="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
               >
-                {loading ? 'Resetting...' : 'Reset Password'}
+                {loading ? t('auth.resetPassword.resetting') : t('auth.forgotPassword.resetPassword')}
               </button>
             </form>
           </div>
 
           <p className="mt-6 text-center text-sm text-gray-500">
-            Need a new token?{' '}
+            {t('auth.resetPassword.needNewToken')}{' '}
             <Link to="/forgot-password" className="text-teal-700 font-semibold hover:text-teal-800">
-              Request Again
+              {t('auth.resetPassword.requestAgain')}
             </Link>
           </p>
         </div>
@@ -178,4 +180,3 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
-

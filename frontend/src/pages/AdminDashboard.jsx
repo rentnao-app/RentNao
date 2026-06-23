@@ -1,6 +1,7 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { apiFetch, isLoggedIn, logout } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 import AdminDashboardSection from './admin-dashboard/AdminDashboardSection';
 import AdminDiscountPoliciesSection from './admin-dashboard/AdminDiscountPoliciesSection';
 import AdminFeePoliciesSection from './admin-dashboard/AdminFeePoliciesSection';
@@ -14,9 +15,11 @@ import {
   normalizeUser,
   parseFeePolicies,
   toIsoString,
+  toLabel,
 } from './admin-dashboard/adminDashboardUtils';
 
 export default function AdminDashboard() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -141,7 +144,7 @@ export default function AdminDashboard() {
         setKycSubmissions([]);
       }
     } catch {
-      setError('Failed to load data. Please check your connection.');
+      setError(t('admin.toasts.loadFailed'));
     } finally {
       if (initial) {
         isInitialLoad.current = false;
@@ -150,7 +153,7 @@ export default function AdminDashboard() {
         setUsersRefreshing(false);
       }
     }
-  }, [roleFilter, debouncedSearch, submissionStatusFilter]);
+  }, [roleFilter, debouncedSearch, submissionStatusFilter, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
@@ -168,17 +171,17 @@ export default function AdminDashboard() {
       if (listingStatusFilter) q.set('listingStatus', listingStatusFilter);
       const res = await apiFetch(`/admin/listings?${q.toString()}`);
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Failed to load listings');
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.loadListingsFailed'));
       setListings(body?.data?.items || []);
       setListingsPagination(body?.data?.pagination || null);
     } catch (e) {
-      toast.error(e.message || 'Failed to load listings');
+      toast.error(e.message || t('admin.toasts.loadListingsFailed'));
       setListings([]);
       setListingsPagination(null);
     } finally {
       setListingsLoading(false);
     }
-  }, [listingsPage, listingStatusFilter]);
+  }, [listingsPage, listingStatusFilter, t]);
 
   useEffect(() => {
     loadDashboard();
@@ -202,16 +205,16 @@ export default function AdminDashboard() {
       const res = await apiFetch(`/admin/fee-policies?${query.toString()}`);
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(body?.error || 'Failed to load fee policies');
+        throw new Error(body?.error || t('admin.toasts.loadFeePoliciesFailed'));
       }
       setFeePolicies(parseFeePolicies(body));
     } catch (e) {
       setFeePolicies([]);
-      setFeeError(e.message || 'Failed to load fee policies');
+      setFeeError(e.message || t('admin.toasts.loadFeePoliciesFailed'));
     } finally {
       setFeeLoading(false);
     }
-  }, [feeCodeFilter, feeActiveFilter]);
+  }, [feeCodeFilter, feeActiveFilter, t]);
 
   useEffect(() => {
     if (activeSection === 'fees') {
@@ -232,16 +235,16 @@ export default function AdminDashboard() {
       const res = await apiFetch(`/admin/discount-policies?${query.toString()}`);
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(body?.error || 'Failed to load discount policies');
+        throw new Error(body?.error || t('admin.toasts.loadDiscountPoliciesFailed'));
       }
       setDiscountPolicies(body?.data?.discountPolicies || []);
     } catch (e) {
       setDiscountPolicies([]);
-      setDiscountError(e.message || 'Failed to load discount policies');
+      setDiscountError(e.message || t('admin.toasts.loadDiscountPoliciesFailed'));
     } finally {
       setDiscountLoading(false);
     }
-  }, [discountCodeFilter, discountFeeCodeFilter, discountActiveFilter]);
+  }, [discountCodeFilter, discountFeeCodeFilter, discountActiveFilter, t]);
 
   useEffect(() => {
     if (activeSection === 'discounts') {
@@ -255,7 +258,7 @@ export default function AdminDashboard() {
 
     try {
       const res = await apiFetch(`/admin/users/${user.user_id}`);
-      if (!res.ok) throw new Error('Failed to fetch user details');
+      if (!res.ok) throw new Error(t('admin.toasts.loadUserFailed'));
       const body = await res.json();
       const normalizedDetailUser = normalizeUser(body?.data?.user || {});
       const mergedUser = { ...user, ...normalizedDetailUser };
@@ -269,7 +272,7 @@ export default function AdminDashboard() {
       setKycOverrideEdit('PENDING');
       setActiveSection('users');
     } catch (err) {
-      toast.error(err?.message || 'Failed to fetch user details');
+      toast.error(err?.message || t('admin.toasts.loadUserFailed'));
     } finally {
       setSelectingUserId(null);
     }
@@ -280,11 +283,11 @@ export default function AdminDashboard() {
     try {
       const res = await apiFetch(`/admin/listings/${item.listingId}`);
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Failed to load listing');
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.loadListingFailed'));
       setSelectedListingDetails(body?.data || null);
       setActiveSection('listings');
     } catch (e) {
-      toast.error(e.message || 'Failed to load listing');
+      toast.error(e.message || t('admin.toasts.loadListingFailed'));
     } finally {
       setSelectingListingId(null);
     }
@@ -299,32 +302,32 @@ export default function AdminDashboard() {
         body: JSON.stringify(payload),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Update failed');
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.updateFailed'));
       toast.success(successMessage);
       await loadDashboard();
       if (selectedUser) {
         await handleSelectUser(selectedUser);
       }
     } catch (e) {
-      toast.error(e.message || 'Operation failed');
+      toast.error(e.message || t('admin.toasts.operationFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('Soft delete this user account?')) return;
+    if (!confirm(t('admin.prompts.softDeleteConfirm'))) return;
     setBusy(true);
     try {
       const res = await apiFetch(`/admin/users/${userId}`, { method: 'DELETE' });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Delete failed');
-      toast.success('User soft-deleted');
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.deleteFailed'));
+      toast.success(t('admin.toasts.userSoftDeleted'));
       await loadDashboard();
       setSelectedUser(null);
       setSelectedUserDetails(null);
     } catch (e) {
-      toast.error(e.message || 'Delete failed');
+      toast.error(e.message || t('admin.toasts.deleteFailed'));
     } finally {
       setBusy(false);
     }
@@ -332,20 +335,20 @@ export default function AdminDashboard() {
 
   const handleHardDeleteUser = async (user) => {
     const label = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || user?.contact_email || user?.user_id;
-    const confirmText = prompt(`Type DELETE to permanently remove ${label}`) || '';
+    const confirmText = prompt(t('admin.prompts.hardDeleteConfirm', { label })) || '';
     if (confirmText !== 'DELETE') return;
 
     setBusy(true);
     try {
       const res = await apiFetch(`/admin/users/${user.user_id}/hard-delete`, { method: 'DELETE' });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Hard delete failed');
-      toast.success('User permanently deleted');
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.hardDeleteFailed'));
+      toast.success(t('admin.toasts.userPermanentlyDeleted'));
       await loadDashboard();
       setSelectedUser(null);
       setSelectedUserDetails(null);
     } catch (e) {
-      toast.error(e.message || 'Hard delete failed');
+      toast.error(e.message || t('admin.toasts.hardDeleteFailed'));
     } finally {
       setBusy(false);
     }
@@ -356,14 +359,14 @@ export default function AdminDashboard() {
     try {
       const res = await apiFetch(`/admin/users/${userId}/restore`, { method: 'POST' });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error || 'Restore failed');
-      toast.success('User restored');
+      if (!res.ok) throw new Error(body.error || t('admin.toasts.restoreFailed'));
+      toast.success(t('admin.toasts.userRestored'));
       await loadDashboard();
       if (selectedUser) {
         await handleSelectUser(selectedUser);
       }
     } catch (e) {
-      toast.error(e.message || 'Restore failed');
+      toast.error(e.message || t('admin.toasts.restoreFailed'));
     } finally {
       setBusy(false);
     }
@@ -374,12 +377,12 @@ export default function AdminDashboard() {
     try {
       const res = await apiFetch(`/admin/kyc/submissions/${submission.submissionId}`);
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Failed to load submission');
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.loadSubmissionFailed'));
       setSelectedSubmission(submission);
       setSelectedSubmissionDetails(body?.data || null);
       setActiveSection('reports');
     } catch (e) {
-      toast.error(e.message || 'Failed to load submission');
+      toast.error(e.message || t('admin.toasts.loadSubmissionFailed'));
     } finally {
       setSelectingSubmissionId(null);
     }
@@ -389,10 +392,10 @@ export default function AdminDashboard() {
     if (!selectedSubmissionDetails?.submissionId) return;
     const rejectionReason =
       decision === 'REJECTED'
-        ? prompt('Rejection reason (minimum 10 chars):') || ''
+        ? prompt(t('admin.prompts.rejectionReason')) || ''
         : undefined;
     if (decision === 'REJECTED' && rejectionReason.trim().length < 10) {
-      toast.error('Rejection reason must be at least 10 characters');
+      toast.error(t('admin.toasts.rejectionReasonMin'));
       return;
     }
     setBusy(true);
@@ -406,13 +409,13 @@ export default function AdminDashboard() {
         }
       );
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Review failed');
-      toast.success(`Submission ${decision.toLowerCase()} successfully`);
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.reviewFailed'));
+      toast.success(t('admin.toasts.submissionReviewed', { decision: toLabel(decision, t).toLowerCase() }));
       await loadDashboard();
       setSelectedSubmission(null);
       setSelectedSubmissionDetails(null);
     } catch (e) {
-      toast.error(e.message || 'Review failed');
+      toast.error(e.message || t('admin.toasts.reviewFailed'));
     } finally {
       setBusy(false);
     }
@@ -426,10 +429,10 @@ export default function AdminDashboard() {
       const hasPercent = feeForm.percentage !== '';
 
       if (!feeForm.code.trim() || !feeForm.name.trim() || (!hasFixed && !hasPercent)) {
-        throw new Error('Code, name and at least one fee component are required');
+        throw new Error(t('admin.toasts.codeNameFeeRequired'));
       }
       if (hasPercent && !feeForm.percentBaseField.trim()) {
-        throw new Error('Base field is required when percentage is set');
+        throw new Error(t('admin.toasts.baseFieldRequired'));
       }
 
       const payload = {
@@ -452,9 +455,9 @@ export default function AdminDashboard() {
         body: JSON.stringify(payload),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Failed to create fee policy');
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.createFeePolicyFailed'));
 
-      toast.success(body?.message || 'Fee policy created');
+      toast.success(body?.message || t('admin.toasts.feePolicyCreated'));
       setFeeForm({
         code: '',
         name: '',
@@ -469,7 +472,7 @@ export default function AdminDashboard() {
       });
       await loadFeePolicies();
     } catch (e) {
-      toast.error(e.message || 'Failed to create fee policy');
+      toast.error(e.message || t('admin.toasts.createFeePolicyFailed'));
     } finally {
       setFeeBusy(false);
     }
@@ -480,29 +483,29 @@ export default function AdminDashboard() {
     setDiscountBusy(true);
     try {
       if (!discountForm.code.trim() || !discountForm.feePolicyCode.trim()) {
-        throw new Error('Discount code and fee policy code are required');
+        throw new Error(t('admin.toasts.discountCodesRequired'));
       }
 
       const hasFixed = discountForm.fixedAmount !== '';
       const hasPercent = discountForm.percentage !== '';
 
       if (discountForm.discountType === 'FIXED' && !hasFixed) {
-        throw new Error('Fixed amount is required for FIXED discounts');
+        throw new Error(t('admin.toasts.fixedAmountRequired'));
       }
       if (discountForm.discountType === 'PERCENTAGE' && !hasPercent) {
-        throw new Error('Percentage is required for PERCENTAGE discounts');
+        throw new Error(t('admin.toasts.percentageRequired'));
       }
       if (discountForm.discountType === 'FIXED' && hasPercent) {
-        throw new Error('Percentage is not allowed for FIXED discounts');
+        throw new Error(t('admin.toasts.percentageNotAllowedFixed'));
       }
       if (discountForm.discountType === 'PERCENTAGE' && hasFixed) {
-        throw new Error('Fixed amount is not allowed for PERCENTAGE discounts');
+        throw new Error(t('admin.toasts.fixedNotAllowedPercentage'));
       }
 
       const minAmount = discountForm.minAmount !== '' ? Number(discountForm.minAmount) : null;
       const maxAmount = discountForm.maxAmount !== '' ? Number(discountForm.maxAmount) : null;
       if (minAmount != null && maxAmount != null && minAmount > maxAmount) {
-        throw new Error('Min amount cannot be greater than max amount');
+        throw new Error(t('admin.toasts.minGreaterThanMax'));
       }
 
       const payload = {
@@ -527,9 +530,9 @@ export default function AdminDashboard() {
         body: JSON.stringify(payload),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Failed to create discount policy');
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.createDiscountPolicyFailed'));
 
-      toast.success(body?.message || 'Discount policy created');
+      toast.success(body?.message || t('admin.toasts.discountPolicyCreated'));
       setDiscountForm({
         code: '',
         feePolicyCode: '',
@@ -546,7 +549,7 @@ export default function AdminDashboard() {
       });
       await loadDiscountPolicies();
     } catch (e) {
-      toast.error(e.message || 'Failed to create discount policy');
+      toast.error(e.message || t('admin.toasts.createDiscountPolicyFailed'));
     } finally {
       setDiscountBusy(false);
     }
@@ -558,30 +561,30 @@ export default function AdminDashboard() {
       const action = policy.isActive ? 'deactivate' : 'activate';
       const res = await apiFetch(`/admin/discount-policies/${policy.id}/${action}`, { method: 'POST' });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || `Failed to ${action} policy`);
-      toast.success(body?.message || `Policy ${action}d`);
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.policyUpdateFailed'));
+      toast.success(body?.message || (action === 'activate' ? t('admin.toasts.policyActivated') : t('admin.toasts.policyDeactivated')));
       await loadDiscountPolicies();
     } catch (e) {
-      toast.error(e.message || 'Policy update failed');
+      toast.error(e.message || t('admin.toasts.policyUpdateFailed'));
     } finally {
       setDiscountBusy(false);
     }
   };
 
   const handleEditDiscountPolicy = async (policy) => {
-    const fixedRaw = prompt('Update fixed amount (leave empty to clear)', String(policy.fixedAmount ?? ''));
+    const fixedRaw = prompt(t('admin.prompts.updateFixedAmount'), String(policy.fixedAmount ?? ''));
     if (fixedRaw === null) return;
-    const percentageRaw = prompt('Update percentage (leave empty to clear)', String(policy.percentage ?? ''));
+    const percentageRaw = prompt(t('admin.prompts.updatePercentage'), String(policy.percentage ?? ''));
     if (percentageRaw === null) return;
-    const minRaw = prompt('Update min amount (leave empty to clear)', String(policy.minAmount ?? ''));
+    const minRaw = prompt(t('admin.prompts.updateMinAmount'), String(policy.minAmount ?? ''));
     if (minRaw === null) return;
-    const maxRaw = prompt('Update max amount (leave empty to clear)', String(policy.maxAmount ?? ''));
+    const maxRaw = prompt(t('admin.prompts.updateMaxAmount'), String(policy.maxAmount ?? ''));
     if (maxRaw === null) return;
-    const totalCapRaw = prompt('Update total redemption cap (leave empty to clear)', String(policy.maxRedemptionsTotal ?? ''));
+    const totalCapRaw = prompt(t('admin.prompts.updateTotalCap'), String(policy.maxRedemptionsTotal ?? ''));
     if (totalCapRaw === null) return;
-    const perUserCapRaw = prompt('Update per-user cap (leave empty to clear)', String(policy.maxRedemptionsPerUser ?? ''));
+    const perUserCapRaw = prompt(t('admin.prompts.updatePerUserCap'), String(policy.maxRedemptionsPerUser ?? ''));
     if (perUserCapRaw === null) return;
-    const roleRaw = prompt('Update eligible role (TENANT/OWNER/ADMIN) or leave empty', String(policy.eligibleRole ?? ''));
+    const roleRaw = prompt(t('admin.prompts.updateEligibleRole'), String(policy.eligibleRole ?? ''));
     if (roleRaw === null) return;
 
     const toNumberOrNull = (value) => {
@@ -598,22 +601,22 @@ export default function AdminDashboard() {
     const maxRedemptionsPerUser = toNumberOrNull(perUserCapRaw);
 
     if ([fixedAmount, percentage, minAmount, maxAmount, maxRedemptionsTotal, maxRedemptionsPerUser].some((v) => Number.isNaN(v))) {
-      toast.error('Numeric inputs must be valid numbers');
+      toast.error(t('admin.toasts.numericInputsInvalid'));
       return;
     }
 
     if (policy.discountType === 'FIXED' && fixedAmount == null) {
-      toast.error('Fixed amount is required for FIXED discounts');
+      toast.error(t('admin.toasts.fixedAmountRequired'));
       return;
     }
 
     if (policy.discountType === 'PERCENTAGE' && percentage == null) {
-      toast.error('Percentage is required for PERCENTAGE discounts');
+      toast.error(t('admin.toasts.percentageRequired'));
       return;
     }
 
     if (typeof minAmount === 'number' && typeof maxAmount === 'number' && minAmount > maxAmount) {
-      toast.error('Min amount cannot be greater than max amount');
+      toast.error(t('admin.toasts.minGreaterThanMax'));
       return;
     }
 
@@ -637,11 +640,11 @@ export default function AdminDashboard() {
         body: JSON.stringify(patchPayload),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Failed to update discount policy');
-      toast.success(body?.message || 'Discount policy updated');
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.updateDiscountPolicyFailed'));
+      toast.success(body?.message || t('admin.toasts.discountPolicyUpdated'));
       await loadDiscountPolicies();
     } catch (e) {
-      toast.error(e.message || 'Failed to update discount policy');
+      toast.error(e.message || t('admin.toasts.updateDiscountPolicyFailed'));
     } finally {
       setDiscountBusy(false);
     }
@@ -653,29 +656,29 @@ export default function AdminDashboard() {
       const action = policy.isActive ? 'deactivate' : 'activate';
       const res = await apiFetch(`/admin/fee-policies/${policy.id}/${action}`, { method: 'POST' });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || `Failed to ${action} policy`);
-      toast.success(body?.message || `Policy ${action}d`);
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.policyUpdateFailed'));
+      toast.success(body?.message || (action === 'activate' ? t('admin.toasts.policyActivated') : t('admin.toasts.policyDeactivated')));
       await loadFeePolicies();
     } catch (e) {
-      toast.error(e.message || 'Policy update failed');
+      toast.error(e.message || t('admin.toasts.policyUpdateFailed'));
     } finally {
       setFeeBusy(false);
     }
   };
 
   const handleEditFeePolicy = async (policy) => {
-    const name = prompt('Update fee policy name', policy.name || '');
+    const name = prompt(t('admin.prompts.updateFeeName'), policy.name || '');
     if (name === null) return;
 
-    const fixedRaw = prompt('Update fixed amount (leave empty to clear)', String(policy.fixedAmount ?? ''));
+    const fixedRaw = prompt(t('admin.prompts.updateFixedAmount'), String(policy.fixedAmount ?? ''));
     if (fixedRaw === null) return;
-    const percentageRaw = prompt('Update percentage (leave empty to clear)', String(policy.percentage ?? ''));
+    const percentageRaw = prompt(t('admin.prompts.updatePercentage'), String(policy.percentage ?? ''));
     if (percentageRaw === null) return;
-    const baseFieldRaw = prompt('Update percentage base field (e.g. rent)', String(policy.percentBaseField ?? ''));
+    const baseFieldRaw = prompt(t('admin.prompts.updateBaseField'), String(policy.percentBaseField ?? ''));
     if (baseFieldRaw === null) return;
-    const minRaw = prompt('Update min amount (leave empty to clear)', String(policy.minAmount ?? ''));
+    const minRaw = prompt(t('admin.prompts.updateMinAmount'), String(policy.minAmount ?? ''));
     if (minRaw === null) return;
-    const maxRaw = prompt('Update max amount (leave empty to clear)', String(policy.maxAmount ?? ''));
+    const maxRaw = prompt(t('admin.prompts.updateMaxAmount'), String(policy.maxAmount ?? ''));
     if (maxRaw === null) return;
 
     const toNumberOrNull = (value) => {
@@ -690,15 +693,15 @@ export default function AdminDashboard() {
     const maxAmount = toNumberOrNull(maxRaw);
 
     if ([fixedAmount, percentage, minAmount, maxAmount].some((v) => Number.isNaN(v))) {
-      toast.error('Numeric inputs must be valid numbers');
+      toast.error(t('admin.toasts.numericInputsInvalid'));
       return;
     }
     if (typeof minAmount === 'number' && typeof maxAmount === 'number' && minAmount > maxAmount) {
-      toast.error('Min amount cannot be greater than max amount');
+      toast.error(t('admin.toasts.minGreaterThanMax'));
       return;
     }
     if (typeof percentage === 'number' && !baseFieldRaw.trim()) {
-      toast.error('Base field is required when percentage is set');
+      toast.error(t('admin.toasts.baseFieldRequired'));
       return;
     }
 
@@ -718,72 +721,75 @@ export default function AdminDashboard() {
         body: JSON.stringify(patchPayload),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Failed to update fee policy');
-      toast.success(body?.message || 'Fee policy updated');
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.updateFeePolicyFailed'));
+      toast.success(body?.message || t('admin.toasts.feePolicyUpdated'));
       await loadFeePolicies();
     } catch (e) {
-      toast.error(e.message || 'Failed to update fee policy');
+      toast.error(e.message || t('admin.toasts.updateFeePolicyFailed'));
     } finally {
       setFeeBusy(false);
     }
   };
 
-  const sideMenuItems = [
-    {
-      key: 'dashboard',
-      label: 'Dashboard',
-      icon: 'M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1v-9.5z',
-    },
-    {
-      key: 'listings',
-      label: 'Properties',
-      icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-    },
-    {
-      key: 'users',
-      label: 'Users',
-      icon: 'M17 20h5v-1a4 4 0 00-5.546-3.69M9 20H2v-1a4 4 0 015.546-3.69M16 6a4 4 0 11-8 0 4 4 0 018 0z',
-    },
-    {
-      key: 'fees',
-      label: 'Payments',
-      icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-    },
-    {
-      key: 'discounts',
-      label: 'Discounts',
-      icon: 'M12 3v3m6.364 1.636l-2.121 2.121M21 12h-3M17.657 17.657l-2.121-2.121M12 21v-3M8.464 16.536l-2.121 2.121M3 12h3M6.343 6.343l2.121 2.121',
-    },
-    {
-      key: 'topup-approvals',
-      label: 'Topup Approvals',
-      to: '/admin-dashboard/topup-approvals',
-      icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-    },
-    {
-      key: 'reports',
-      label: 'Reports',
-      icon: 'M9 17v-6a1 1 0 011-1h8m-6 6h6m-6-3h4M4 7h4M4 11h2M4 15h1M4 5h16',
-    },
-    {
-      key: 'settings',
-      label: 'Settings',
-      icon: 'M10.325 4.317a1 1 0 011.35-.936l1.06.396a1 1 0 00.95-.106l.985-.574a1 1 0 011.366.366l.5.866a1 1 0 00.79.49l1.145.15a1 1 0 01.878 1.12l-.1 1.11a1 1 0 00.287.829l.79.79a1 1 0 010 1.414l-.79.79a1 1 0 00-.287.829l.1 1.11a1 1 0 01-.878 1.12l-1.146.15a1 1 0 00-.789.49l-.5.866a1 1 0 01-1.366.366l-.985-.574a1 1 0 00-.95-.106l-1.06.396a1 1 0 01-1.35-.936l-.086-1.148a1 1 0 00-.522-.795l-.94-.542a1 1 0 01-.366-1.366l.574-.985a1 1 0 00.106-.95l-.396-1.06a1 1 0 01.936-1.35l1.148-.086a1 1 0 00.795-.522l.542-.94z',
-    },
-    {
-      key: 'account',
-      label: 'Account',
-      to: '/account',
-      icon: 'M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z',
-    },
-  ];
+  const sideMenuItems = useMemo(
+    () => [
+      {
+        key: 'dashboard',
+        label: t('admin.sidebar.dashboard'),
+        icon: 'M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1v-9.5z',
+      },
+      {
+        key: 'listings',
+        label: t('admin.sidebar.properties'),
+        icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+      },
+      {
+        key: 'users',
+        label: t('admin.sidebar.users'),
+        icon: 'M17 20h5v-1a4 4 0 00-5.546-3.69M9 20H2v-1a4 4 0 015.546-3.69M16 6a4 4 0 11-8 0 4 4 0 018 0z',
+      },
+      {
+        key: 'fees',
+        label: t('admin.sidebar.payments'),
+        icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+      },
+      {
+        key: 'discounts',
+        label: t('admin.sidebar.discounts'),
+        icon: 'M12 3v3m6.364 1.636l-2.121 2.121M21 12h-3M17.657 17.657l-2.121-2.121M12 21v-3M8.464 16.536l-2.121 2.121M3 12h3M6.343 6.343l2.121 2.121',
+      },
+      {
+        key: 'topup-approvals',
+        label: t('admin.sidebar.topupApprovals'),
+        to: '/admin-dashboard/topup-approvals',
+        icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+      },
+      {
+        key: 'reports',
+        label: t('admin.sidebar.reports'),
+        icon: 'M9 17v-6a1 1 0 011-1h8m-6 6h6m-6-3h4M4 7h4M4 11h2M4 15h1M4 5h16',
+      },
+      {
+        key: 'settings',
+        label: t('admin.sidebar.settings'),
+        icon: 'M10.325 4.317a1 1 0 011.35-.936l1.06.396a1 1 0 00.95-.106l.985-.574a1 1 0 011.366.366l.5.866a1 1 0 00.79.49l1.145.15a1 1 0 01.878 1.12l-.1 1.11a1 1 0 00.287.829l.79.79a1 1 0 010 1.414l-.79.79a1 1 0 00-.287.829l.1 1.11a1 1 0 01-.878 1.12l-1.146.15a1 1 0 00-.789.49l-.5.866a1 1 0 01-1.366.366l-.985-.574a1 1 0 00-.95-.106l-1.06.396a1 1 0 01-1.35-.936l-.086-1.148a1 1 0 00-.522-.795l-.94-.542a1 1 0 01-.366-1.366l.574-.985a1 1 0 00.106-.95l-.396-1.06a1 1 0 01.936-1.35l1.148-.086a1 1 0 00.795-.522l.542-.94z',
+      },
+      {
+        key: 'account',
+        label: t('admin.sidebar.account'),
+        to: '/account',
+        icon: 'M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z',
+      },
+    ],
+    [t]
+  );
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f2f7f3]">
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-emerald-700" />
-          <p className="text-sm font-medium text-gray-600">Loading admin dashboard...</p>
+          <p className="text-sm font-medium text-gray-600">{t('admin.loading')}</p>
         </div>
       </div>
     );
@@ -925,8 +931,8 @@ export default function AdminDashboard() {
             {activeSection === 'settings'
               ? (
                 <AdminPlaceholderSection
-                  title="Settings"
-                  description="Configure platform-level admin preferences and permissions."
+                  title={t('admin.settings.title')}
+                  description={t('admin.settings.description')}
                 />
               )
               : null}

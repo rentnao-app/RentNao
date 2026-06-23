@@ -1,13 +1,15 @@
 ﻿import FeatureUnavailablePage from '../components/FeatureUnavailablePage';
+import { useTranslation } from '../lib/i18n';
 
 export default function MyRentalsPage() {
+  const { t } = useTranslation();
+
   return (
     <FeatureUnavailablePage
-      title="Rentals Timeline Unavailable"
-      description="Rental lifecycle and review features are currently unavailable because rental and review endpoints are not in the active backend API contract."
+      title={t('requests.rentals.unavailable.title')}
+      description={t('requests.rentals.unavailable.description')}
       backTo="/tenant-dashboard"
-      backLabel="Back to Dashboard"
+      backLabel={t('requests.rentals.unavailable.backLabel')}
     />
   );
 }
-

@@ -14,9 +14,10 @@ import { addLocalNotification } from "../lib/notifications";
 import { usePaymentGuard } from "../lib/usePaymentGuard";
 import { formatMoney } from "../lib/wallet";
 import AppHeader from "../components/AppHeader";
+import { useTranslation } from "../lib/i18n";
 
-function formatBdt(n) {
-  if (n == null || Number.isNaN(Number(n))) return "—";
+function formatBdt(n, dash) {
+  if (n == null || Number.isNaN(Number(n))) return dash;
   try {
     return new Intl.NumberFormat("en-BD", {
       style: "currency",
@@ -26,28 +27,6 @@ function formatBdt(n) {
   } catch {
     return `BDT ${Number(n).toLocaleString()}`;
   }
-}
-
-function areaLabel(name) {
-  if (!name) return "Area";
-  return String(name).replaceAll("_", " ");
-}
-
-function formatTenantType(v) {
-  if (!v) return "—";
-  return String(v).replaceAll("_", " ");
-}
-
-function relativeListed(iso) {
-  if (!iso) return "";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "";
-  const diff = Date.now() - t;
-  const h = Math.floor(diff / 3600000);
-  if (h < 1) return "Just listed";
-  if (h < 48) return `${h} hour${h === 1 ? "" : "s"} ago`;
-  const d = Math.floor(h / 24);
-  return `${d} day${d === 1 ? "" : "s"} ago`;
 }
 
 function Icon({ children, className = "h-5 w-5" }) {
@@ -76,6 +55,7 @@ function SpecRow({ label, value, icon }) {
 }
 
 export default function ListingDetailsPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const [listing, setListing] = useState(null);
   const [related, setRelated] = useState([]);
@@ -94,12 +74,57 @@ export default function ListingDetailsPage() {
   const isTenant = loggedIn && viewerRole === "TENANT";
   const isOwner = loggedIn && viewerRole === "OWNER";
 
+  const areaLabel = useCallback(
+    (name) => {
+      if (!name) return t("common.areaNotSpecified");
+      return t(`common.areas.${name}`, String(name).replaceAll("_", " "));
+    },
+    [t]
+  );
+
+  const formatTenantType = useCallback(
+    (v) => {
+      if (!v) return t("common.dash");
+      return t(`common.enums.tenantType.${v}`, String(v).replaceAll("_", " "));
+    },
+    [t]
+  );
+
+  const formatFacing = useCallback(
+    (v) => {
+      if (!v) return t("common.dash");
+      return t(`common.enums.facing.${v}`, String(v).replaceAll("_", " "));
+    },
+    [t]
+  );
+
+  const relativeListed = useCallback(
+    (iso) => {
+      if (!iso) return "";
+      const ts = new Date(iso).getTime();
+      if (Number.isNaN(ts)) return "";
+      const diff = Date.now() - ts;
+      const h = Math.floor(diff / 3600000);
+      if (h < 1) return t("common.time.justListed");
+      if (h < 48) {
+        return h === 1
+          ? t("common.time.hoursAgo", { h })
+          : t("common.time.hoursAgo_other", { h });
+      }
+      const d = Math.floor(h / 24);
+      return d === 1
+        ? t("common.time.daysAgo", { d })
+        : t("common.time.daysAgo_other", { d });
+    },
+    [t]
+  );
+
   const loadListing = useCallback(async () => {
     const publicRes = await apiFetch(`/properties/public/listings/${id}`);
     const publicBody = await publicRes.json().catch(() => ({}));
     if (!publicRes.ok) {
       throw new Error(
-        publicBody?.error || publicBody?.message || "Failed to load listing",
+        publicBody?.error || publicBody?.message || t("listingDetails.errors.loadFailed"),
       );
     }
     let merged = publicBody.data;
@@ -113,7 +138,7 @@ export default function ListingDetailsPage() {
     }
 
     setListing(merged);
-  }, [id, loggedIn]);
+  }, [id, loggedIn, t]);
 
   useEffect(() => {
     const load = async () => {
@@ -122,13 +147,13 @@ export default function ListingDetailsPage() {
         setError("");
         await loadListing();
       } catch (e) {
-        setError(e.message || "Failed to load listing.");
+        setError(e.message || t("listingDetails.errors.loadFailed"));
       } finally {
         setLoading(false);
       }
     };
     void load();
-  }, [loadListing]);
+  }, [loadListing, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,13 +232,14 @@ export default function ListingDetailsPage() {
   });
 
   const availabilityLabel = useMemo(() => {
-    if (!listing?.listingStartDate) return "Available now";
+    if (!listing?.listingStartDate) return t("myProperties.availableNow");
     const start = new Date(listing.listingStartDate);
-    if (Number.isNaN(start.getTime())) return "Available now";
-    if (start.getTime() > Date.now())
-      return `From ${start.toLocaleDateString()}`;
-    return "Available now";
-  }, [listing]);
+    if (Number.isNaN(start.getTime())) return t("myProperties.availableNow");
+    if (start.getTime() > Date.now()) {
+      return t("myProperties.startsDate", { date: start.toLocaleDateString() });
+    }
+    return t("myProperties.availableNow");
+  }, [listing, t]);
 
   if (loading) {
     return (
@@ -232,12 +258,12 @@ export default function ListingDetailsPage() {
         <AppHeader variant="wide" />
         <div className="flex min-h-[50vh] items-center justify-center px-4">
           <div className="text-center">
-            <p className="mb-4 text-slate-600">{error || "Listing not found."}</p>
+            <p className="mb-4 text-slate-600">{error || t("listingDetails.errors.notFound")}</p>
             <Link
               to="/listings"
               className="text-sm font-semibold text-emerald-800 hover:text-emerald-900"
             >
-              ← Back to listings
+              {t("listingDetails.backToListings")}
             </Link>
           </div>
         </div>
@@ -245,7 +271,7 @@ export default function ListingDetailsPage() {
     );
   }
 
-  const title = listing.title || "Property listing";
+  const title = listing.title || t("listingDetails.defaultTitle");
   const area = areaLabel(listing.areaName);
 
   return (
@@ -264,7 +290,7 @@ export default function ListingDetailsPage() {
           aria-label="Breadcrumb"
         >
           <Link to="/" className="font-medium text-emerald-800 hover:underline">
-            Home
+            {t("nav.home")}
           </Link>
           <span className="text-slate-300">/</span>
           <Link
@@ -284,17 +310,17 @@ export default function ListingDetailsPage() {
           <aside className="order-2 space-y-3 xl:order-1 xl:col-span-3 xl:row-start-1">
             <div className="flex gap-2 rounded-xl border border-slate-200/80 bg-white p-1 shadow-sm">
               <span className="flex-1 rounded-lg bg-emerald-700 px-3 py-2 text-center text-xs font-semibold text-white">
-                Residential
+                {t("search.categories.residential")}
               </span>
               <span className="flex-1 rounded-lg px-3 py-2 text-center text-xs font-semibold text-slate-400">
-                Commercial
+                {t("search.categories.commercial")}
               </span>
             </div>
             <div className="space-y-2">
               <SpecRow
-                label="Bedrooms"
+                label={t("listingDetails.specs.bedrooms")}
                 value={
-                  listing.roomCount != null ? String(listing.roomCount) : "—"
+                  listing.roomCount != null ? String(listing.roomCount) : t("common.dash")
                 }
                 icon={
                   <Icon>
@@ -315,11 +341,11 @@ export default function ListingDetailsPage() {
                 }
               />
               <SpecRow
-                label="Bathrooms"
+                label={t("listingDetails.specs.bathrooms")}
                 value={
                   listing.bathroomCount != null
                     ? String(listing.bathroomCount)
-                    : "—"
+                    : t("common.dash")
                 }
                 icon={
                   <Icon>
@@ -340,11 +366,11 @@ export default function ListingDetailsPage() {
                 }
               />
               <SpecRow
-                label="Size"
+                label={t("listingDetails.specs.size")}
                 value={
                   listing.propertySizeSqft != null
-                    ? `${listing.propertySizeSqft.toLocaleString()} sq.ft`
-                    : "—"
+                    ? `${listing.propertySizeSqft.toLocaleString()} ${t("common.sqFt")}`
+                    : t("common.dash")
                 }
                 icon={
                   <Icon>
@@ -365,11 +391,11 @@ export default function ListingDetailsPage() {
                 }
               />
               <SpecRow
-                label="Building floors"
+                label={t("listingDetails.specs.buildingFloors")}
                 value={
                   listing.buildingFloors != null
                     ? String(listing.buildingFloors)
-                    : "—"
+                    : t("common.dash")
                 }
                 icon={
                   <Icon>
@@ -390,11 +416,11 @@ export default function ListingDetailsPage() {
                 }
               />
               <SpecRow
-                label="Facing"
+                label={t("listingDetails.specs.facing")}
                 value={
                   listing.buildingFacing
-                    ? formatTenantType(listing.buildingFacing)
-                    : "—"
+                    ? formatFacing(listing.buildingFacing)
+                    : t("common.dash")
                 }
                 icon={
                   <Icon>
@@ -415,7 +441,7 @@ export default function ListingDetailsPage() {
                 }
               />
               <SpecRow
-                label="Tenant type"
+                label={t("listingDetails.specs.tenantType")}
                 value={formatTenantType(listing.intendedTenantType)}
                 icon={
                   <Icon>
@@ -438,11 +464,10 @@ export default function ListingDetailsPage() {
             </div>
             <div className="hidden rounded-2xl border border-dashed border-emerald-200/80 bg-emerald-50/40 p-6 text-center xl:block">
               <p className="text-xs font-medium text-emerald-900">
-                Verified listings on Rent Nao
+                {t("listingDetails.promo.title")}
               </p>
               <p className="mt-2 text-[11px] leading-relaxed text-emerald-800/90">
-                Review details, unlock the exact location when you are ready,
-                and connect with owners securely.
+                {t("listingDetails.promo.body")}
               </p>
             </div>
           </aside>
@@ -457,10 +482,10 @@ export default function ListingDetailsPage() {
                   </h1>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-100">
-                      Verified
+                      {t("listingDetails.badges.verified")}
                     </span>
                     <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200/80">
-                      {listing.listingStatus || "ACTIVE"}
+                      {t(`common.status.listing.${listing.listingStatus || "ACTIVE"}`, listing.listingStatus || "ACTIVE")}
                     </span>
                   </div>
                 </div>
@@ -472,7 +497,7 @@ export default function ListingDetailsPage() {
                       onSavedChange={(_lid, next) => setWishlisted(next)}
                     />
                     <span className="text-sm font-medium text-slate-600">
-                      {wishlisted ? "Saved" : "Save"}
+                      {wishlisted ? t("listingDetails.wishlist.saved") : t("listingDetails.wishlist.save")}
                     </span>
                   </div>
                 ) : null}
@@ -487,7 +512,7 @@ export default function ListingDetailsPage() {
               listing?.exactLng != null ? (
               <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
                 <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
-                  Map location
+                  {t("listingDetails.map.title")}
                 </h2>
                 <div className="mt-3 overflow-hidden rounded-xl border border-slate-100">
                   <MapView
@@ -516,10 +541,10 @@ export default function ListingDetailsPage() {
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
-                    Map location
+                    {t("listingDetails.map.title")}
                   </p>
                   <p className="text-xs text-slate-500">
-                    Unlock this listing to view the exact map pin.
+                    {t("listingDetails.map.lockedHint")}
                   </p>
                 </div>
               </div>
@@ -527,50 +552,50 @@ export default function ListingDetailsPage() {
 
             <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-6">
               <h2 className="text-lg font-bold text-slate-900">
-                Property details
+                {t("listingDetails.details.title")}
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
                 {listing.description ||
-                  "No description provided for this listing."}
+                  t("listingDetails.details.noDescription")}
               </p>
               <div className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <p>
-                  <span className="text-slate-400">Area:</span>{" "}
+                  <span className="text-slate-400">{t("listingDetails.details.area")}</span>{" "}
                   <span className="font-medium text-slate-800">{area}</span>
                 </p>
                 <p>
-                  <span className="text-slate-400">Balconies:</span>{" "}
+                  <span className="text-slate-400">{t("listingDetails.details.balconies")}</span>{" "}
                   <span className="font-medium text-slate-800">
-                    {listing.balconyCount ?? "—"}
+                    {listing.balconyCount ?? t("common.dash")}
                   </span>
                 </p>
                 <p>
-                  <span className="text-slate-400">Lift:</span>{" "}
+                  <span className="text-slate-400">{t("listingDetails.details.lift")}</span>{" "}
                   <span className="font-medium text-slate-800">
-                    {listing.hasLift ? "Yes" : "No"}
+                    {listing.hasLift ? t("common.yes") : t("common.no")}
                   </span>
                 </p>
                 <p>
-                  <span className="text-slate-400">Generator:</span>{" "}
+                  <span className="text-slate-400">{t("listingDetails.details.generator")}</span>{" "}
                   <span className="font-medium text-slate-800">
-                    {listing.hasGenerator ? "Yes" : "No"}
+                    {listing.hasGenerator ? t("common.yes") : t("common.no")}
                   </span>
                 </p>
                 <p>
-                  <span className="text-slate-400">Security:</span>{" "}
+                  <span className="text-slate-400">{t("listingDetails.details.security")}</span>{" "}
                   <span className="font-medium text-slate-800">
-                    {listing.hasSecurityGuard ? "Yes" : "No"}
+                    {listing.hasSecurityGuard ? t("common.yes") : t("common.no")}
                   </span>
                 </p>
                 <p>
-                  <span className="text-slate-400">Floor Number:</span>{" "}
+                  <span className="text-slate-400">{t("listingDetails.details.floorNumber")}</span>{" "}
                   <span className="font-medium text-slate-800">
-                    {listing.floorNo ?? "—"}
+                    {listing.floorNo ?? t("common.dash")}
                   </span>
                 </p>
                 {hasAccess && listing.address ? (
                   <p className="sm:col-span-2">
-                    <span className="text-slate-400">Address:</span>{" "}
+                    <span className="text-slate-400">{t("listingDetails.details.address")}</span>{" "}
                     <span className="font-medium text-slate-800">
                       {listing.address}
                     </span>
@@ -578,7 +603,7 @@ export default function ListingDetailsPage() {
                 ) : null}
                 {hasAccess && listing.flatNo ? (
                   <p className="sm:col-span-2">
-                    <span className="text-slate-400">Flat / Unit Number:</span>{" "}
+                    <span className="text-slate-400">{t("listingDetails.details.flatUnit")}</span>{" "}
                     <span className="font-medium text-slate-800">
                       {listing.flatNo}
                     </span>
@@ -591,13 +616,13 @@ export default function ListingDetailsPage() {
               <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
                 <div className="mb-4 flex items-center justify-between gap-2">
                   <h2 className="text-base font-bold text-slate-900">
-                    More in this area
+                    {t("listingDetails.related.title")}
                   </h2>
                   <Link
                     to="/listings"
                     className="text-xs font-semibold text-emerald-800 hover:underline sm:text-sm"
                   >
-                    View all
+                    {t("common.viewAll")}
                   </Link>
                 </div>
                 <ul className="space-y-3">
@@ -616,7 +641,7 @@ export default function ListingDetailsPage() {
                             />
                           ) : (
                             <div className="flex h-full items-center justify-center text-[10px] text-slate-400">
-                              No photo
+                              {t("common.noPhoto")}
                             </div>
                           )}
                         </div>
@@ -625,11 +650,11 @@ export default function ListingDetailsPage() {
                             {row.title}
                           </p>
                           <p className="mt-0.5 text-sm font-bold text-emerald-800">
-                            {formatBdt(row.rent)}/mo
+                            {formatBdt(row.rent, t("common.dash"))}{t("common.perMonth")}
                           </p>
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                             <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-800">
-                              Verified
+                              {t("listingDetails.badges.verified")}
                             </span>
                             <span>{relativeListed(row.createdAt)}</span>
                             <span className="hidden sm:inline">·</span>
@@ -650,9 +675,9 @@ export default function ListingDetailsPage() {
           <aside className="order-3 space-y-4 xl:col-span-3 xl:col-start-10 xl:row-start-1">
             <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
               <p className="text-2xl font-bold tracking-tight text-emerald-800 sm:text-3xl">
-                {formatBdt(listing.rent)}
+                {formatBdt(listing.rent, t("common.dash"))}
               </p>
-              <p className="text-sm font-medium text-slate-500">per month</p>
+              <p className="text-sm font-medium text-slate-500">{t("listingDetails.price.perMonth")}</p>
               <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 ring-1 ring-slate-100">
                 <span>{availabilityLabel}</span>
                 <svg
@@ -671,24 +696,24 @@ export default function ListingDetailsPage() {
               </div>
 
               <div className="mt-5 space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-sm">
-                <span className="font-semibold text-slate-900">—</span>
+                <span className="font-semibold text-slate-900">{t("common.dash")}</span>
               </div>
               <div className="flex justify-between gap-3 border-b border-slate-100 pb-2">
-                <span className="text-slate-500">Minimum lease</span>
+                <span className="text-slate-500">{t("listingDetails.terms.minLease")}</span>
                 <span className="font-semibold text-slate-900">
-                  12 months
+                  {t("listingDetails.terms.twelveMonths")}
                 </span>
               </div>
               <div className="flex justify-between gap-3 border-b border-slate-100 pb-2">
-                <span className="text-slate-500">Tenant fit</span>
+                <span className="text-slate-500">{t("listingDetails.terms.tenantFit")}</span>
                 <span className="font-semibold text-slate-900 text-right">
                   {formatTenantType(listing.intendedTenantType)}
                 </span>
               </div>
               <div className="flex justify-between gap-3">
-                <span className="text-slate-500">Category</span>
+                <span className="text-slate-500">{t("listingDetails.terms.category")}</span>
                 <span className="font-semibold text-slate-900">
-                  Residential
+                  {t("search.categories.residential")}
                 </span>
               </div>
             </div>
@@ -696,7 +721,7 @@ export default function ListingDetailsPage() {
             {isOwner ? (
               <div className="mt-5 space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
-                  Owner controls
+                  {t("listingDetails.ownerControls.title")}
                 </p>
                 <Link
                   to="/owner-dashboard/requests"
@@ -715,13 +740,13 @@ export default function ListingDetailsPage() {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  Tenant requests
+                  {t("listingDetails.ownerControls.tenantRequests")}
                 </Link>
                 <Link
                   to="/owner-dashboard/my-properties"
                   className="flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
                 >
-                  My properties
+                  {t("nav.myProperties")}
                 </Link>
               </div>
             ) : null}
@@ -729,23 +754,22 @@ export default function ListingDetailsPage() {
             {loggedIn && isTenant && listingActive ? (
               <div className="mt-5 space-y-3 border-t border-slate-100 pt-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
-                  Tenant tools
+                  {t("listingDetails.tenantTools.title")}
                 </p>
                 <h3 className="text-sm font-bold text-slate-900">
-                  Rental request
+                  {t("listingDetails.tenantTools.rentalRequest")}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Message the owner; you can track or withdraw requests from
-                  your dashboard.
+                  {t("listingDetails.tenantTools.hint")}
                 </p>
                 {requestRecord?.requestStatus === "PENDING" ? (
                   <div className="rounded-xl bg-amber-50 px-3 py-3 text-sm text-amber-950 ring-1 ring-amber-100">
-                    <p className="font-medium">Request pending</p>
+                    <p className="font-medium">{t("listingDetails.tenantTools.pending")}</p>
                     <Link
                       to="/tenant-dashboard/applications"
                       className="mt-2 inline-block text-xs font-semibold text-emerald-800 hover:underline"
                     >
-                      View my requests →
+                      {t("listingDetails.tenantTools.viewRequests")}
                     </Link>
                     <button
                       type="button"
@@ -757,7 +781,7 @@ export default function ListingDetailsPage() {
                         );
                         setRequestLoading(false);
                         if (!result.ok) {
-                          toast.error("Failed to withdraw request");
+                          toast.error(t("listingDetails.toast.withdrawFailed"));
                           return;
                         }
                         setRequestRecord({
@@ -765,31 +789,29 @@ export default function ListingDetailsPage() {
                           requestStatus: "WITHDRAWN",
                         });
                         addLocalNotification({
-                          title: "Request withdrawn",
-                          message: "You withdrew your tenant request.",
+                          title: t("listingDetails.notification.withdrawnTitle"),
+                          message: t("listingDetails.notification.withdrawnMessage"),
                           url: "/tenant-dashboard/applications",
                           type: "REQUEST",
                         });
-                        toast.success("Request withdrawn");
+                        toast.success(t("listingDetails.toast.withdrawn"));
                       }}
                       className="mt-3 w-full rounded-lg bg-white py-2 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-50"
                     >
-                      {requestLoading ? "Working…" : "Withdraw request"}
+                      {requestLoading ? t("listingDetails.tenantTools.withdrawing") : t("listingDetails.tenantTools.withdraw")}
                     </button>
                   </div>
                 ) : requestRecord?.requestStatus === "ACCEPTED" ? (
                   <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900 ring-1 ring-emerald-100">
-                    The owner accepted your request.
+                    {t("listingDetails.tenantTools.accepted")}
                   </p>
                 ) : requestRecord?.requestStatus === "REJECTED" ? (
                   <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-100">
-                    Your request was declined. You can send another if the
-                    listing is still active.
+                    {t("listingDetails.tenantTools.rejected")}
                   </p>
                 ) : requestRecord?.requestStatus === "WITHDRAWN" ? (
                   <p className="text-xs text-slate-600">
-                    You withdrew a previous request. You may send a new one
-                    below.
+                    {t("listingDetails.tenantTools.withdrawn")}
                   </p>
                 ) : null}
                 {(!requestRecord ||
@@ -801,7 +823,7 @@ export default function ListingDetailsPage() {
                         className="block text-xs font-medium text-slate-500"
                         htmlFor="rental-msg"
                       >
-                        Message (optional)
+                        {t("listingDetails.tenantTools.messageLabel")}
                       </label>
                       <textarea
                         id="rental-msg"
@@ -809,7 +831,7 @@ export default function ListingDetailsPage() {
                         onChange={(e) => setRequestMessage(e.target.value)}
                         maxLength={2000}
                         rows={3}
-                        placeholder="Introduce yourself or ask a question…"
+                        placeholder={t("listingDetails.tenantTools.messagePlaceholder")}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                       />
                       <button
@@ -831,23 +853,23 @@ export default function ListingDetailsPage() {
                               throw new Error(
                                 body.error ||
                                 body.message ||
-                                "Could not send request",
+                                t("listingDetails.toast.sendFailed"),
                               );
                             toast.success(
-                              body.message || "Rental request sent",
+                              body.message || t("listingDetails.toast.sent"),
                             );
                             setRequestMessage("");
                             const rec = await getTenantRequestForListing(id);
                             setRequestRecord(rec);
                           } catch (e) {
-                            toast.error(e.message || "Failed to send request");
+                            toast.error(e.message || t("listingDetails.toast.sendFailed"));
                           } finally {
                             setSendingRequest(false);
                           }
                         }}
                         className="w-full rounded-xl bg-emerald-700 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"
                       >
-                        {sendingRequest ? "Sending…" : "Send rental request"}
+                        {sendingRequest ? t("listingDetails.tenantTools.sending") : t("listingDetails.tenantTools.send")}
                       </button>
                     </>
                   )}
@@ -857,27 +879,27 @@ export default function ListingDetailsPage() {
             {loggedIn && isTenant && !hasAccess ? (
               <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
                 <h3 className="text-sm font-bold text-slate-900">
-                  Unlock details
+                  {t("listingDetails.unlock.title")}
                 </h3>
                 <p className="mt-1 text-xs text-slate-600">
-                  Address, map pin, and owner contact use a wallet unlock.
+                  {t("listingDetails.unlock.body")}
                 </p>
                 <div className="mt-3 rounded-lg border border-emerald-100 bg-white/80 px-3 py-2 text-xs text-slate-700">
                   <p>
                     <span className="font-semibold text-slate-900">
-                      Unlock fee:
+                      {t("listingDetails.unlock.fee")}
                     </span>{" "}
                     {unlockPayment.fee
                       ? formatMoney(
                           unlockPayment.requiredAmount,
                           unlockPayment.currency,
                         )
-                      : "Loading payment amount..."}
+                      : t("common.loadingPaymentAmount")}
                   </p>
                   {unlockPayment.availableBalance ? (
                     <p className="mt-1">
                       <span className="font-semibold text-slate-900">
-                        Wallet balance:
+                        {t("listingDetails.unlock.balance")}
                       </span>{" "}
                       {formatMoney(
                         unlockPayment.availableBalance,
@@ -915,12 +937,12 @@ export default function ListingDetailsPage() {
                         throw new Error(
                           body?.error ||
                           body?.message ||
-                          "Failed to unlock listing",
+                          t("listingDetails.toast.unlockFailed"),
                         );
                       await loadListing();
-                      toast.success(body?.message || "Listing unlocked");
+                      toast.success(body?.message || t("listingDetails.toast.unlocked"));
                     } catch (e) {
-                      toast.error(e.message || "Failed to unlock listing");
+                      toast.error(e.message || t("listingDetails.toast.unlockFailed"));
                     } finally {
                       setUnlocking(false);
                     }
@@ -928,8 +950,8 @@ export default function ListingDetailsPage() {
                   className="mt-3 w-full rounded-xl bg-emerald-700 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"
                 >
                   {unlocking || unlockPayment.loading
-                    ? "Checking wallet…"
-                    : "Unlock listing"}
+                    ? t("listingDetails.unlock.checking")
+                    : t("listingDetails.unlock.unlockButton")}
                 </button>
                 {unlockPayment.modal}
               </div>
@@ -937,26 +959,26 @@ export default function ListingDetailsPage() {
 
             <div className="mt-5 border-t border-slate-100 pt-5">
               <h3 className="text-sm font-bold text-slate-900">
-                Owner contact
+                {t("listingDetails.contact.title")}
               </h3>
               {hasAccess ? (
                 <div className="mt-2 space-y-1 text-sm">
                   <p>
-                    <span className="text-slate-500">Email:</span>{" "}
+                    <span className="text-slate-500">{t("common.email")}</span>{" "}
                     <span className="font-medium">
-                      {listing.ownerContact?.email || "—"}
+                      {listing.ownerContact?.email || t("common.dash")}
                     </span>
                   </p>
                   <p>
-                    <span className="text-slate-500">Phone:</span>{" "}
+                    <span className="text-slate-500">{t("common.phone")}</span>{" "}
                     <span className="font-medium">
-                      {listing.ownerContact?.phone || "—"}
+                      {listing.ownerContact?.phone || t("common.dash")}
                     </span>
                   </p>
                 </div>
               ) : (
                 <p className="mt-2 text-xs text-slate-500">
-                  Unlock the listing to view owner contact details.
+                  {t("listingDetails.contact.lockedHint")}
                 </p>
               )}
             </div>

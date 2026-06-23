@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useTranslation } from '../lib/i18n';
 
 export default function ImageGallery({ images = [] }) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState(0);
 
   if (images.length === 0) {
@@ -44,7 +46,9 @@ export default function ImageGallery({ images = [] }) {
               {thumbIsVideo ? (
                 <div className="relative h-full w-full bg-gray-800">
                   <video src={s} className="h-full w-full object-cover opacity-90" muted />
-                  <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">Video</span>
+                  <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
+                    {t('components.imageGallery.videoBadge')}
+                  </span>
                 </div>
               ) : (
                 <img src={s} alt="" className="h-full w-full object-cover" />

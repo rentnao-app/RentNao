@@ -15,6 +15,7 @@ import { listOwnerIncomingRequests, reviewOwnerRequest } from '../lib/requests';
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
 import AppHeader from '../components/AppHeader';
+import { useTranslation } from '../lib/i18n';
 
 function Icon({ path, className = 'h-5 w-5' }) {
   return (
@@ -37,18 +38,18 @@ function formatBdt(n) {
   }
 }
 
-function formatRelativeTime(iso) {
+function formatRelativeTime(iso, t) {
   if (!iso) return '';
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return '';
-  const diff = Date.now() - t;
+  const time = new Date(iso).getTime();
+  if (Number.isNaN(time)) return '';
+  const diff = Date.now() - time;
   const m = Math.floor(diff / 60000);
-  if (m < 1) return 'Just now';
-  if (m < 60) return `${m} min ago`;
+  if (m < 1) return t('common.time.justNow');
+  if (m < 60) return t('common.time.minutesAgo', { m });
   const h = Math.floor(m / 60);
-  if (h < 48) return `${h} hour${h === 1 ? '' : 's'} ago`;
+  if (h < 48) return t(h === 1 ? 'common.time.hoursAgo' : 'common.time.hoursAgo_other', { h });
   const d = Math.floor(h / 24);
-  return `${d} day${d === 1 ? '' : 's'} ago`;
+  return t(d === 1 ? 'common.time.daysAgo' : 'common.time.daysAgo_other', { d });
 }
 
 function displayName(user) {
@@ -103,46 +104,41 @@ function listingToResume(property) {
   return listings.find((l) => l.listingStatus === 'UNLISTED') || null;
 }
 
-const FILTER_OPTIONS = [
-  { value: 'ALL', label: 'All' },
-  { value: 'ACTIVE', label: 'Active only' },
-];
-
-function getKycProgress(status) {
+function getKycProgress(status, t) {
   const key = String(status || '').toUpperCase();
   if (key === 'APPROVED' || key === 'ACCEPTED') {
     return {
-      label: 'Verified',
+      label: t('dashboard.owner.kyc.verified'),
       width: 'w-full',
       bar: 'bg-emerald-600',
       track: 'bg-emerald-100',
-      hint: 'Your account is fully verified.',
+      hint: t('dashboard.owner.kyc.verifiedHint'),
     };
   }
   if (key === 'SUBMITTED' || key === 'UNDER_REVIEW') {
     return {
-      label: 'Under review',
+      label: t('dashboard.owner.kyc.underReview'),
       width: 'w-2/3',
       bar: 'bg-amber-500',
       track: 'bg-amber-100',
-      hint: 'Documents submitted. Review usually takes 24-48 hours.',
+      hint: t('dashboard.owner.kyc.underReviewHint'),
     };
   }
   if (key === 'REJECTED') {
     return {
-      label: 'Rejected',
+      label: t('dashboard.owner.kyc.rejected'),
       width: 'w-1/3',
       bar: 'bg-red-500',
       track: 'bg-red-100',
-      hint: 'Please re-upload the requested documents.',
+      hint: t('dashboard.owner.kyc.rejectedHint'),
     };
   }
   return {
-    label: 'Pending',
+    label: t('dashboard.owner.kyc.pending'),
     width: 'w-1/3',
     bar: 'bg-amber-500',
     track: 'bg-amber-100',
-    hint: 'Complete verification to unlock all features.',
+    hint: t('dashboard.owner.kyc.pendingHint'),
   };
 }
 
@@ -172,6 +168,7 @@ function SidebarLink({ to, label, iconPath, active, onNavigate }) {
 }
 
 export default function OwnerDashboard() {
+  const { t } = useTranslation();
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [dashLoading, setDashLoading] = useState(true);
@@ -207,7 +204,7 @@ export default function OwnerDashboard() {
   const loadProperties = useCallback(async () => {
     const res = await apiFetch('/properties/me');
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(getApiErrorMessage(body, 'Failed to load properties'));
+    if (!res.ok) throw new Error(getApiErrorMessage(body, t('common.unexpectedError')));
     const items = body?.data?.items || [];
     const withListings = await Promise.all(
       items.map(async (property) => {
@@ -226,7 +223,7 @@ export default function OwnerDashboard() {
       })
     );
     return withListings;
-  }, []);
+  }, [t]);
 
   const loadIncoming = useCallback(async () => {
     const ids = await loadOwnerListingIds();
@@ -260,11 +257,11 @@ export default function OwnerDashboard() {
       setProperties(await loadProperties());
     } catch (e) {
       console.error(e);
-      const message = getRequestErrorMessage(e, 'Could not refresh dashboard');
+      const message = getRequestErrorMessage(e, t('dashboard.owner.errors.refreshFailed'));
       setDashError(message);
       toast.error(message);
     }
-  }, [loadIncoming, loadProperties, loadTransactions]);
+  }, [loadIncoming, loadProperties, loadTransactions, t]);
 
   const patchListingStatus = useCallback(async (propertyId, listingId, listingStatus) => {
     const res = await apiFetch(`/properties/${propertyId}/listings/${listingId}`, {
@@ -273,29 +270,27 @@ export default function OwnerDashboard() {
       body: JSON.stringify({ listingStatus }),
     });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(getApiErrorMessage(body, 'Could not update listing'));
-  }, []);
+    if (!res.ok) throw new Error(getApiErrorMessage(body, t('common.unexpectedError')));
+  }, [t]);
 
   const handleDeleteProperty = useCallback(
     async (propertyId) => {
-      const ok = window.confirm(
-        'Permanently delete this property, all listings, images, and related data from the database? This cannot be undone.'
-      );
+      const ok = window.confirm(t('dashboard.owner.confirm.deleteProperty'));
       if (!ok) return;
       setPropertyBusyKey(`d:${propertyId}`);
       try {
         const res = await apiFetch(`/properties/${propertyId}`, { method: 'DELETE' });
         const body = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(getApiErrorMessage(body, 'Delete failed'));
-        toast.success('Property permanently deleted');
+        if (!res.ok) throw new Error(getApiErrorMessage(body, t('dashboard.owner.toast.deleteFailed')));
+        toast.success(t('dashboard.owner.toast.propertyDeleted'));
         await refreshDashboard();
       } catch (e) {
-        toast.error(e?.message || 'Delete failed');
+        toast.error(e?.message || t('dashboard.owner.toast.deleteFailed'));
       } finally {
         setPropertyBusyKey(null);
       }
     },
-    [refreshDashboard]
+    [refreshDashboard, t]
   );
 
   const handlePauseListing = useCallback(
@@ -303,15 +298,15 @@ export default function OwnerDashboard() {
       setPropertyBusyKey(`p:${propertyId}:${listingId}`);
       try {
         await patchListingStatus(propertyId, listingId, 'UNLISTED');
-        toast.success('Listing paused - hidden from search');
+        toast.success(t('dashboard.owner.toast.listingPaused'));
         await refreshDashboard();
       } catch (e) {
-        toast.error(e?.message || 'Pause failed');
+        toast.error(e?.message || t('dashboard.owner.toast.pauseFailed'));
       } finally {
         setPropertyBusyKey(null);
       }
     },
-    [patchListingStatus, refreshDashboard]
+    [patchListingStatus, refreshDashboard, t]
   );
 
   const handleResumeListing = useCallback(
@@ -319,15 +314,15 @@ export default function OwnerDashboard() {
       setPropertyBusyKey(`r:${propertyId}:${listingId}`);
       try {
         await patchListingStatus(propertyId, listingId, 'ACTIVE');
-        toast.success('Listing is active again');
+        toast.success(t('dashboard.owner.toast.listingActive'));
         await refreshDashboard();
       } catch (e) {
-        toast.error(e?.message || 'Resume failed');
+        toast.error(e?.message || t('dashboard.owner.toast.resumeFailed'));
       } finally {
         setPropertyBusyKey(null);
       }
     },
-    [patchListingStatus, refreshDashboard]
+    [patchListingStatus, refreshDashboard, t]
   );
 
   useEffect(() => {
@@ -364,7 +359,7 @@ export default function OwnerDashboard() {
         await loadIncoming();
       } catch (err) {
         console.error(err);
-        const message = getRequestErrorMessage(err, 'Could not load dashboard');
+        const message = getRequestErrorMessage(err, t('dashboard.owner.errors.loadFailed'));
         setDashError(message);
         toast.error(message);
       } finally {
@@ -372,7 +367,7 @@ export default function OwnerDashboard() {
       }
     };
     void run();
-  }, [loadIncoming, loadProperties, loadTransactions]);
+  }, [loadIncoming, loadProperties, loadTransactions, t]);
 
   const activeListingsCount = useMemo(
     () =>
@@ -411,42 +406,53 @@ export default function OwnerDashboard() {
     return location.pathname === prefix || location.pathname.startsWith(`${prefix}/`);
   };
 
-  const sideLinks = [
-    { to: '/owner-dashboard', label: 'Dashboard', icon: 'M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z', exact: true },
-    { to: '/owner-dashboard/my-properties', label: 'My Properties', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-    { to: '/owner-dashboard/requests', label: 'Tenant Requests', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
-    { to: '/wallet', label: 'Wallet and Payments', icon: 'M17 9V7a4 4 0 10-8 0v2m-2 0h12a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2z' },
-    { to: '/account', label: 'Settings', icon: 'M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.94L14.4 2.7a.5.5 0 0 0-.49-.4h-3.82a.5.5 0 0 0-.49.4L9.25 5.32c-.57.23-1.11.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.03.31-.05.63-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.52.4 1.06.71 1.63.94l.35 2.62a.5.5 0 0 0 .49.4h3.82a.5.5 0 0 0 .49-.4l.35-2.62c.57-.23 1.11-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 3.5-3.5A3.5 3.5 0 0 1 12 15.5z' },
-    { to: '/faq', label: 'Support', icon: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm.1 15.5a1.4 1.4 0 1 1 1.4-1.4 1.4 1.4 0 0 1-1.4 1.4zM14.2 11c-.9.7-1.4 1.1-1.4 2v.3h-1.6v-.4c0-1.4.8-2.1 1.7-2.8.7-.5 1.2-.9 1.2-1.5a1.7 1.7 0 0 0-3.3-.6l-1.6-.4a3.3 3.3 0 1 1 6.5 1c0 1.4-.8 2-1.5 2.4z' },
-  ];
+  const filterOptions = useMemo(
+    () => [
+      { value: 'ALL', label: t('dashboard.owner.properties.filterAll') },
+      { value: 'ACTIVE', label: t('dashboard.owner.properties.filterActive') },
+    ],
+    [t]
+  );
 
-  const handleReview = async (item, decision) => {
+  const sideLinks = useMemo(
+    () => [
+      { to: '/owner-dashboard', label: t('nav.dashboard'), icon: 'M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z', exact: true },
+      { to: '/owner-dashboard/my-properties', label: t('nav.myProperties'), icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+      { to: '/owner-dashboard/requests', label: t('dashboard.owner.sidebar.tenantRequests'), icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
+      { to: '/wallet', label: t('dashboard.owner.sidebar.walletPayments'), icon: 'M17 9V7a4 4 0 10-8 0v2m-2 0h12a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2z' },
+      { to: '/account', label: t('dashboard.owner.sidebar.settings'), icon: 'M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.94L14.4 2.7a.5.5 0 0 0-.49-.4h-3.82a.5.5 0 0 0-.49.4L9.25 5.32c-.57.23-1.11.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.03.31-.05.63-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.52.4 1.06.71 1.63.94l.35 2.62a.5.5 0 0 0 .49.4h3.82a.5.5 0 0 0 .49-.4l.35-2.62c.57-.23 1.11-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 3.5-3.5A3.5 3.5 0 0 1 12 15.5z' },
+      { to: '/faq', label: t('dashboard.owner.sidebar.support'), icon: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm.1 15.5a1.4 1.4 0 1 1 1.4-1.4 1.4 1.4 0 0 1-1.4 1.4zM14.2 11c-.9.7-1.4 1.1-1.4 2v.3h-1.6v-.4c0-1.4.8-2.1 1.7-2.8.7-.5 1.2-.9 1.2-1.5a1.7 1.7 0 0 0-3.3-.6l-1.6-.4a3.3 3.3 0 1 1 6.5 1c0 1.4-.8 2-1.5 2.4z' },
+    ],
+    [t]
+  );
+
+  const handleReview = useCallback(async (item, decision) => {
     setReviewingId(item.requestId);
     try {
       const result = await reviewOwnerRequest(item.requestId, decision);
       if (!result.ok) {
-        toast.error(decision === 'ACCEPT' ? 'Failed to approve' : 'Failed to reject');
+        toast.error(decision === 'ACCEPT' ? t('dashboard.owner.toast.approveFailed') : t('dashboard.owner.toast.rejectFailed'));
         return;
       }
       addLocalNotification({
-        title: decision === 'ACCEPT' ? 'Request approved' : 'Request rejected',
-        message: `Listing #${item.listingId} - ${item.tenant?.name || 'Tenant'}.`,
+        title: decision === 'ACCEPT' ? t('dashboard.owner.notification.requestApproved') : t('dashboard.owner.notification.requestRejected'),
+        message: t('dashboard.owner.notification.requestReviewed', { id: item.listingId, tenant: item.tenant?.name || t('roles.tenant') }),
         url: '/owner-dashboard/requests',
         type: 'REQUEST',
       });
-      toast.success(decision === 'ACCEPT' ? 'Request approved' : 'Request rejected');
+      toast.success(decision === 'ACCEPT' ? t('dashboard.owner.toast.requestApproved') : t('dashboard.owner.toast.requestRejected'));
       await refreshDashboard();
     } finally {
       setReviewingId(null);
     }
-  };
+  }, [refreshDashboard, t]);
 
   if (dashLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f2f7f3]">
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-emerald-700" />
-          <p className="text-sm font-medium text-gray-600">Loading your dashboard</p>
+          <p className="text-sm font-medium text-gray-600">{t('dashboard.owner.loading')}</p>
         </div>
       </div>
     );
@@ -478,13 +484,13 @@ export default function OwnerDashboard() {
               onClick={() => logout()}
               className="w-full rounded-xl bg-red-50 text-red-600 border border-red-100 py-2.5 text-sm font-semibold hover:bg-red-100 transition"
             >
-              Logout
+              {t('header.logout')}
             </button>
             {(() => {
-              const kyc = getKycProgress(user?.kycVerificationStatus);
+              const kyc = getKycProgress(user?.kycVerificationStatus, t);
               return (
                 <div className="mt-4 rounded-2xl border border-emerald-100 bg-white p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Profile Status</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{t('dashboard.profileStatus.title')}</p>
                   <p className="mt-1 text-sm font-semibold text-gray-800">{kyc.label}</p>
                   <div className={`mt-3 h-2 rounded-full ${kyc.track}`} aria-hidden>
                     <div
@@ -508,19 +514,19 @@ export default function OwnerDashboard() {
                 {isOwnerProfileMissingError(dashError) ? (
                   <p className="mt-2 text-red-700">
                     <Link to="/owner-registration" className="font-semibold underline hover:text-red-900">
-                      Complete owner registration
+                      {t('dashboard.owner.errors.completeRegistration')}
                     </Link>{' '}
-                    to restore access to your dashboard and properties.
+                    {t('dashboard.owner.errors.completeRegistrationHint')}
                   </p>
                 ) : null}
               </div>
             ) : null}
             <section className="mb-5 rounded-2xl border border-emerald-100/80 bg-white p-4 shadow-sm sm:p-6 lg:mb-6">
               <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
-                Welcome, {welcomeName}!
+                {t('dashboard.owner.welcome', { name: welcomeName })}
               </h1>
               <p className="mt-1 max-w-xl text-sm text-gray-600">
-                Manage your properties and connect with tenants easily.
+                {t('dashboard.owner.subtitle')}
               </p>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 <div className="flex items-center gap-3 rounded-xl border border-emerald-100/90 bg-emerald-50/40 px-4 py-3">
@@ -529,7 +535,7 @@ export default function OwnerDashboard() {
                   </span>
                   <div>
                     <p className="text-2xl font-bold text-gray-900">{activeListingsCount}</p>
-                    <p className="text-xs font-medium text-gray-600">Listings active</p>
+                    <p className="text-xs font-medium text-gray-600">{t('dashboard.owner.stats.listingsActive')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-xl border border-amber-100/90 bg-amber-50/35 px-4 py-3">
@@ -538,7 +544,7 @@ export default function OwnerDashboard() {
                   </span>
                   <div>
                     <p className="text-2xl font-bold text-gray-900">{pendingRequests.length}</p>
-                    <p className="text-xs font-medium text-gray-600">Pending requests</p>
+                    <p className="text-xs font-medium text-gray-600">{t('dashboard.owner.stats.pendingRequests')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-xl border border-slate-200/90 bg-slate-50/60 px-4 py-3">
@@ -547,7 +553,7 @@ export default function OwnerDashboard() {
                   </span>
                   <div>
                     <p className="text-2xl font-bold text-gray-900">{inactivePropertiesAll.length}</p>
-                    <p className="text-xs font-medium text-gray-600">Inactive properties</p>
+                    <p className="text-xs font-medium text-gray-600">{t('dashboard.owner.stats.inactiveProperties')}</p>
                   </div>
                 </div>
               </div>
@@ -558,7 +564,7 @@ export default function OwnerDashboard() {
               <section className="flex min-h-0 flex-col rounded-2xl border border-emerald-100/80 bg-white shadow-sm lg:col-span-7 lg:col-start-1 lg:row-span-2 lg:row-start-1">
                 <div className="border-b border-slate-100/90 bg-gradient-to-r from-slate-50/50 to-white px-4 pb-4 pt-4 sm:p-5">
                   <div className="flex flex-col gap-3">
-                    <h2 className="text-center text-xl font-bold tracking-tight text-slate-900">My Properties</h2>
+                    <h2 className="text-center text-xl font-bold tracking-tight text-slate-900">{t('dashboard.owner.properties.title')}</h2>
 
                     <div className="flex w-full items-center justify-center gap-2 pt-1 flex-nowrap">
                       <label className="relative w-[7.75rem] shrink-0 sm:w-[8.5rem]">
@@ -571,9 +577,9 @@ export default function OwnerDashboard() {
                           value={propertyFilter}
                           onChange={(e) => setPropertyFilter(e.target.value)}
                           className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-8 pr-8 text-xs font-semibold text-slate-800 shadow-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 sm:h-11 sm:pl-9 sm:pr-10 sm:text-sm sm:font-medium"
-                          aria-label="Filter properties"
+                          aria-label={t('dashboard.owner.properties.filterAria')}
                         >
-                          {FILTER_OPTIONS.map((o) => (
+                          {filterOptions.map((o) => (
                             <option key={o.value} value={o.value}>
                               {o.label}
                             </option>
@@ -589,13 +595,13 @@ export default function OwnerDashboard() {
                         to="/owner-dashboard/my-properties"
                         className="inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50/60 px-2.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100/70 hover:text-emerald-900 sm:px-3 sm:text-sm"
                       >
-                        View all
+                        {t('common.viewAll')}
                       </Link>
                       <Link
                         to="/owner-dashboard/create-listing"
                         className="inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-emerald-700 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800 sm:px-4 sm:text-sm"
                       >
-                        List property
+                        {t('dashboard.owner.properties.listProperty')}
                       </Link>
                     </div>
                   </div>
@@ -603,9 +609,9 @@ export default function OwnerDashboard() {
                 <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3 sm:px-4 sm:pb-5 sm:pt-4 lg:px-5 lg:pb-6">
                   {previewProperties.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-12 text-center text-sm text-slate-500">
-                      No properties yet.{' '}
+                      {t('dashboard.owner.properties.empty')}{' '}
                       <Link to="/owner-dashboard/create-listing" className="font-semibold text-emerald-700 hover:underline">
-                        Create a listing
+                        {t('dashboard.owner.properties.createListing')}
                       </Link>
                     </div>
                   ) : (
@@ -640,7 +646,7 @@ export default function OwnerDashboard() {
                                   />
                                 ) : (
                                   <div className="flex h-full items-center justify-center text-xs font-medium text-slate-500">
-                                    No photo yet
+                                    {t('common.noPhotoYet')}
                                   </div>
                                 )}
                               </div>
@@ -648,7 +654,7 @@ export default function OwnerDashboard() {
                                 <div>
                                   <div className="flex flex-wrap items-center gap-2">
                                     <h3 className="truncate text-[15px] font-semibold tracking-tight text-slate-900">
-                                      {property.title || 'Untitled property'}
+                                      {property.title || t('common.untitledProperty')}
                                     </h3>
                                     {listing ? (
                                       <span
@@ -660,17 +666,17 @@ export default function OwnerDashboard() {
                                               : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80'
                                         }`}
                                       >
-                                        {listing.listingStatus === 'UNLISTED' ? 'Paused' : listing.listingStatus}
+                                        {listing.listingStatus === 'UNLISTED' ? t('common.status.listing.paused') : t(`common.status.listing.${listing.listingStatus}`, listing.listingStatus)}
                                       </span>
                                     ) : null}
                                   </div>
                                   {rentLabel ? (
                                     <p className="mt-1.5 text-lg font-bold tabular-nums tracking-tight text-emerald-700">
                                       {rentLabel}
-                                      <span className="text-sm font-semibold text-slate-500">/mo</span>
+                                      <span className="text-sm font-semibold text-slate-500">{t('common.perMonth')}</span>
                                     </p>
                                   ) : (
-                                    <p className="mt-1.5 text-sm font-medium text-slate-400">No listing yet</p>
+                                    <p className="mt-1.5 text-sm font-medium text-slate-400">{t('dashboard.owner.properties.noListingYet')}</p>
                                   )}
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-50/90 p-2 ring-1 ring-slate-100 sm:flex sm:flex-wrap sm:justify-end sm:gap-2 sm:p-1.5 md:grid md:grid-cols-3 md:justify-stretch md:p-2 lg:flex lg:flex-wrap lg:justify-end lg:p-1.5">
@@ -678,13 +684,13 @@ export default function OwnerDashboard() {
                                     to={viewTo}
                                     className="flex min-h-[42px] items-center justify-center rounded-lg bg-white px-2 text-center text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 sm:min-h-0 sm:px-3 sm:py-2"
                                   >
-                                    {isActivePublic ? 'View live' : 'Preview'}
+                                    {isActivePublic ? t('dashboard.owner.properties.viewLive') : t('dashboard.owner.properties.preview')}
                                   </Link>
                                   <Link
                                     to={`/owner-dashboard/my-properties/${property.propertyId}/edit`}
                                     className="flex min-h-[42px] items-center justify-center rounded-lg bg-emerald-600 px-2 text-center text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 sm:min-h-0 sm:px-3 sm:py-2"
                                   >
-                                    Edit
+                                    {t('common.edit')}
                                   </Link>
                                   {toPause ? (
                                     <button
@@ -693,7 +699,7 @@ export default function OwnerDashboard() {
                                       onClick={() => handlePauseListing(property.propertyId, toPause.listingId)}
                                       className="flex min-h-[42px] items-center justify-center rounded-lg bg-amber-50 px-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200/80 transition hover:bg-amber-100 disabled:opacity-50 sm:min-h-0 sm:px-3 sm:py-2"
                                     >
-                                      {rowBusy && propertyBusyKey?.startsWith('p:') ? 'Pausing...' : 'Pause'}
+                                      {rowBusy && propertyBusyKey?.startsWith('p:') ? t('dashboard.owner.properties.pausing') : t('dashboard.owner.properties.pause')}
                                     </button>
                                   ) : null}
                                   {toResume ? (
@@ -703,14 +709,14 @@ export default function OwnerDashboard() {
                                       onClick={() => handleResumeListing(property.propertyId, toResume.listingId)}
                                       className="flex min-h-[42px] items-center justify-center rounded-lg bg-white px-2 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-50/80 disabled:opacity-50 sm:min-h-0 sm:px-3 sm:py-2"
                                     >
-                                      {rowBusy && propertyBusyKey?.startsWith('r:') ? 'Resuming...' : 'Resume'}
+                                      {rowBusy && propertyBusyKey?.startsWith('r:') ? t('dashboard.owner.properties.resuming') : t('dashboard.owner.properties.resume')}
                                     </button>
                                   ) : null}
                                   <Link
                                     to="/owner-dashboard/requests"
                                     className="flex min-h-[42px] items-center justify-center rounded-lg bg-white px-2 text-center text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 sm:min-h-0 sm:px-3 sm:py-2"
                                   >
-                                    Requests
+                                    {t('dashboard.owner.properties.requests')}
                                   </Link>
                                   <button
                                     type="button"
@@ -718,7 +724,7 @@ export default function OwnerDashboard() {
                                     onClick={() => handleDeleteProperty(property.propertyId)}
                                     className="flex min-h-[42px] items-center justify-center rounded-lg bg-white px-2 text-xs font-semibold text-red-600 ring-1 ring-red-100 transition hover:bg-red-50 disabled:opacity-50 sm:min-h-0 sm:bg-transparent sm:px-3 sm:py-2 sm:ring-0"
                                   >
-                                    {propertyBusyKey === `d:${property.propertyId}` ? 'Deleting...' : 'Delete'}
+                                    {propertyBusyKey === `d:${property.propertyId}` ? t('common.deleting') : t('common.delete')}
                                   </button>
                                 </div>
                               </div>
@@ -733,18 +739,18 @@ export default function OwnerDashboard() {
 
               <section className="flex min-h-0 flex-col rounded-2xl border border-emerald-100/80 bg-white shadow-sm lg:col-span-5 lg:col-start-8 lg:row-start-1">
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 sm:p-5">
-                  <h2 className="text-lg font-bold text-gray-900">Pending tenant requests</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{t('dashboard.owner.tenantRequests.title')}</h2>
                   <Link
                     to="/owner-dashboard/requests"
                     className="text-sm font-semibold text-emerald-700 transition hover:text-emerald-900"
                   >
-                    View all
+                    {t('common.viewAll')}
                   </Link>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
                   {pendingRequests.length === 0 ? (
                     <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-8 text-center text-sm text-gray-500">
-                      No pending requests.
+                      {t('dashboard.owner.tenantRequests.empty')}
                     </p>
                   ) : (
                     <ul className="space-y-3">
@@ -761,19 +767,19 @@ export default function OwnerDashboard() {
                               <p className="truncate font-semibold text-gray-900">
                                 {item.tenant?.userId ? (
                                   <Link to={`/profile/${item.tenant.userId}`} className="hover:text-emerald-800">
-                                    {item.tenant?.name || 'Tenant'}
+                                    {item.tenant?.name || t('roles.tenant')}
                                   </Link>
                                 ) : (
-                                  item.tenant?.name || 'Tenant'
+                                  item.tenant?.name || t('roles.tenant')
                                 )}
                               </p>
-                              <p className="truncate text-xs text-gray-500">{item.tenant?.phone || item.tenant?.email || '-'}</p>
-                              <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(item.requestedAt)}</p>
+                              <p className="truncate text-xs text-gray-500">{item.tenant?.phone || item.tenant?.email || t('common.dash')}</p>
+                              <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(item.requestedAt, t)}</p>
                               <Link
                                 to={`/listings/${item.listingId}`}
                                 className="mt-2 inline-block text-xs font-medium text-emerald-700 hover:underline"
                               >
-                                Listing #{item.listingId}
+                                {t('common.listingNumber', { id: item.listingId })}
                               </Link>
                             </div>
                           </div>
@@ -782,7 +788,7 @@ export default function OwnerDashboard() {
                               to="/owner-dashboard/requests"
                               className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-center text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50"
                             >
-                              View request
+                              {t('dashboard.owner.tenantRequests.viewRequest')}
                             </Link>
                             <button
                               type="button"
@@ -790,7 +796,7 @@ export default function OwnerDashboard() {
                               onClick={() => handleReview(item, 'ACCEPT')}
                               className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
                             >
-                              {reviewingId === item.requestId ? '...' : 'Approve'}
+                              {reviewingId === item.requestId ? '...' : t('common.approve')}
                             </button>
                             <button
                               type="button"
@@ -798,7 +804,7 @@ export default function OwnerDashboard() {
                               onClick={() => handleReview(item, 'REJECT')}
                               className="rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-100 disabled:opacity-50"
                             >
-                              Reject
+                              {t('common.reject')}
                             </button>
                           </div>
                         </li>
@@ -810,15 +816,15 @@ export default function OwnerDashboard() {
 
               <section className="flex min-h-0 flex-col rounded-2xl border border-emerald-100/80 bg-white shadow-sm lg:col-span-5 lg:col-start-8 lg:row-start-2">
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 sm:p-5">
-                  <h2 className="text-lg font-bold text-gray-900">Recent payments</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{t('dashboard.owner.payments.title')}</h2>
                   <Link to="/wallet" className="text-sm font-semibold text-emerald-700 transition hover:text-emerald-900">
-                    View all
+                    {t('common.viewAll')}
                   </Link>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
                   {transactions.length === 0 ? (
                     <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-8 text-center text-sm text-gray-500">
-                      No wallet activity yet.
+                      {t('dashboard.owner.payments.empty')}
                     </p>
                   ) : (
                     <ul className="space-y-3">
@@ -829,12 +835,12 @@ export default function OwnerDashboard() {
                         >
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold text-gray-900">
-                              {txn.description || txn.type || 'Transaction'}
+                              {txn.description || txn.type || t('common.transaction')}
                             </p>
                             <p className="mt-0.5 text-xs text-gray-500">
-                              {txn.type} - {txn.status || '-'}
+                              {txn.type} - {txn.status || t('common.dash')}
                             </p>
-                            <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(txn.createdAt)}</p>
+                            <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(txn.createdAt, t)}</p>
                           </div>
                           <span
                             className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${

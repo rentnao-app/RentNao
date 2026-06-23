@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AppHeader from '../components/AppHeader';
 import ReviewStatsPanel from '../components/ReviewStatsPanel';
+import { useTranslation } from '../lib/i18n';
 import {
   apiFetch,
   fetchProfileStatus,
@@ -19,13 +20,22 @@ const PAGE_SIZE = 12;
 const MIN_CONTENT = 10;
 const MAX_CONTENT = 1000;
 
-const STATUS_BADGES = {
-  PENDING: { label: 'Pending review', tone: 'bg-amber-50 text-amber-800 border-amber-200' },
-  FLAGGED: { label: 'Flagged', tone: 'bg-rose-50 text-rose-700 border-rose-200' },
-  APPROVED: { label: 'Live', tone: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-  REJECTED: { label: 'Rejected', tone: 'bg-gray-100 text-gray-600 border-gray-200' },
-  ARCHIVED: { label: 'Archived', tone: 'bg-gray-100 text-gray-600 border-gray-200' },
+const STATUS_BADGE_TONES = {
+  PENDING: 'bg-amber-50 text-amber-800 border-amber-200',
+  FLAGGED: 'bg-rose-50 text-rose-700 border-rose-200',
+  APPROVED: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  REJECTED: 'bg-gray-100 text-gray-600 border-gray-200',
+  ARCHIVED: 'bg-gray-100 text-gray-600 border-gray-200',
 };
+
+function getStatusBadge(status, t) {
+  const key = `reviews.status.${status}`;
+  const label = t(key);
+  return {
+    label: label !== key ? label : status,
+    tone: STATUS_BADGE_TONES[status] || STATUS_BADGE_TONES.APPROVED,
+  };
+}
 
 function localCacheKey(userId) {
   return userId ? `rentnao_my_review_${userId}` : null;
@@ -57,6 +67,7 @@ function writeLocalReview(userId, review) {
 }
 
 export default function ReviewPage() {
+  const { t } = useTranslation();
   const loggedIn = isLoggedIn();
   const user = useMemo(() => getCurrentUser(), []);
   const userId = getUserId(user);
@@ -92,7 +103,7 @@ export default function ReviewPage() {
         const res = await apiFetch(`/testimonials?page=${nextPage}&limit=${PAGE_SIZE}`);
         const body = await res.json().catch(() => ({}));
         if (!res.ok || body?.success === false) {
-          throw new Error(getApiErrorMessage(body, 'Could not load reviews'));
+          throw new Error(getApiErrorMessage(body, t('reviews.errors.loadReviews')));
         }
         const items = Array.isArray(body?.data) ? body.data : [];
         const pagination = body?.pagination || {};
@@ -109,13 +120,13 @@ export default function ReviewPage() {
           }
         }
       } catch (err) {
-        setListError(err?.message || 'Could not load reviews');
+        setListError(err?.message || t('reviews.errors.loadReviews'));
       } finally {
         if (isFirstPage) setLoading(false);
         else setLoadingMore(false);
       }
     },
-    [userId]
+    [userId, t]
   );
 
   const fetchStats = useCallback(async () => {
@@ -124,16 +135,16 @@ export default function ReviewPage() {
       const res = await apiFetch('/testimonials/stats');
       const body = await res.json().catch(() => ({}));
       if (!res.ok || body?.success === false) {
-        throw new Error(getApiErrorMessage(body, 'Could not load review stats'));
+        throw new Error(getApiErrorMessage(body, t('reviews.errors.loadStats')));
       }
       setStats(body?.data || null);
       setStatsError('');
     } catch (err) {
-      setStatsError(err?.message || 'Could not load review stats');
+      setStatsError(err?.message || t('reviews.errors.loadStats'));
     } finally {
       setStatsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchReviews(1);
@@ -213,14 +224,13 @@ export default function ReviewPage() {
       <main className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-14">
         <header className="mb-8 sm:mb-10">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 mb-2">
-            Community reviews
+            {t('reviews.badge')}
           </p>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
-            What our users say about Rent Nao
+            {t('reviews.title')}
           </h1>
           <p className="mt-3 text-base text-gray-600 max-w-2xl">
-            Real stories from owners and tenants who use Rent Nao every day. Share your own
-            experience to help others rent with confidence.
+            {t('reviews.subtitle')}
           </p>
         </header>
 
@@ -249,10 +259,12 @@ export default function ReviewPage() {
 
           <section className="lg:col-start-1 lg:row-start-2">
             <div className="mb-4 flex items-end justify-between gap-3">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">All reviews</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">{t('reviews.all.title')}</h2>
               {!loading && reviews.length > 0 ? (
                 <p className="text-xs sm:text-sm text-gray-500">
-                  Showing {reviews.length} review{reviews.length === 1 ? '' : 's'}
+                  {reviews.length === 1
+                    ? t('reviews.all.showingCount', { n: reviews.length })
+                    : t('reviews.all.showingCount_other', { n: reviews.length })}
                 </p>
               ) : null}
             </div>
@@ -267,7 +279,7 @@ export default function ReviewPage() {
                   className="ml-1 font-semibold underline hover:text-rose-900"
                   onClick={() => fetchReviews(1)}
                 >
-                  Try again
+                  {t('common.tryAgain')}
                 </button>
               </div>
             ) : reviews.length === 0 ? (
@@ -291,7 +303,7 @@ export default function ReviewPage() {
                       disabled={loadingMore}
                       className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-5 py-2.5 text-sm font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {loadingMore ? 'Loading…' : 'Load more reviews'}
+                      {loadingMore ? t('reviews.loadingMore') : t('reviews.loadMore')}
                     </button>
                   </div>
                 ) : null}
@@ -314,24 +326,26 @@ function ComposerCard({
   onCancelEdit,
   onSubmitted,
 }) {
+  const { t } = useTranslation();
+
   if (!loggedIn) {
     return (
       <PromptCard
-        title="Share your experience"
-        description="Sign in to leave a review and rating for Rent Nao."
+        title={t('reviews.composer.title')}
+        description={t('reviews.composer.signInDescription')}
         actions={
           <>
             <Link
               to="/login"
               className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 transition"
             >
-              Log In
+              {t('header.login')}
             </Link>
             <Link
               to="/signup"
               className="inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 transition"
             >
-              Create account
+              {t('reviews.composer.createAccount')}
             </Link>
           </>
         }
@@ -345,7 +359,7 @@ function ComposerCard({
         <div className="h-4 w-40 animate-pulse rounded bg-gray-100" />
         <div className="mt-3 h-3 w-full max-w-md animate-pulse rounded bg-gray-100" />
         <div className="mt-2 h-3 w-[66%] max-w-sm animate-pulse rounded bg-gray-100" />
-        <p className="mt-4 text-xs text-gray-500">Checking your verification status…</p>
+        <p className="mt-4 text-xs text-gray-500">{t('reviews.composer.checkingKyc')}</p>
       </div>
     );
   }
@@ -354,14 +368,14 @@ function ComposerCard({
     return (
       <PromptCard
         tone="warning"
-        title="Complete verification to leave a review"
-        description="Only verified users can post reviews. Finish your KYC verification first, then come back to share your experience."
+        title={t('reviews.composer.kycRequiredTitle')}
+        description={t('reviews.composer.kycRequiredBody')}
         actions={
           <Link
             to="/verification-holding"
             className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 transition"
           >
-            Go to verification
+            {t('reviews.composer.goToVerification')}
           </Link>
         }
       />
@@ -383,6 +397,7 @@ function ComposerCard({
 }
 
 function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
+  const { t } = useTranslation();
   const [rating, setRating] = useState(initial?.rating || 5);
   const [hoverRating, setHoverRating] = useState(0);
   const [content, setContent] = useState(initial?.content || '');
@@ -403,13 +418,13 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || body?.success === false) {
-        throw new Error(getApiErrorMessage(body, 'Could not submit your review'));
+        throw new Error(getApiErrorMessage(body, t('reviews.toast.submitFailed')));
       }
       const created = body?.data;
-      toast.success('Your review is live for everyone to see. Thank you!');
+      toast.success(t('reviews.toast.submitted'));
       onSubmitted?.(created);
     } catch (err) {
-      toast.error(err?.message || 'Could not submit your review');
+      toast.error(err?.message || t('reviews.toast.submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -422,15 +437,15 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
     >
       <div className="mb-5">
         <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-          {isEdit ? 'Edit your review' : 'Share your experience'}
+          {isEdit ? t('reviews.form.editTitle') : t('reviews.composer.title')}
         </h2>
         <p className="mt-1 text-sm text-gray-600">
-          Help other renters and owners by telling them what worked for you.
+          {t('reviews.form.helpText')}
         </p>
       </div>
 
       <div className="mb-5">
-        <label className="block text-sm font-semibold text-gray-800 mb-2">Your rating</label>
+        <label className="block text-sm font-semibold text-gray-800 mb-2">{t('reviews.form.ratingLabel')}</label>
         <div className="flex items-center gap-1.5">
           {[1, 2, 3, 4, 5].map((n) => {
             const filled = n <= (hoverRating || rating);
@@ -442,7 +457,7 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
                 onMouseEnter={() => setHoverRating(n)}
                 onMouseLeave={() => setHoverRating(0)}
                 className="rounded-md p-1 transition hover:scale-110"
-                aria-label={`${n} star${n === 1 ? '' : 's'}`}
+                aria-label={n === 1 ? t('reviews.form.starAria', { n }) : t('reviews.form.starAria_other', { n })}
               >
                 <StarIcon className={`h-8 w-8 ${filled ? 'text-amber-400' : 'text-gray-300'}`} filled={filled} />
               </button>
@@ -454,7 +469,7 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
 
       <div className="mb-5">
         <label htmlFor="review-content" className="block text-sm font-semibold text-gray-800 mb-2">
-          Your review
+          {t('reviews.form.contentLabel')}
         </label>
         <textarea
           id="review-content"
@@ -462,7 +477,7 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
           maxLength={MAX_CONTENT}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="What did you like? What could be better? Share something useful."
+          placeholder={t('reviews.form.placeholder')}
           className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 transition"
         />
         <div className="mt-1.5 flex items-center justify-between text-xs">
@@ -474,8 +489,8 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
             }
           >
             {trimmed.length < MIN_CONTENT
-              ? `At least ${MIN_CONTENT} characters`
-              : 'Looks good'}
+              ? t('reviews.form.minChars', { n: MIN_CONTENT })
+              : t('reviews.form.looksGood')}
           </span>
           <span className="text-gray-400 tabular-nums">
             {content.length}/{MAX_CONTENT}
@@ -490,7 +505,7 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
             onClick={onCancel}
             className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
           >
-            Cancel
+            {t('reviews.form.cancel')}
           </button>
         ) : null}
         <button
@@ -498,7 +513,7 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
           disabled={!valid || submitting}
           className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? 'Submitting…' : isEdit ? 'Save changes' : 'Submit review'}
+          {submitting ? t('reviews.form.submitting') : isEdit ? t('reviews.form.saveChanges') : t('reviews.form.submit')}
         </button>
       </div>
     </form>
@@ -506,17 +521,18 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
 }
 
 function MyReviewCard({ review, onEdit }) {
+  const { t } = useTranslation();
   const status = String(review?.status || 'APPROVED').toUpperCase();
-  const badge = STATUS_BADGES[status] || STATUS_BADGES.APPROVED;
+  const badge = getStatusBadge(status, t);
   const showStatusBadge = status !== 'APPROVED';
 
   return (
     <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 via-white to-white p-5 sm:p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Your review</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{t('reviews.myReview.title')}</p>
           <h2 className="mt-1 text-lg sm:text-xl font-bold text-gray-900">
-            Thanks for sharing your experience
+            {t('reviews.myReview.thanks')}
           </h2>
         </div>
         {showStatusBadge ? (
@@ -527,7 +543,7 @@ function MyReviewCard({ review, onEdit }) {
           </span>
         ) : (
           <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-            Visible to everyone
+            {t('reviews.myReview.visible')}
           </span>
         )}
       </div>
@@ -552,7 +568,7 @@ function MyReviewCard({ review, onEdit }) {
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5m-1.414-9.414a2 2 0 1 1 2.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
-          Edit
+          {t('common.edit')}
         </button>
       </div>
     </div>
@@ -574,8 +590,9 @@ function PromptCard({ title, description, actions, tone = 'info' }) {
 }
 
 function ReviewCard({ review, isMine }) {
-  const name = review?.user?.displayName || 'Anonymous User';
-  const dateText = formatDate(review?.createdAt);
+  const { t } = useTranslation();
+  const name = review?.user?.displayName || t('reviews.card.anonymous');
+  const dateText = formatDate(review?.createdAt, t);
 
   return (
     <article
@@ -590,7 +607,7 @@ function ReviewCard({ review, isMine }) {
             {name}
             {isMine ? (
               <span className="ml-1.5 inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
-                You
+                {t('reviews.card.you')}
               </span>
             ) : null}
           </p>
@@ -608,7 +625,7 @@ function ReviewCard({ review, isMine }) {
 
       {review.isFeatured ? (
         <p className="mt-auto pt-3 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-          Featured
+          {t('reviews.card.featured')}
         </p>
       ) : null}
     </article>
@@ -616,6 +633,7 @@ function ReviewCard({ review, isMine }) {
 }
 
 function EmptyReviews() {
+  const { t } = useTranslation();
   return (
     <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-10 text-center">
       <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
@@ -623,8 +641,8 @@ function EmptyReviews() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 0 0 .95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 0 0-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 0 0-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 0 0-.363-1.118L2.077 10.1c-.783-.57-.38-1.81.588-1.81h4.915a1 1 0 0 0 .95-.69l1.519-4.673z" />
         </svg>
       </div>
-      <p className="text-base font-semibold text-gray-900">No reviews yet</p>
-      <p className="mt-1 text-sm text-gray-600">Be the first to share your experience with Rent Nao.</p>
+      <p className="text-base font-semibold text-gray-900">{t('reviews.empty.title')}</p>
+      <p className="mt-1 text-sm text-gray-600">{t('reviews.empty.body')}</p>
     </div>
   );
 }
@@ -731,15 +749,20 @@ function getInitials(name) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-function formatDate(iso) {
+function formatDate(iso, t) {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   const now = new Date();
   const diffMs = now - d;
   const day = 24 * 60 * 60 * 1000;
-  if (diffMs < day) return 'Today';
-  if (diffMs < 2 * day) return 'Yesterday';
-  if (diffMs < 7 * day) return `${Math.floor(diffMs / day)} days ago`;
+  if (diffMs < day) return t('common.time.today');
+  if (diffMs < 2 * day) return t('common.time.yesterday');
+  if (diffMs < 7 * day) {
+    const days = Math.floor(diffMs / day);
+    return days === 1
+      ? t('common.time.daysAgo', { d: days })
+      : t('common.time.daysAgo_other', { d: days });
+  }
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }

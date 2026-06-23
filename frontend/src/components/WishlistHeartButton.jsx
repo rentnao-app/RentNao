@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { apiFetch, getCurrentUser, isLoggedIn } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 
 /**
  * Heart control for listing cards / detail. Tenants only; prompts login otherwise.
@@ -12,6 +13,7 @@ export default function WishlistHeartButton({
   className = '',
   size = 'md',
 }) {
+  const { t } = useTranslation();
   const [saved, setSaved] = useState(Boolean(savedProp));
   const [busy, setBusy] = useState(false);
 
@@ -39,7 +41,7 @@ export default function WishlistHeartButton({
 
     const user = getCurrentUser();
     if (!isLoggedIn() || (user?.role || user?.userRole) !== 'TENANT') {
-      toast.error('Log in as a tenant to save listings.');
+      toast.error(t('wishlist.loginAsTenant'));
       return;
     }
 
@@ -48,18 +50,18 @@ export default function WishlistHeartButton({
       if (saved) {
         const res = await apiFetch(`/wishlists/${listingId}`, { method: 'DELETE' });
         const body = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(body?.error || body?.message || 'Remove failed');
+        if (!res.ok) throw new Error(body?.error || body?.message || t('wishlist.removeFailed'));
         syncSaved(false);
-        toast.success('Removed from wishlist');
+        toast.success(t('wishlist.removedSuccess'));
       } else {
         const res = await apiFetch(`/wishlists/${listingId}`, { method: 'POST' });
         const body = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(body?.error || body?.message || 'Save failed');
+        if (!res.ok) throw new Error(body?.error || body?.message || t('wishlist.saveFailed'));
         syncSaved(true);
-        toast.success('Saved to wishlist');
+        toast.success(t('wishlist.savedSuccess'));
       }
     } catch (err) {
-      toast.error(err?.message || 'Wishlist update failed');
+      toast.error(err?.message || t('wishlist.updateFailed'));
     } finally {
       setBusy(false);
     }
@@ -70,8 +72,8 @@ export default function WishlistHeartButton({
       type="button"
       disabled={busy}
       onClick={handleClick}
-      aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'}
-      title={saved ? 'Remove from wishlist' : 'Save to wishlist'}
+      aria-label={saved ? t('wishlist.removeFromWishlist') : t('wishlist.addToWishlist')}
+      title={saved ? t('wishlist.removeFromWishlist') : t('wishlist.saveToWishlist')}
       className={[
         dim,
         'inline-flex shrink-0 items-center justify-center rounded-full border shadow-sm transition',
@@ -104,4 +106,3 @@ export default function WishlistHeartButton({
     </button>
   );
 }
-

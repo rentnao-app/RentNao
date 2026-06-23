@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, getApiErrorMessage, isLoggedIn } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 import toast from 'react-hot-toast';
+import { toLabel } from './admin-dashboard/adminDashboardUtils';
 
 function money(value, currency = 'BDT') {
   const num = Number(value || 0);
@@ -10,6 +12,7 @@ function money(value, currency = 'BDT') {
 }
 
 export default function AdminTopupApprovalsPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [topupRequests, setTopupRequests] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
@@ -26,16 +29,16 @@ export default function AdminTopupApprovalsPage() {
 
       const res = await apiFetch(`/admin/topup-requests?${query.toString()}`);
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(getApiErrorMessage(body, 'Failed to load topup requests'));
+      if (!res.ok) throw new Error(getApiErrorMessage(body, t('admin.toasts.loadTopupFailed')));
 
       setTopupRequests(body?.data?.topupRequests || []);
       setPagination(body?.data?.pagination || { page, totalPages: 1, total: 0 });
     } catch (e) {
-      toast.error(e.message || 'Failed to load topup requests');
+      toast.error(e.message || t('admin.toasts.loadTopupFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleApprove = useCallback(
     async (topupRequestId) => {
@@ -48,25 +51,25 @@ export default function AdminTopupApprovalsPage() {
 
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(getApiErrorMessage(body, 'Failed to approve topup request'));
+          throw new Error(getApiErrorMessage(body, t('admin.toasts.approveTopupFailed')));
         }
 
-        toast.success('Topup request approved');
+        toast.success(t('admin.toasts.topupApproved'));
         await loadTopupRequests(currentPage, statusFilter);
       } catch (e) {
-        toast.error(e.message || 'Failed to approve topup request');
+        toast.error(e.message || t('admin.toasts.approveTopupFailed'));
       } finally {
         setActionLoading((prev) => ({ ...prev, [topupRequestId]: false }));
       }
     },
-    [loadTopupRequests, currentPage, statusFilter]
+    [loadTopupRequests, currentPage, statusFilter, t]
   );
 
   const handleReject = useCallback(
     async (topupRequestId) => {
       const reason = rejectReason[topupRequestId] || '';
       if (!reason.trim()) {
-        toast.error('Please provide a rejection reason');
+        toast.error(t('admin.toasts.rejectReasonRequired'));
         return;
       }
 
@@ -80,10 +83,10 @@ export default function AdminTopupApprovalsPage() {
 
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(getApiErrorMessage(body, 'Failed to reject topup request'));
+          throw new Error(getApiErrorMessage(body, t('admin.toasts.rejectTopupFailed')));
         }
 
-        toast.success('Topup request rejected');
+        toast.success(t('admin.toasts.topupRejected'));
         setRejectReason((prev) => {
           const newReasons = { ...prev };
           delete newReasons[topupRequestId];
@@ -91,12 +94,12 @@ export default function AdminTopupApprovalsPage() {
         });
         await loadTopupRequests(currentPage, statusFilter);
       } catch (e) {
-        toast.error(e.message || 'Failed to reject topup request');
+        toast.error(e.message || t('admin.toasts.rejectTopupFailed'));
       } finally {
         setActionLoading((prev) => ({ ...prev, [topupRequestId]: false }));
       }
     },
-    [loadTopupRequests, currentPage, statusFilter, rejectReason]
+    [loadTopupRequests, currentPage, statusFilter, rejectReason, t]
   );
 
   useEffect(() => {
@@ -106,6 +109,12 @@ export default function AdminTopupApprovalsPage() {
     }
     loadTopupRequests(currentPage, statusFilter);
   }, [currentPage, statusFilter, loadTopupRequests]);
+
+  const statusFilters = [
+    { value: 'PENDING', label: t('admin.topup.pending') },
+    { value: 'APPROVED', label: t('admin.topup.approved') },
+    { value: 'REJECTED', label: t('admin.topup.rejected') },
+  ];
 
   if (loading) {
     return (
@@ -121,70 +130,70 @@ export default function AdminTopupApprovalsPage() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <BrandLogoLink />
           <Link to="/admin-dashboard" className="text-sm font-medium text-teal-700 hover:text-teal-800">
-            Back to dashboard
+            {t('admin.topup.backToDashboard')}
           </Link>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
-        <h1 className="mb-6 text-2xl font-bold text-gray-900">Topup Approvals</h1>
+        <h1 className="mb-6 text-2xl font-bold text-gray-900">{t('admin.topup.title')}</h1>
         <section className="bg-white rounded-xl border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Topup Requests</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t('admin.topup.requestsTitle')}</h2>
             <div className="flex gap-2">
-              {['PENDING', 'APPROVED', 'REJECTED'].map((status) => (
+              {statusFilters.map(({ value, label }) => (
                 <button
-                  key={status}
+                  key={value}
                   onClick={() => {
-                    setStatusFilter(status);
+                    setStatusFilter(value);
                     setCurrentPage(1);
                   }}
                   className={`px-4 py-2 rounded-lg font-medium transition ${
-                    statusFilter === status
+                    statusFilter === value
                       ? 'bg-teal-700 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {status}
+                  {label}
                 </button>
               ))}
             </div>
           </div>
 
           {topupRequests.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">No topup requests found.</p>
+            <p className="text-center text-gray-500 py-8">{t('admin.topup.empty')}</p>
           ) : (
             <div className="space-y-4">
               {topupRequests.map((req) => (
                 <div key={req.topupRequestId} className="border border-gray-200 rounded-lg p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">Amount</p>
+                      <p className="text-sm text-gray-500 mb-1">{t('admin.topup.amount')}</p>
                       <p className="text-2xl font-bold text-teal-700">{money(req.amount, 'BDT')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">Status</p>
+                      <p className="text-sm text-gray-500 mb-1">{t('admin.topup.status')}</p>
                       <p className={`font-semibold text-lg ${
                         req.status === 'APPROVED' ? 'text-green-700' :
                         req.status === 'REJECTED' ? 'text-red-700' :
                         'text-yellow-700'
                       }`}>
-                        {req.status}
+                        {toLabel(req.status, t)}
                       </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-sm">
                     <div>
-                      <p className="text-gray-500">bKash Number</p>
+                      <p className="text-gray-500">{t('admin.topup.bkashNumber')}</p>
                       <p className="font-mono">{req.bkashNumber}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Transaction ID</p>
+                      <p className="text-gray-500">{t('admin.topup.transactionId')}</p>
                       <p className="font-mono text-xs break-all">{req.transactionId}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Requested On</p>
+                      <p className="text-gray-500">{t('admin.topup.requestedOn')}</p>
                       <p>{new Date(req.createdAt).toLocaleString()}</p>
                     </div>
                   </div>
@@ -192,7 +201,7 @@ export default function AdminTopupApprovalsPage() {
                   {req.status === 'REJECTED' && req.rejectionReason && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                       <p className="text-sm text-red-800">
-                        <strong>Rejection Reason:</strong> {req.rejectionReason}
+                        <strong>{t('admin.topup.rejectionReason')}</strong> {req.rejectionReason}
                       </p>
                     </div>
                   )}
@@ -205,7 +214,7 @@ export default function AdminTopupApprovalsPage() {
                           disabled={actionLoading[req.topupRequestId]}
                           className="flex-1 bg-green-700 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {actionLoading[req.topupRequestId] ? 'Approving...' : 'Approve'}
+                          {actionLoading[req.topupRequestId] ? t('admin.topup.approving') : t('admin.topup.approve')}
                         </button>
                       </div>
                       <div className="space-y-2">
@@ -217,7 +226,7 @@ export default function AdminTopupApprovalsPage() {
                               [req.topupRequestId]: e.target.value,
                             }))
                           }
-                          placeholder="Reason for rejection (required if rejecting)"
+                          placeholder={t('admin.topup.rejectPlaceholder')}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                           rows="2"
                         />
@@ -226,7 +235,7 @@ export default function AdminTopupApprovalsPage() {
                           disabled={actionLoading[req.topupRequestId]}
                           className="w-full bg-red-700 text-white py-2 px-4 rounded-lg font-medium hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {actionLoading[req.topupRequestId] ? 'Rejecting...' : 'Reject'}
+                          {actionLoading[req.topupRequestId] ? t('admin.topup.rejecting') : t('admin.topup.reject')}
                         </button>
                       </div>
                     </div>
@@ -243,10 +252,10 @@ export default function AdminTopupApprovalsPage() {
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               className="px-3 py-1.5 border border-gray-300 rounded disabled:opacity-50"
             >
-              Prev
+              {t('admin.topup.prev')}
             </button>
             <span className="text-sm text-gray-600">
-              Page {pagination.page} of {pagination.totalPages || 1}
+              {t('admin.topup.pageOf', { page: pagination.page, total: pagination.totalPages || 1 })}
             </span>
             <button
               type="button"
@@ -254,7 +263,7 @@ export default function AdminTopupApprovalsPage() {
               onClick={() => setCurrentPage((p) => p + 1)}
               className="px-3 py-1.5 border border-gray-300 rounded disabled:opacity-50"
             >
-              Next
+              {t('admin.topup.next')}
             </button>
           </div>
         </section>

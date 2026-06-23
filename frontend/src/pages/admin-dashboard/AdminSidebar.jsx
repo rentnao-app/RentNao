@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../../components/BrandLogoLink';
+import { useTranslation } from '../../lib/i18n';
 import { Icon } from './AdminUi';
 
 export default function AdminSidebar({
@@ -10,6 +11,8 @@ export default function AdminSidebar({
   setMobileDrawerOpen,
   onLogout,
 }) {
+  const { t } = useTranslation();
+
   return (
     <aside
       className={`fixed inset-y-0 right-0 z-40 flex h-screen w-[min(270px,88vw)] max-w-[270px] flex-col overflow-y-auto overscroll-contain border-l border-[#dceadf] bg-[#f7fbf8] transition-transform duration-200 ease-out lg:left-0 lg:right-auto lg:border-l-0 lg:border-r lg:translate-x-0 ${
@@ -23,14 +26,14 @@ export default function AdminSidebar({
             onClick={() => setMobileDrawerOpen(false)}
           />
           <div className="min-w-0 pt-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-600/80">Admin</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-600/80">{t('admin.sidebar.badge')}</p>
           </div>
         </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col px-3 pb-4 pt-3 sm:px-4 sm:pt-4">
-        <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">Menu</p>
-        <nav className="space-y-1" aria-label="Admin sidebar">
+        <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">{t('admin.sidebar.menu')}</p>
+        <nav className="space-y-1" aria-label={t('admin.sidebar.ariaLabel')}>
           {sideMenuItems.map((item) => {
             const isActive = item.to
               ? typeof window !== 'undefined' && window.location.pathname.startsWith(item.to)
@@ -91,7 +94,7 @@ export default function AdminSidebar({
           }}
           className="w-full rounded-xl border border-red-100 bg-red-50/90 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-100"
         >
-          Logout
+          {t('admin.sidebar.logout')}
         </button>
       </div>
     </aside>

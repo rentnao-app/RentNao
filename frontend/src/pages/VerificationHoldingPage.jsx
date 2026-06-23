@@ -3,46 +3,47 @@ import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, clearAuthSession, getApiErrorMessage, getCurrentUser, getRequestErrorMessage } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 
 function normalizeStatus(status) {
   return String(status || 'PENDING').toUpperCase();
 }
 
-function getStatusMeta(status) {
+function getStatusMeta(status, t) {
   const key = normalizeStatus(status);
   const map = {
     PENDING: {
-      label: 'Pending',
+      label: t('verification.holding.statusPending'),
       chip: 'bg-amber-50 text-amber-800 border-amber-200',
       dot: 'bg-amber-400',
     },
     DRAFT: {
-      label: 'Draft',
+      label: t('verification.holding.statusDraft'),
       chip: 'bg-slate-50 text-slate-700 border-slate-200',
       dot: 'bg-slate-400',
     },
     SUBMITTED: {
-      label: 'Submitted',
+      label: t('verification.holding.statusSubmitted'),
       chip: 'bg-sky-50 text-sky-800 border-sky-200',
       dot: 'bg-sky-500',
     },
     UNDER_REVIEW: {
-      label: 'Under review',
+      label: t('verification.holding.statusUnderReview'),
       chip: 'bg-amber-50 text-amber-800 border-amber-200',
       dot: 'bg-amber-400',
     },
     APPROVED: {
-      label: 'Verified',
+      label: t('verification.holding.statusVerified'),
       chip: 'bg-emerald-50 text-emerald-800 border-emerald-200',
       dot: 'bg-emerald-500',
     },
     ACCEPTED: {
-      label: 'Verified',
+      label: t('verification.holding.statusVerified'),
       chip: 'bg-emerald-50 text-emerald-800 border-emerald-200',
       dot: 'bg-emerald-500',
     },
     REJECTED: {
-      label: 'Rejected',
+      label: t('verification.holding.statusRejected'),
       chip: 'bg-red-50 text-red-800 border-red-200',
       dot: 'bg-red-500',
     },
@@ -66,15 +67,15 @@ function dashboardPathForRole(role) {
   return '/';
 }
 
-function DocumentTypeLabel(type) {
+function DocumentTypeLabel(type, t) {
   const value = String(type || '').toUpperCase();
-  if (value === 'NATIONAL_ID') return 'NID / Passport / Driving License';
-  if (value === 'PROOF_OF_OWNERSHIP') return 'Property Ownership Certificate';
-  return 'Document';
+  if (value === 'NATIONAL_ID') return t('verification.holding.docNid');
+  if (value === 'PROOF_OF_OWNERSHIP') return t('verification.holding.docOwnership');
+  return t('verification.holding.docGeneric');
 }
 
-function StatusChip({ status }) {
-  const meta = getStatusMeta(status);
+function StatusChip({ status, t }) {
+  const meta = getStatusMeta(status, t);
   const key = normalizeStatus(status);
   const pulse = key === 'PENDING' || key === 'UNDER_REVIEW' || key === 'SUBMITTED' || key === 'DRAFT';
   return (
@@ -86,6 +87,7 @@ function StatusChip({ status }) {
 }
 
 export default function VerificationHoldingPage() {
+  const { t } = useTranslation();
   const [documents, setDocuments] = useState([]);
   const [submissionStatus, setSubmissionStatus] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
@@ -123,25 +125,25 @@ export default function VerificationHoldingPage() {
         setError('');
       } else {
         const body = await res.json().catch(() => ({}));
-        setError(getApiErrorMessage(body, 'Could not fetch your documents'));
+        setError(getApiErrorMessage(body, t('verification.holding.fetchFailed')));
       }
     } catch (err) {
-      setError(getRequestErrorMessage(err, 'An error occurred while fetching verification status'));
+      setError(getRequestErrorMessage(err, t('verification.holding.fetchError')));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleManualRefresh = useCallback(async () => {
     if (refreshing) return;
     setRefreshing(true);
     try {
       await fetchDocuments();
-      toast.success('Status refreshed', { duration: 1500 });
+      toast.success(t('verification.holding.statusRefreshed'), { duration: 1500 });
     } finally {
       setRefreshing(false);
     }
-  }, [fetchDocuments, refreshing]);
+  }, [fetchDocuments, refreshing, t]);
 
   useEffect(() => {
     fetchDocuments();
@@ -160,7 +162,7 @@ export default function VerificationHoldingPage() {
 
     if (isNowApproved && wasPreviouslyOther && !approvalHandledRef.current) {
       approvalHandledRef.current = true;
-      toast.success('You are verified! Redirecting to your dashboard...', { duration: 2500 });
+      toast.success(t('verification.holding.verifiedRedirect'), { duration: 2500 });
       const timer = setTimeout(() => {
         navigate(dashboardHref);
       }, 2500);
@@ -169,7 +171,7 @@ export default function VerificationHoldingPage() {
     }
 
     previousStatusRef.current = current;
-  }, [submissionStatus, navigate, dashboardHref]);
+  }, [submissionStatus, navigate, dashboardHref, t]);
 
   const handleLogout = () => {
     clearAuthSession();
@@ -178,14 +180,14 @@ export default function VerificationHoldingPage() {
 
   const hasSubmission = Boolean(submissionStatus || documents.length > 0);
   const phase = getSubmissionPhase(submissionStatus, hasSubmission);
-  const currentSubmissionMeta = getStatusMeta(submissionStatus || 'PENDING');
+  const currentSubmissionMeta = getStatusMeta(submissionStatus || 'PENDING', t);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f4f7f5] flex items-center justify-center px-4">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="h-12 w-12 rounded-full border-2 border-emerald-200 border-t-emerald-700 animate-spin" aria-hidden />
-          <p className="text-sm text-gray-600">Checking your verification status...</p>
+          <p className="text-sm text-gray-600">{t('verification.holding.checkingStatus')}</p>
         </div>
       </div>
     );
@@ -194,9 +196,8 @@ export default function VerificationHoldingPage() {
   const heroByPhase = {
     verified: {
       wrap: 'border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50/90 shadow-md shadow-emerald-900/5',
-      title: "You're verified",
-      subtitle:
-        'Your identity documents were approved. You can use the full dashboard and features your role allows.',
+      title: t('verification.holding.verifiedTitle'),
+      subtitle: t('verification.holding.verifiedSubtitle'),
       icon: (
         <div className="relative flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/25 ring-4 ring-emerald-100">
           <svg className="h-8 w-8 sm:h-9 sm:w-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
@@ -207,9 +208,8 @@ export default function VerificationHoldingPage() {
     },
     processing: {
       wrap: 'border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-white to-emerald-50/50 shadow-sm',
-      title: 'Verification in process',
-      subtitle:
-        'Our team is reviewing your submission. This page updates automatically; you can refresh anytime.',
+      title: t('verification.holding.processingTitle'),
+      subtitle: t('verification.holding.processingSubtitle'),
       icon: (
         <div className="relative flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-800 ring-4 ring-amber-50">
           <svg className="h-7 w-7 sm:h-8 sm:w-8 animate-pulse" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -220,9 +220,8 @@ export default function VerificationHoldingPage() {
     },
     rejected: {
       wrap: 'border-red-200/90 bg-gradient-to-br from-red-50/80 via-white to-white shadow-sm',
-      title: 'Verification not approved',
-      subtitle:
-        'Please read the note below and submit updated documents. We are here to help you complete verification.',
+      title: t('verification.holding.rejectedTitle'),
+      subtitle: t('verification.holding.rejectedSubtitle'),
       icon: (
         <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-700 ring-4 ring-red-50">
           <svg className="h-7 w-7 sm:h-8 sm:w-8" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -233,8 +232,8 @@ export default function VerificationHoldingPage() {
     },
     idle: {
       wrap: 'border-emerald-100 bg-gradient-to-r from-white via-white to-emerald-50/80 shadow-sm',
-      title: 'Complete verification',
-      subtitle: 'Upload your documents to start the review process. We will notify you when verification is complete.',
+      title: t('verification.holding.idleTitle'),
+      subtitle: t('verification.holding.idleSubtitle'),
       icon: (
         <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800 ring-4 ring-emerald-50">
           <svg className="h-7 w-7 sm:h-8 sm:w-8" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -258,7 +257,7 @@ export default function VerificationHoldingPage() {
             onClick={handleLogout}
             className="text-sm font-semibold text-red-600 hover:text-red-700 transition px-1 shrink-0"
           >
-            Logout
+            {t('verification.holding.logout')}
           </button>
         </div>
       </header>
@@ -273,12 +272,12 @@ export default function VerificationHoldingPage() {
                 <p className="mt-2 sm:mt-3 text-sm sm:text-base text-gray-600 max-w-2xl leading-relaxed">{hero.subtitle}</p>
                 {phase === 'verified' && reviewedAt && (
                   <p className="mt-2 text-xs sm:text-sm text-emerald-800/90 font-medium">
-                    Approved on {new Date(reviewedAt).toLocaleString()}
+                    {t('verification.holding.approvedOn', { date: new Date(reviewedAt).toLocaleString() })}
                   </p>
                 )}
                 {phase === 'rejected' && rejectionReason && (
                   <div className="mt-4 rounded-xl border border-red-200 bg-white/80 px-3 py-3 sm:px-4 text-sm text-red-900">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-red-700 mb-1">Reason</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-red-700 mb-1">{t('verification.holding.reason')}</p>
                     <p className="leading-relaxed">{rejectionReason}</p>
                   </div>
                 )}
@@ -288,8 +287,8 @@ export default function VerificationHoldingPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap lg:flex-col lg:items-stretch xl:flex-row xl:items-center shrink-0 w-full lg:w-auto lg:min-w-[200px]">
               {hasSubmission && (
                 <div className="rounded-xl border border-white/60 bg-white/70 backdrop-blur-sm px-4 py-3 shadow-sm">
-                  <p className="text-[10px] sm:text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">Submission status</p>
-                  <StatusChip status={submissionStatus || 'PENDING'} />
+                  <p className="text-[10px] sm:text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">{t('verification.holding.submissionStatus')}</p>
+                  <StatusChip status={submissionStatus || 'PENDING'} t={t} />
                 </div>
               )}
               {phase === 'verified' && (
@@ -297,7 +296,7 @@ export default function VerificationHoldingPage() {
                   to={dashboardHref}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/10 hover:bg-emerald-800 transition text-center w-full sm:w-auto"
                 >
-                  Go to dashboard
+                  {t('verification.holding.goToDashboard')}
                   <span aria-hidden>{'->'}</span>
                 </Link>
               )}
@@ -306,7 +305,7 @@ export default function VerificationHoldingPage() {
                   to={verificationHref}
                   className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 transition w-full sm:w-auto text-center"
                 >
-                  Upload documents
+                  {t('verification.holding.uploadDocuments')}
                 </Link>
               )}
               {phase === 'rejected' && (
@@ -314,7 +313,7 @@ export default function VerificationHoldingPage() {
                   to={verificationHref}
                   className="inline-flex items-center justify-center rounded-xl bg-red-700 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800 transition w-full sm:w-auto text-center"
                 >
-                  Update &amp; resubmit
+                  {t('verification.holding.updateResubmit')}
                 </Link>
               )}
             </div>
@@ -330,29 +329,29 @@ export default function VerificationHoldingPage() {
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(260px,22rem)] gap-6 lg:gap-8">
           <section className="rounded-2xl border border-emerald-100 bg-white shadow-sm p-5 sm:p-6 order-2 xl:order-1">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-5">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Submitted documents</h2>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">{t('verification.holding.submittedDocuments')}</h2>
               <button
                 type="button"
                 onClick={handleManualRefresh}
                 disabled={refreshing}
                 className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition self-start sm:self-auto disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {refreshing ? 'Refreshing...' : 'Refresh'}
+                {refreshing ? t('verification.holding.refreshing') : t('verification.holding.refresh')}
               </button>
             </div>
 
             {documents.length === 0 ? (
               <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/40 p-6 sm:p-8 text-center">
-                <p className="text-gray-600 mb-4 text-sm sm:text-base">You haven&apos;t uploaded any documents for this submission yet.</p>
+                <p className="text-gray-600 mb-4 text-sm sm:text-base">{t('verification.holding.noDocuments')}</p>
                 <Link
                   to={verificationHref}
                   className="inline-flex items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-3 text-sm sm:text-base transition w-full max-w-xs mx-auto"
                 >
-                  Upload documents
+                  {t('verification.holding.uploadDocuments')}
                 </Link>
               </div>
             ) : (
-              <ul className="space-y-3" aria-label="Document list">
+              <ul className="space-y-3" aria-label={t('verification.holding.docGeneric')}>
                 {documents.map((doc) => {
                   const docId = doc.document_id || doc.documentId;
                   const status = doc.verification_status || doc.verificationStatus || 'PENDING';
@@ -365,14 +364,16 @@ export default function VerificationHoldingPage() {
                     >
                       <div className="min-w-0 flex-1">
                         <p className="text-sm sm:text-base font-semibold text-gray-900 break-words">
-                          {DocumentTypeLabel(doc.document_type || doc.documentType)}
+                          {DocumentTypeLabel(doc.document_type || doc.documentType, t)}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          Uploaded {uploadedAt ? new Date(uploadedAt).toLocaleDateString() : 'recently'}
+                          {uploadedAt
+                            ? t('verification.holding.uploadedOn', { date: new Date(uploadedAt).toLocaleDateString() })
+                            : t('verification.holding.uploadedRecently')}
                         </p>
                       </div>
                       <div className="shrink-0 self-start sm:self-center">
-                        <StatusChip status={status} />
+                        <StatusChip status={status} t={t} />
                       </div>
                     </li>
                   );
@@ -387,13 +388,13 @@ export default function VerificationHoldingPage() {
                 disabled={refreshing}
                 className="min-h-[44px] rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {refreshing ? 'Refreshing...' : 'Refresh status'}
+                {refreshing ? t('verification.holding.refreshing') : t('verification.holding.refreshStatus')}
               </button>
               <Link
                 to={verificationHref}
                 className="min-h-[44px] rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-800 transition flex items-center justify-center text-center"
               >
-                Re-upload
+                {t('verification.holding.reUpload')}
               </Link>
             </div>
           </section>
@@ -408,30 +409,30 @@ export default function VerificationHoldingPage() {
                     : 'border-emerald-100 bg-emerald-50/60'
               }`}
             >
-              <p className="text-[10px] sm:text-xs uppercase tracking-wider text-gray-600 font-semibold">Overview</p>
+              <p className="text-[10px] sm:text-xs uppercase tracking-wider text-gray-600 font-semibold">{t('verification.holding.overview')}</p>
               <p className="text-sm text-gray-800 mt-2 leading-relaxed">
                 {phase === 'verified' && (
                   <>
-                    Status: <span className="font-bold text-emerald-800">Verified</span>
-                    <span className="block mt-1 text-xs text-gray-600">Your KYC submission was approved. You can explore the app from your dashboard.</span>
+                    {t('verification.holding.statusLabel')} <span className="font-bold text-emerald-800">{t('verification.holding.statusVerified')}</span>
+                    <span className="block mt-1 text-xs text-gray-600">{t('verification.holding.verifiedOverview')}</span>
                   </>
                 )}
                 {phase === 'processing' && (
                   <>
-                    Status: <span className="font-bold text-amber-900">{currentSubmissionMeta.label}</span>
-                    <span className="block mt-1 text-xs text-gray-600">Verification is in process. Typical review time is 24-48 hours.</span>
+                    {t('verification.holding.statusLabel')} <span className="font-bold text-amber-900">{currentSubmissionMeta.label}</span>
+                    <span className="block mt-1 text-xs text-gray-600">{t('verification.holding.processingOverview')}</span>
                   </>
                 )}
                 {phase === 'rejected' && (
                   <>
-                    Status: <span className="font-bold text-red-800">Not approved</span>
-                    <span className="block mt-1 text-xs text-gray-600">Update your documents and submit again from the verification page.</span>
+                    {t('verification.holding.statusLabel')} <span className="font-bold text-red-800">{t('verification.holding.notApproved')}</span>
+                    <span className="block mt-1 text-xs text-gray-600">{t('verification.holding.rejectedOverview')}</span>
                   </>
                 )}
                 {phase === 'idle' && (
                   <>
-                    Status: <span className="font-bold text-gray-800">No submission yet</span>
-                    <span className="block mt-1 text-xs text-gray-600">Start by uploading the required documents.</span>
+                    {t('verification.holding.statusLabel')} <span className="font-bold text-gray-800">{t('verification.holding.noSubmission')}</span>
+                    <span className="block mt-1 text-xs text-gray-600">{t('verification.holding.idleOverview')}</span>
                   </>
                 )}
               </p>
@@ -439,7 +440,7 @@ export default function VerificationHoldingPage() {
 
             {phase === 'verified' ? (
               <>
-                <h3 className="text-base font-semibold text-gray-900 mb-3">What you can do now</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-3">{t('verification.holding.whatYouCanDo')}</h3>
                 <ul className="space-y-3 text-sm text-gray-600">
                   <li className="flex items-start gap-3">
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
@@ -447,7 +448,7 @@ export default function VerificationHoldingPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     </span>
-                    Access your full dashboard and account features for your role.
+                    {t('verification.holding.accessDashboard')}
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
@@ -455,47 +456,47 @@ export default function VerificationHoldingPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     </span>
-                    Listings, applications, and payments work according to your verification level.
+                    {t('verification.holding.listingsPayments')}
                   </li>
                 </ul>
               </>
             ) : phase === 'rejected' ? (
               <>
-                <h3 className="text-base font-semibold text-gray-900 mb-3">Next steps</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-3">{t('verification.holding.nextSteps')}</h3>
                 <ul className="space-y-3 text-sm text-gray-600">
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-red-500 shrink-0" />
-                    Review the rejection reason above (if provided).
+                    {t('verification.holding.reviewReason')}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-red-500 shrink-0" />
-                    Prepare clearer scans or the correct document types.
+                    {t('verification.holding.prepareScans')}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-red-500 shrink-0" />
-                    Use <strong className="font-semibold text-gray-800">Re-upload</strong> on this page or go to the verification form.
+                    {t('verification.holding.useReupload')}
                   </li>
                 </ul>
               </>
             ) : (
               <>
-                <h3 className="text-base font-semibold text-gray-900 mb-3">What happens next?</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-3">{t('verification.holding.whatHappensNext')}</h3>
                 <ul className="space-y-3 text-sm text-gray-600">
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                    The admin team reviews your submitted documents.
+                    {t('verification.holding.adminReviews')}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                    Verification usually takes 24 to 48 hours.
+                    {t('verification.holding.reviewTime')}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                    You will be notified when the decision is made.
+                    {t('verification.holding.notifiedDecision')}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                    After approval, this page will show <strong className="font-semibold text-gray-800">Verified</strong>.
+                    {t('verification.holding.afterApproval')}
                   </li>
                 </ul>
               </>
@@ -506,7 +507,7 @@ export default function VerificationHoldingPage() {
                 <svg className="w-5 h-5 shrink-0 sm:mt-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                   <path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 1 1 6 0v3H9z" />
                 </svg>
-                <p className="text-xs sm:text-sm font-medium leading-relaxed">Your documents are encrypted and handled securely.</p>
+                <p className="text-xs sm:text-sm font-medium leading-relaxed">{t('verification.holding.encryptedSecure')}</p>
               </div>
             </div>
           </aside>
@@ -524,14 +525,14 @@ export default function VerificationHoldingPage() {
               <svg className="w-5 h-5 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              <span className="font-medium">Verified - thank you for completing identity verification.</span>
+              <span className="font-medium">{t('verification.holding.verifiedThankYou')}</span>
             </>
           ) : (
             <>
               <svg className="w-5 h-5 shrink-0 text-emerald-700" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <path d="M12 2l7 3v6c0 5-3.4 9.7-7 11-3.6-1.3-7-6-7-11V5l7-3zm-1 13l5-5-1.4-1.4L11 12.2l-1.6-1.6L8 12l3 3z" />
               </svg>
-              <span>Your documents are secure and reviewed in order of submission.</span>
+              <span>{t('verification.holding.secureReviewOrder')}</span>
             </>
           )}
         </div>

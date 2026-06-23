@@ -1,3 +1,4 @@
+import { useTranslation } from '../../lib/i18n';
 import { feeFormulaParts } from './adminDashboardUtils';
 
 export default function AdminFeePoliciesSection({
@@ -15,19 +16,21 @@ export default function AdminFeePoliciesSection({
   handleEditFeePolicy,
   handleToggleFeePolicy,
 }) {
+  const { t } = useTranslation();
+
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Fee policies</h2>
-          <p className="text-sm text-slate-500">Manage listing and unlock fee policies.</p>
+          <h2 className="text-xl font-bold text-slate-900">{t('admin.fees.title')}</h2>
+          <p className="text-sm text-slate-500">{t('admin.fees.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <input
             type="text"
             value={feeCodeFilter}
             onChange={(e) => setFeeCodeFilter(e.target.value)}
-            placeholder="Filter by code"
+            placeholder={t('admin.fees.filterByCode')}
             className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
           />
           <select
@@ -35,9 +38,9 @@ export default function AdminFeePoliciesSection({
             onChange={(e) => setFeeActiveFilter(e.target.value)}
             className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
           >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="all">{t('admin.fees.all')}</option>
+            <option value="active">{t('admin.fees.active')}</option>
+            <option value="inactive">{t('admin.fees.inactive')}</option>
           </select>
         </div>
       </div>
@@ -45,17 +48,17 @@ export default function AdminFeePoliciesSection({
       <form onSubmit={handleCreateFeePolicy} className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Create fee policy</h3>
-            <p className="text-xs text-slate-500">Define the base cost, percentage component, and schedule in one place.</p>
+            <h3 className="text-sm font-semibold text-slate-900">{t('admin.fees.createTitle')}</h3>
+            <p className="text-xs text-slate-500">{t('admin.fees.createSubtitle')}</p>
           </div>
           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm ring-1 ring-slate-200">
-            Required fields are labeled
+            {t('admin.fees.requiredHint')}
           </span>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
           <label className="flex flex-col gap-2 xl:col-span-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Code</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('admin.fees.code')}</span>
             <input
               type="text"
               placeholder="LISTING_CREATE"
@@ -66,7 +69,7 @@ export default function AdminFeePoliciesSection({
           </label>
 
           <label className="flex flex-col gap-2 xl:col-span-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Policy name</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('admin.fees.policyName')}</span>
             <input
               type="text"
               placeholder="Listing creation fee"
@@ -77,7 +80,7 @@ export default function AdminFeePoliciesSection({
           </label>
 
           <label className="flex flex-col gap-2 xl:col-span-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Currency</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('admin.fees.currency')}</span>
             <input
               type="text"
               placeholder="BDT"
@@ -88,7 +91,7 @@ export default function AdminFeePoliciesSection({
           </label>
 
           <label className="flex flex-col gap-2 xl:col-span-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Effective from</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('admin.fees.effectiveFrom')}</span>
             <input
               type="datetime-local"
               value={feeForm.effectiveFrom}
@@ -98,21 +101,21 @@ export default function AdminFeePoliciesSection({
           </label>
 
           <label className="flex flex-col gap-2 xl:col-span-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Active state</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('admin.fees.activeState')}</span>
             <div className="flex h-[42px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700">
               <input
                 type="checkbox"
                 checked={feeForm.isActive}
                 onChange={(e) => setFeeForm((prev) => ({ ...prev, isActive: e.target.checked }))}
               />
-              <span>Active on create</span>
+              <span>{t('admin.fees.activeOnCreate')}</span>
             </div>
           </label>
 
           <div className="xl:col-span-12">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
               <label className="flex flex-col gap-2 xl:col-span-3">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Fixed amount</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('admin.fees.fixedAmount')}</span>
                 <input
                   type="number"
                   min="0"
@@ -125,7 +128,7 @@ export default function AdminFeePoliciesSection({
               </label>
 
               <label className="flex flex-col gap-2 xl:col-span-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Percent</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('admin.fees.percent')}</span>
                 <input
                   type="number"
                   min="0"
@@ -138,7 +141,7 @@ export default function AdminFeePoliciesSection({
               </label>
 
               <label className="flex flex-col gap-2 xl:col-span-3">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Percent base field</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('admin.fees.percentBaseField')}</span>
                 <input
                   type="text"
                   placeholder="rent"
@@ -149,7 +152,7 @@ export default function AdminFeePoliciesSection({
               </label>
 
               <label className="flex flex-col gap-2 xl:col-span-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Minimum</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('admin.fees.minimum')}</span>
                 <input
                   type="number"
                   min="0"
@@ -162,7 +165,7 @@ export default function AdminFeePoliciesSection({
               </label>
 
               <label className="flex flex-col gap-2 xl:col-span-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Maximum</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('admin.fees.maximum')}</span>
                 <input
                   type="number"
                   min="0"
@@ -182,7 +185,7 @@ export default function AdminFeePoliciesSection({
               disabled={feeBusy}
               className="w-full rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-50 md:w-auto"
             >
-              Create fee policy
+              {t('admin.fees.createButton')}
             </button>
           </div>
         </div>
@@ -193,26 +196,26 @@ export default function AdminFeePoliciesSection({
       ) : null}
 
       {feeLoading ? (
-        <p className="text-sm text-slate-500">Loading fee policies...</p>
+        <p className="text-sm text-slate-500">{t('admin.fees.loading')}</p>
       ) : feePolicies.length === 0 ? (
-        <p className="text-sm text-slate-500">No fee policies found for selected filters.</p>
+        <p className="text-sm text-slate-500">{t('admin.fees.empty')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-slate-500">
-                <th className="py-2 pr-4">Code</th>
-                <th className="py-2 pr-4">Version</th>
-                <th className="py-2 pr-4">Name</th>
-                <th className="py-2 pr-4">Formula</th>
-                <th className="py-2 pr-4">Status</th>
-                <th className="py-2 pr-4">Effective from</th>
-                <th className="py-2">Actions</th>
+                <th className="py-2 pr-4">{t('admin.fees.tableCode')}</th>
+                <th className="py-2 pr-4">{t('admin.fees.tableVersion')}</th>
+                <th className="py-2 pr-4">{t('admin.fees.tableName')}</th>
+                <th className="py-2 pr-4">{t('admin.fees.tableFormula')}</th>
+                <th className="py-2 pr-4">{t('admin.fees.tableStatus')}</th>
+                <th className="py-2 pr-4">{t('admin.fees.tableEffectiveFrom')}</th>
+                <th className="py-2">{t('admin.fees.tableActions')}</th>
               </tr>
             </thead>
             <tbody>
               {feePolicies.map((policy) => {
-                const formulaParts = feeFormulaParts(policy);
+                const formulaParts = feeFormulaParts(policy, t);
 
                 return (
                   <tr key={policy.id} className="border-b border-slate-100 align-top">
@@ -235,7 +238,7 @@ export default function AdminFeePoliciesSection({
                             </div>
                           ))
                         ) : (
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">No formula</span>
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">{t('admin.fees.noFormula')}</span>
                         )}
                       </div>
                     </td>
@@ -245,11 +248,11 @@ export default function AdminFeePoliciesSection({
                           policy.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
                         }`}
                       >
-                        {policy.isActive ? 'Active' : 'Inactive'}
+                        {policy.isActive ? t('admin.fees.active') : t('admin.fees.inactive')}
                       </span>
                     </td>
                     <td className="py-3 pr-4 text-slate-700">
-                      {policy.effectiveFrom ? new Date(policy.effectiveFrom).toLocaleString() : 'N/A'}
+                      {policy.effectiveFrom ? new Date(policy.effectiveFrom).toLocaleString() : t('admin.labels.na')}
                     </td>
                     <td className="py-3">
                       <div className="flex flex-wrap gap-2">
@@ -259,7 +262,7 @@ export default function AdminFeePoliciesSection({
                           onClick={() => handleEditFeePolicy(policy)}
                           className="rounded-lg bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 transition hover:bg-sky-100 disabled:opacity-50"
                         >
-                          Edit
+                          {t('admin.fees.edit')}
                         </button>
                         <button
                           type="button"
@@ -269,7 +272,7 @@ export default function AdminFeePoliciesSection({
                             policy.isActive ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
                           }`}
                         >
-                          {policy.isActive ? 'Deactivate' : 'Activate'}
+                          {policy.isActive ? t('admin.fees.deactivate') : t('admin.fees.activate')}
                         </button>
                       </div>
                     </td>

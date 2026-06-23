@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import NotificationBell from '../../components/NotificationBell';
 import BrandLogoLink from '../../components/BrandLogoLink';
 import UserMenu from '../../components/UserMenu';
+import { useTranslation } from '../../lib/i18n';
 import { Icon } from './AdminUi';
 import {
   AUTH_UPDATE_EVENT,
@@ -13,6 +14,7 @@ import {
 import { useProfilePhotoDownloadUrl } from '../../hooks/useProfilePhotoDownloadUrl';
 
 export default function AdminHeader({ onToggleMenu }) {
+  const { t } = useTranslation();
   const [user, setUser] = useState(() => getCurrentUser());
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export default function AdminHeader({ onToggleMenu }) {
           <div className="ml-auto flex shrink-0 items-center gap-2.5 sm:gap-2 md:gap-3.5">
             <NotificationBell />
             <UserMenu
-              name={name || 'Admin'}
+              name={name || t('admin.header.defaultName')}
               email={email}
               role={role}
               initials={initials}
@@ -45,7 +47,7 @@ export default function AdminHeader({ onToggleMenu }) {
             <button
               type="button"
               className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-gray-200 text-gray-600 transition hover:bg-gray-50 lg:hidden"
-              aria-label="Open menu"
+              aria-label={t('admin.header.openMenu')}
               onClick={onToggleMenu}
             >
               <Icon className="h-4 w-4" path="M4 7h16M4 12h16M4 17h16" />

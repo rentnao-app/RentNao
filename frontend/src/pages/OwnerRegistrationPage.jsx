@@ -2,6 +2,7 @@ import { startTransition, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
 import { apiFetch, getCurrentUser, splitName } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 import {
   clearPendingSignupPhone,
   clipPhoneInput,
@@ -30,12 +31,20 @@ const BLOOD_GROUP_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 /** Backend `EmploymentStatus` (same enum family as tenant profiles) — drives profession choices. */
 const EMPLOYMENT_STATUS_OPTIONS = [
-  { value: 'EMPLOYED', label: 'Employed' },
-  { value: 'SELF_EMPLOYED', label: 'Self-employed' },
-  { value: 'UNEMPLOYED', label: 'Unemployed' },
-  { value: 'STUDENT', label: 'Student' },
-  { value: 'RETIRED', label: 'Retired' },
+  { value: 'EMPLOYED', labelKey: 'registration.owner.employmentEmployed' },
+  { value: 'SELF_EMPLOYED', labelKey: 'registration.owner.employmentSelfEmployed' },
+  { value: 'UNEMPLOYED', labelKey: 'registration.owner.employmentUnemployed' },
+  { value: 'STUDENT', labelKey: 'registration.owner.employmentStudent' },
+  { value: 'RETIRED', labelKey: 'registration.owner.employmentRetired' },
 ];
+
+const RELIGION_LABEL_KEYS = {
+  Islam: 'registration.options.islam',
+  Hinduism: 'registration.options.hinduism',
+  Christianity: 'registration.options.christianity',
+  Buddhism: 'registration.options.buddhism',
+  Other: 'registration.options.other',
+};
 
 /**
  * Profession lines per employment; each maps to backend `JobCategory` + a short `profession` string for the API.
@@ -43,35 +52,35 @@ const EMPLOYMENT_STATUS_OPTIONS = [
  */
 const PROFESSION_ROWS_BY_EMPLOYMENT = {
   EMPLOYED: [
-    { label: 'Engineer / technologist', jobCategory: 'TECHNOLOGY' },
-    { label: 'Doctor / healthcare worker', jobCategory: 'HEALTHCARE' },
-    { label: 'Teacher / academic', jobCategory: 'EDUCATION' },
-    { label: 'Finance / banking', jobCategory: 'FINANCE' },
-    { label: 'Construction / development', jobCategory: 'CONSTRUCTION' },
-    { label: 'Hospitality / tourism', jobCategory: 'HOSPITALITY' },
-    { label: 'Retail / sales', jobCategory: 'RETAIL' },
-    { label: 'Government service', jobCategory: 'GOVERNMENT' },
-    { label: 'Property / facilities manager (employed)', jobCategory: 'OTHER' },
-    { label: 'Other employed role', jobCategory: 'OTHER' },
+    { label: 'Engineer / technologist', labelKey: 'registration.professions.engineerTechnologist', jobCategory: 'TECHNOLOGY' },
+    { label: 'Doctor / healthcare worker', labelKey: 'registration.professions.doctorHealthcare', jobCategory: 'HEALTHCARE' },
+    { label: 'Teacher / academic', labelKey: 'registration.professions.teacherAcademic', jobCategory: 'EDUCATION' },
+    { label: 'Finance / banking', labelKey: 'registration.professions.financeBanking', jobCategory: 'FINANCE' },
+    { label: 'Construction / development', labelKey: 'registration.professions.constructionDevelopment', jobCategory: 'CONSTRUCTION' },
+    { label: 'Hospitality / tourism', labelKey: 'registration.professions.hospitalityTourism', jobCategory: 'HOSPITALITY' },
+    { label: 'Retail / sales', labelKey: 'registration.professions.retailSales', jobCategory: 'RETAIL' },
+    { label: 'Government service', labelKey: 'registration.professions.governmentService', jobCategory: 'GOVERNMENT' },
+    { label: 'Property / facilities manager (employed)', labelKey: 'registration.professions.propertyManager', jobCategory: 'OTHER' },
+    { label: 'Other employed role', labelKey: 'registration.professions.otherEmployed', jobCategory: 'OTHER' },
   ],
   SELF_EMPLOYED: [
-    { label: 'Property owner / landlord', jobCategory: 'SELF_EMPLOYED' },
-    { label: 'Real estate broker / agent', jobCategory: 'SELF_EMPLOYED' },
-    { label: 'Business owner (general)', jobCategory: 'OTHER' },
-    { label: 'Consultant / freelancer', jobCategory: 'OTHER' },
-    { label: 'Other self-employed', jobCategory: 'OTHER' },
+    { label: 'Property owner / landlord', labelKey: 'registration.professions.propertyOwner', jobCategory: 'SELF_EMPLOYED' },
+    { label: 'Real estate broker / agent', labelKey: 'registration.professions.realEstateBroker', jobCategory: 'SELF_EMPLOYED' },
+    { label: 'Business owner (general)', labelKey: 'registration.professions.businessOwner', jobCategory: 'OTHER' },
+    { label: 'Consultant / freelancer', labelKey: 'registration.professions.consultantFreelancer', jobCategory: 'OTHER' },
+    { label: 'Other self-employed', labelKey: 'registration.professions.otherSelfEmployed', jobCategory: 'OTHER' },
   ],
   UNEMPLOYED: [
-    { label: 'Not currently working', jobCategory: 'OTHER' },
-    { label: 'Looking for work', jobCategory: 'OTHER' },
+    { label: 'Not currently working', labelKey: 'registration.professions.notWorking', jobCategory: 'OTHER' },
+    { label: 'Looking for work', labelKey: 'registration.professions.lookingForWork', jobCategory: 'OTHER' },
   ],
   STUDENT: [
-    { label: 'Full-time student', jobCategory: 'OTHER' },
-    { label: 'Student with part-time work', jobCategory: 'RETAIL' },
+    { label: 'Full-time student', labelKey: 'registration.professions.fullTimeStudent', jobCategory: 'OTHER' },
+    { label: 'Student with part-time work', labelKey: 'registration.professions.studentPartTime', jobCategory: 'RETAIL' },
   ],
   RETIRED: [
-    { label: 'Retired', jobCategory: 'OTHER' },
-    { label: 'Retired — previously in property / real estate', jobCategory: 'SELF_EMPLOYED' },
+    { label: 'Retired', labelKey: 'registration.professions.retired', jobCategory: 'OTHER' },
+    { label: 'Retired — previously in property / real estate', labelKey: 'registration.professions.retiredProperty', jobCategory: 'SELF_EMPLOYED' },
   ],
 };
 
@@ -97,6 +106,7 @@ function Icon({ children }) {
 }
 
 export default function OwnerRegistrationPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
 
   const [form, setForm] = useState({
@@ -170,42 +180,39 @@ export default function OwnerRegistrationPage() {
     try {
       const currentUser = getCurrentUser();
       if (!currentUser?.userId) {
-        setError('Not authenticated. Please log in again.');
+        setError(t('common.notAuthenticated'));
         return;
       }
 
       const suffix = digitsOnly(form.phoneAfter880);
       if (!/^1[3-9]\d{8}$/.test(suffix)) {
-        setError(
-          'Enter the 10 digits after +880 (e.g. 1712345678). Your full number must be a valid 01… mobile.'
-        );
+        setError(t('common.phoneAfter880Error'));
         return;
       }
 
       if (!form.dateOfBirth) {
-        setError('Please select your date of birth.');
+        setError(t('registration.owner.dobRequired'));
         return;
       }
       if (!form.religion || !form.employmentStatus || !form.workSelection || !form.currentLocation) {
-        setError('Please complete all required fields.');
+        setError(t('registration.owner.fieldsRequired'));
         return;
       }
 
       const parsed = parseWorkSelection(form.workSelection);
       if (!parsed?.jobCategory || !parsed?.roleLabel) {
-        setError('Please select your role or profession for your employment type.');
+        setError(t('registration.owner.roleRequired'));
         return;
       }
 
       const { firstName, lastName } = splitName(form.fullName);
       if (!firstName || firstName.length < 2) {
-        setError('Please enter your full name (at least 2 characters for your first name).');
+        setError(t('registration.owner.nameRequired'));
         return;
       }
 
-      const empLabel =
-        EMPLOYMENT_STATUS_OPTIONS.find((o) => o.value === form.employmentStatus)?.label ||
-        form.employmentStatus;
+      const empOption = EMPLOYMENT_STATUS_OPTIONS.find((o) => o.value === form.employmentStatus);
+      const empLabel = empOption ? t(empOption.labelKey) : form.employmentStatus;
       const professionPayload = `${empLabel}: ${parsed.roleLabel}`.slice(0, 100);
 
       const ownerCategory = 'RESIDENTIAL';
@@ -233,12 +240,12 @@ export default function OwnerRegistrationPage() {
 
       if (!ownerRes.ok) {
         const data = await ownerRes.json().catch(() => ({}));
-        throw new Error(data.error || data.message || 'Failed to create owner profile');
+        throw new Error(data.error || data.message || t('registration.owner.profileFailed'));
       }
 
       window.location.href = '/verification?role=OWNER';
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred');
+      setError(err.message || t('common.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -256,16 +263,16 @@ export default function OwnerRegistrationPage() {
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
             <Link to="/" className="text-gray-700 hover:text-emerald-700 transition">
-              Home
+              {t('common.home')}
             </Link>
             <Link to="/listings" className="text-gray-700 hover:text-emerald-700 transition">
-              Find Property
+              {t('common.findProperty')}
             </Link>
             <Link to="/owner-dashboard/create-listing" className="text-gray-700 hover:text-emerald-700 transition">
-              List Property
+              {t('common.listProperty')}
             </Link>
             <Link to="/services" className="text-gray-700 hover:text-emerald-700 transition">
-              Services
+              {t('common.services')}
             </Link>
           </nav>
 
@@ -274,13 +281,13 @@ export default function OwnerRegistrationPage() {
               to="/login"
               className="px-3 sm:px-5 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
             >
-              Login
+              {t('common.login')}
             </Link>
             <Link
               to="/signup"
               className="px-3 sm:px-5 py-2 rounded-xl bg-emerald-700 text-white text-xs sm:text-sm font-semibold hover:bg-emerald-800 transition"
             >
-              Sign Up
+              {t('common.signUp')}
             </Link>
           </div>
 
@@ -288,7 +295,7 @@ export default function OwnerRegistrationPage() {
             type="button"
             className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-800 shadow-sm hover:bg-emerald-50 transition"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={mobileMenuOpen ? t('common.closeMenu') : t('common.openMenu')}
             aria-expanded={mobileMenuOpen}
             aria-controls="owner-mobile-nav"
           >
@@ -310,7 +317,7 @@ export default function OwnerRegistrationPage() {
           <button
             type="button"
             className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
-            aria-label="Close menu"
+            aria-label={t('common.closeMenu')}
             onClick={() => setMobileMenuOpen(false)}
           />
           <aside
@@ -327,14 +334,14 @@ export default function OwnerRegistrationPage() {
                   onClick={() => setMobileMenuOpen(false)}
                 />
                 <span id="owner-mobile-nav-title" className="sr-only">
-                  Main menu
+                  {t('common.mainMenu')}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
-                aria-label="Close menu"
+                aria-label={t('common.closeMenu')}
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -342,48 +349,48 @@ export default function OwnerRegistrationPage() {
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Mobile">
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label={t('common.mobile')}>
               <Link
                 to="/"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-[#2f8444] bg-[#eef7ef]"
               >
-                Home
+                {t('common.home')}
               </Link>
               <Link
                 to="/listings"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                Find Property
+                {t('common.findProperty')}
               </Link>
               <Link
                 to="/owner-dashboard/create-listing"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                List Property
+                {t('common.listProperty')}
               </Link>
               <Link
                 to="/services"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                Services
+                {t('common.services')}
               </Link>
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                Login
+                {t('common.login')}
               </Link>
               <Link
                 to="/signup"
                 onClick={() => setMobileMenuOpen(false)}
                 className="mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition"
               >
-                Sign Up
+                {t('common.signUp')}
               </Link>
             </nav>
           </aside>
@@ -393,10 +400,9 @@ export default function OwnerRegistrationPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10">
         <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-10">
           <aside className="rounded-3xl bg-gradient-to-b from-[#eef8f1] to-[#e2f2e8] border border-emerald-100 p-5 shadow-sm">
-            <h2 className="text-4xl font-extrabold leading-tight text-emerald-900">Create your owner profile</h2>
+            <h2 className="text-4xl font-extrabold leading-tight text-emerald-900">{t('registration.owner.sidebarTitle')}</h2>
             <p className="mt-4 text-emerald-700 text-lg">
-              We collect the same core profile details as for tenants, plus how you plan to use RentNao—so verification
-              and matching stay accurate.
+              {t('registration.owner.sidebarDesc')}
             </p>
 
             <div className="mt-6 grid grid-cols-3 gap-2">
@@ -406,7 +412,7 @@ export default function OwnerRegistrationPage() {
                     <path d="M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z" />
                   </svg>
                 </div>
-                <p className="text-[11px] font-semibold text-gray-700">List properties</p>
+                <p className="text-[11px] font-semibold text-gray-700">{t('registration.owner.listProperties')}</p>
               </div>
               <div className="bg-white/80 border border-emerald-100 rounded-xl p-2 text-center">
                 <div className="text-emerald-700 mb-1 flex justify-center">
@@ -414,7 +420,7 @@ export default function OwnerRegistrationPage() {
                     <path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-6 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
                   </svg>
                 </div>
-                <p className="text-[11px] font-semibold text-gray-700">Talk to tenants</p>
+                <p className="text-[11px] font-semibold text-gray-700">{t('registration.owner.talkToTenants')}</p>
               </div>
               <div className="bg-white/80 border border-emerald-100 rounded-xl p-2 text-center">
                 <div className="text-emerald-700 mb-1 flex justify-center">
@@ -422,22 +428,22 @@ export default function OwnerRegistrationPage() {
                     <path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5z" />
                   </svg>
                 </div>
-                <p className="text-[11px] font-semibold text-gray-700">Verified onboarding</p>
+                <p className="text-[11px] font-semibold text-gray-700">{t('registration.owner.verifiedOnboarding')}</p>
               </div>
             </div>
 
             <div className="mt-6 rounded-2xl overflow-hidden border border-emerald-100 bg-white p-2">
-              <img src={SIDE_IMAGE} alt="Owner registration visual" className="w-full h-90% object-cover rounded-xl" />
+              <img src={SIDE_IMAGE} alt={t('registration.owner.sidebarImageAlt')} className="w-full h-90% object-cover rounded-xl" />
             </div>
           </aside>
 
           <section className="rounded-3xl bg-white border border-gray-100 shadow-[0_10px_28px_rgba(15,23,42,0.08)] p-5 sm:p-7">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-emerald-800 tracking-tight">Owner information</h1>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-emerald-800 tracking-tight">{t('registration.owner.pageTitle')}</h1>
               <div className="flex items-center gap-4">
-                <StepItem number={1} label="Details" active />
+                <StepItem number={1} label={t('common.details')} active />
                 <span className="text-gray-300">—</span>
-                <StepItem number={2} label="Verify" />
+                <StepItem number={2} label={t('common.verify')} />
               </div>
             </div>
 
@@ -447,12 +453,12 @@ export default function OwnerRegistrationPage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <p className="text-sm text-gray-600 border-b border-gray-100 pb-4">
-                Complete your details so we can verify your account and match you with tenants.
+                {t('registration.owner.formIntro')}
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                 <div className="md:col-span-2">
-                  <label className={labelClass}>Full name</label>
+                  <label className={labelClass}>{t('common.fullName')}</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -460,7 +466,7 @@ export default function OwnerRegistrationPage() {
                       value={form.fullName}
                       onChange={handleChange}
                       className={inputClass}
-                      placeholder="As on your NID / documents"
+                      placeholder={t('registration.owner.fullNamePlaceholder')}
                       required
                     />
                     <Icon>
@@ -472,7 +478,7 @@ export default function OwnerRegistrationPage() {
                 </div>
 
                 <div>
-                  <label className={labelClass}>Mobile number</label>
+                  <label className={labelClass}>{t('common.mobileNumber')}</label>
                   <div className="flex rounded-xl border border-gray-200 overflow-hidden">
                     <div className="px-3 bg-gray-50 border-r border-gray-200 flex items-center text-sm text-gray-600">+880</div>
                     <input
@@ -486,15 +492,15 @@ export default function OwnerRegistrationPage() {
                         setForm((prev) => ({ ...prev, phoneAfter880: d }));
                       }}
                       className="w-full px-3 py-3 text-sm outline-none"
-                      placeholder="1712345678"
+                      placeholder={t('common.phoneAfter880Placeholder')}
                       required
                     />
                   </div>
-                  <p className="mt-1 text-xs text-gray-500">10 digits after +880 (same mobile you used to sign up).</p>
+                  <p className="mt-1 text-xs text-gray-500">{t('common.phoneAfter880Hint')}</p>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Date of birth</label>
+                  <label className={labelClass}>{t('common.dateOfBirth')}</label>
                   <input
                     type="date"
                     name="dateOfBirth"
@@ -506,7 +512,7 @@ export default function OwnerRegistrationPage() {
                 </div>
 
                 <div>
-                  <label className={labelClass}>Gender</label>
+                  <label className={labelClass}>{t('common.gender')}</label>
                   <div className="flex items-center gap-5 h-[50px] rounded-xl border border-gray-200 px-3">
                     {['male', 'female', 'other'].map((g) => (
                       <label key={g} className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
@@ -518,28 +524,28 @@ export default function OwnerRegistrationPage() {
                           onChange={handleChange}
                           className="accent-emerald-700"
                         />
-                        <span className="capitalize">{g}</span>
+                        <span>{t(`common.${g}`)}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Religion</label>
+                  <label className={labelClass}>{t('common.religion')}</label>
                   <select name="religion" value={form.religion} onChange={handleChange} className={inputClass} required>
-                    <option value="">Select religion</option>
+                    <option value="">{t('common.selectReligion')}</option>
                     {RELIGION_OPTIONS.map((item) => (
                       <option key={item} value={item}>
-                        {item}
+                        {t(RELIGION_LABEL_KEYS[item] || 'registration.options.other')}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Blood group</label>
+                  <label className={labelClass}>{t('common.bloodGroup')}</label>
                   <select name="bloodGroup" value={form.bloodGroup} onChange={handleChange} className={inputClass}>
-                    <option value="">Select blood group (optional)</option>
+                    <option value="">{t('common.selectBloodGroupOptional')}</option>
                     {BLOOD_GROUP_OPTIONS.map((item) => (
                       <option key={item} value={item}>
                         {item}
@@ -547,12 +553,12 @@ export default function OwnerRegistrationPage() {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500">
-                    Same field as tenant onboarding; owner API does not store it yet.
+                    {t('registration.owner.bloodGroupNote')}
                   </p>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Employment</label>
+                  <label className={labelClass}>{t('registration.owner.employment')}</label>
                   <select
                     name="employmentStatus"
                     value={form.employmentStatus}
@@ -560,22 +566,20 @@ export default function OwnerRegistrationPage() {
                     className={inputClass}
                     required
                   >
-                    <option value="">Select employment status</option>
+                    <option value="">{t('registration.owner.selectEmployment')}</option>
                     {EMPLOYMENT_STATUS_OPTIONS.map((item) => (
                       <option key={item.value} value={item.value}>
-                        {item.label}
+                        {t(item.labelKey)}
                       </option>
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500">
-                    Uses the same <span className="font-medium text-gray-700">EmploymentStatus</span> idea as tenants;
-                    we then map your answer to <span className="font-medium text-gray-700">profession</span> +{' '}
-                    <span className="font-medium text-gray-700">jobCategory</span> for the owner profile API.
+                    {t('registration.owner.employmentNote')}
                   </p>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Role / profession</label>
+                  <label className={labelClass}>{t('registration.owner.roleProfession')}</label>
                   <select
                     name="workSelection"
                     value={form.workSelection}
@@ -584,25 +588,24 @@ export default function OwnerRegistrationPage() {
                     required
                   >
                     <option value="">
-                      {form.employmentStatus ? 'Select the option that best describes you' : 'Choose employment first'}
+                      {form.employmentStatus ? t('registration.owner.selectRoleBest') : t('registration.owner.chooseEmploymentFirst')}
                     </option>
                     {professionRows.map((row) => (
                       <option
                         key={`${form.employmentStatus}-${row.jobCategory}-${row.label}`}
                         value={`${form.employmentStatus}|${row.jobCategory}|${row.label}`}
                       >
-                        {row.label}
+                        {t(row.labelKey)}
                       </option>
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500">
-                    Each option sets the backend <span className="font-medium text-gray-700">jobCategory</span> enum and
-                    a clear <span className="font-medium text-gray-700">profession</span> string.
+                    {t('registration.owner.roleNote')}
                   </p>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Primary area (current)</label>
+                  <label className={labelClass}>{t('registration.owner.primaryArea')}</label>
                   <select
                     name="currentLocation"
                     value={form.currentLocation}
@@ -610,7 +613,7 @@ export default function OwnerRegistrationPage() {
                     className={inputClass}
                     required
                   >
-                    <option value="">Where are you based?</option>
+                    <option value="">{t('registration.owner.whereBased')}</option>
                     {LOCATION_OPTIONS.map((item) => (
                       <option key={item} value={item}>
                         {item}
@@ -625,14 +628,14 @@ export default function OwnerRegistrationPage() {
                   to="/signup"
                   className="h-11 w-full rounded-xl border border-gray-200 bg-white text-gray-600 font-semibold flex items-center justify-center hover:bg-gray-50 transition"
                 >
-                  Back
+                  {t('common.back')}
                 </Link>
                 <button
                   type="submit"
                   disabled={loading}
                   className="h-11 w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Saving...' : 'Continue'}
+                  {loading ? t('common.saving') : t('common.continue')}
                 </button>
               </div>
 
@@ -640,7 +643,7 @@ export default function OwnerRegistrationPage() {
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5z" />
                 </svg>
-                Your information is safe and secure. Next: upload owner verification documents (NID + proof of ownership).
+                {t('registration.owner.nextStepNote')}
               </p>
             </form>
           </section>
