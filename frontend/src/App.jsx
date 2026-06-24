@@ -44,7 +44,7 @@ function AppLayout() {
   const hideFooter = pathname.startsWith('/admin-dashboard');
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-x-clip max-w-full">
       <div className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage />} />

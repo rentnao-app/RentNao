@@ -11,6 +11,7 @@ import {
   getApiErrorMessage,
   getCurrentUser,
   getRefreshToken,
+  getRequestErrorMessage,
   getUserId,
   isLoggedIn,
   setAuthSession,
@@ -120,7 +121,7 @@ export default function ReviewPage() {
           }
         }
       } catch (err) {
-        setListError(err?.message || t('reviews.errors.loadReviews'));
+        setListError(getRequestErrorMessage(err, t('reviews.errors.loadReviews')));
       } finally {
         if (isFirstPage) setLoading(false);
         else setLoadingMore(false);
@@ -140,7 +141,7 @@ export default function ReviewPage() {
       setStats(body?.data || null);
       setStatsError('');
     } catch (err) {
-      setStatsError(err?.message || t('reviews.errors.loadStats'));
+      setStatsError(getRequestErrorMessage(err, t('reviews.errors.loadStats')));
     } finally {
       setStatsLoading(false);
     }
@@ -424,7 +425,7 @@ function ReviewForm({ initial, isEdit, onCancel, onSubmitted }) {
       toast.success(t('reviews.toast.submitted'));
       onSubmitted?.(created);
     } catch (err) {
-      toast.error(err?.message || t('reviews.toast.submitFailed'));
+      toast.error(getRequestErrorMessage(err, t('reviews.toast.submitFailed')));
     } finally {
       setSubmitting(false);
     }

@@ -1,4 +1,14 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+/** Dev always uses same-origin requests (Vite proxy). Prod uses VITE_API_URL. */
+function resolveApiUrl() {
+  if (import.meta.env.DEV) {
+    return '';
+  }
+  const envUrl = import.meta.env.VITE_API_URL?.trim();
+  if (envUrl) return envUrl.replace(/\/$/, '');
+  return 'http://localhost:3000';
+}
+
+const API_URL = resolveApiUrl();
 
 const ACCESS_TOKEN_KEY = 'rentnao_access_token';
 const REFRESH_TOKEN_KEY = 'rentnao_refresh_token';
@@ -133,6 +143,13 @@ export function getRequestErrorMessage(err, fallback = 'Request failed') {
     if (fromBody) return fromBody;
   }
   const message = typeof err.message === 'string' ? err.message.trim() : '';
+  if (
+    message === 'Failed to fetch' ||
+    message === 'NetworkError when attempting to fetch resource.' ||
+    message === 'Load failed'
+  ) {
+    return fallback;
+  }
   if (message) return message;
   return fallback;
 }

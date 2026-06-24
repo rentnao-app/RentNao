@@ -3,7 +3,7 @@ import { useTranslation } from '../lib/i18n';
 
 /** Default size for main headers (wide mark + wordmark). */
 export const BRAND_LOGO_IMG_CLASS =
-  'h-9 w-auto max-w-[min(100%,12rem)] object-contain object-left sm:h-10 sm:max-w-[14rem]';
+  'h-8 w-auto max-w-[min(100%,9.5rem)] object-contain object-left sm:h-9 md:h-10 sm:max-w-[12rem] md:max-w-[14rem]';
 
 /** Smaller mark for mobile drawers / compact rows. */
 export const BRAND_LOGO_IMG_CLASS_COMPACT = 'h-8 w-auto max-w-[10rem] object-contain object-left sm:h-9 sm:max-w-[11rem]';

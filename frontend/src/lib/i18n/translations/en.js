@@ -53,6 +53,8 @@ const existingMerged = {
     heroTitle: 'Find Your Perfect Home,',
     heroTitleBreak: 'No Brokers Needed',
     heroSubtitle: 'Connecting Owners & Tenants Directly in Bangladesh.',
+    heroSubtitleLine1: 'Connecting Owners & Tenants',
+    heroSubtitleLine2: 'Directly in Bangladesh.',
     heroImageAlt: 'Happy couple with rented home',
     statVerifiedTitle: 'Verified Listings',
     statVerifiedSubtitle: 'Safe & Trusted Properties',

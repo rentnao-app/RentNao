@@ -53,6 +53,8 @@ const existingMerged = {
     heroTitle: 'আপনার পছন্দের বাড়ি খুঁজুন,',
     heroTitleBreak: 'দালাল ছাড়াই',
     heroSubtitle: 'বাংলাদেশে মালিক ও ভাড়াটিয়াকে সরাসরি সংযুক্ত করছি।',
+    heroSubtitleLine1: 'বাংলাদেশে মালিক ও ভাড়াটিয়াকে',
+    heroSubtitleLine2: 'সরাসরি সংযুক্ত করছি।',
     heroImageAlt: 'ভাড়া বাড়িতে সুখী দম্পতি',
     statVerifiedTitle: 'যাচাইকৃত তালিকা',
     statVerifiedSubtitle: 'নিরাপদ ও বিশ্বস্ত সম্পত্তি',

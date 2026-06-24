@@ -14,11 +14,28 @@
 @layer base {
   html {
     font-family: 'Bear Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow-x: clip;
+    max-width: 100%;
   }
   html[data-lang='bn'] {
     font-family: 'Noto Sans Bengali', 'Bear Sans', ui-sans-serif, system-ui, sans-serif;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  body {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+  #root {
+    overflow-x: clip;
+    max-width: 100%;
+    min-height: 100%;
   }
   body, button, input, select, textarea {
     font-family: inherit;
+  }
+  img, video, svg {
+    max-width: 100%;
+    height: auto;
   }
 }
