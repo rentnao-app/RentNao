@@ -39,11 +39,13 @@ export async function consumeWsTicket(ticket: string): Promise<{ userId: string;
   const key = `${TICKET_PREFIX}${ticket}`;
 
   // Atomic GET + DELETE to prevent race conditions on ticket reuse
-  const data = await redis.get(key);
-  if (!data) return null;
+  const data = await redis.eval(
+    "local val = redis.call('GET', KEYS[1]); if val then redis.call('DEL', KEYS[1]) end; return val;",
+    1,
+    key
+  ) as string | null;
 
-  // Delete immediately so it can't be reused
-  await redis.del(key);
+  if (!data) return null;
 
   try {
     return JSON.parse(data);

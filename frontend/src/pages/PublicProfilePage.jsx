@@ -3,8 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
 import { apiFetch, getCurrentUser, getUserId, getUserRole, isLoggedIn } from '../lib/api';
 import { getPublicProfileData, savePublicProfileSnapshot } from '../lib/publicProfiles';
+import { useTranslation } from '../lib/i18n';
 
 export default function PublicProfilePage() {
+  const { t } = useTranslation();
   const { userId } = useParams();
   const [loading, setLoading] = useState(true);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
@@ -35,7 +37,7 @@ export default function PublicProfilePage() {
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
           setRemoteLoaded(false);
-          setError('Showing interaction-based profile summary (remote profile is restricted).');
+          setError(t('publicProfile.errors.restricted'));
           setLoading(false);
           return;
         }
@@ -55,14 +57,14 @@ export default function PublicProfilePage() {
         setRemoteLoaded(true);
       } catch {
         setRemoteLoaded(false);
-        setError('Showing interaction-based profile summary (network unavailable).');
+        setError(t('publicProfile.errors.network'));
       } finally {
         setLoading(false);
       }
     };
 
     void load();
-  }, [canFetchRemote, userId]);
+  }, [canFetchRemote, userId, t]);
 
   if (loading) {
     return (
@@ -76,12 +78,12 @@ export default function PublicProfilePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
         <div className="bg-white border border-gray-100 rounded-xl p-8 max-w-lg w-full text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Profile Not Available</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('publicProfile.notAvailable.title')}</h1>
           <p className="text-gray-500 mb-6">
-            No public profile data found for this user yet.
+            {t('publicProfile.notAvailable.body')}
           </p>
           <Link to="/listings" className="text-teal-700 font-semibold hover:text-teal-800">
-            Browse Listings
+            {t('publicProfile.browseListings')}
           </Link>
         </div>
       </div>
@@ -97,14 +99,14 @@ export default function PublicProfilePage() {
           <BrandLogoLink />
 
           <Link to="/listings" className="hidden lg:inline text-sm font-medium text-teal-700 hover:text-teal-800">
-            Browse Listings
+            {t('publicProfile.browseListings')}
           </Link>
 
           <button
             type="button"
             className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={mobileMenuOpen ? t('header.closeMenu') : t('header.openMenu')}
             aria-expanded={mobileMenuOpen}
             aria-controls="public-profile-mobile-nav"
           >
@@ -126,7 +128,7 @@ export default function PublicProfilePage() {
           <button
             type="button"
             className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] motion-reduce:backdrop-blur-none animate-mobile-nav-backdrop motion-reduce:animate-none motion-reduce:opacity-100"
-            aria-label="Close menu"
+            aria-label={t('header.closeMenu')}
             onClick={() => setMobileMenuOpen(false)}
           />
           <aside
@@ -143,14 +145,14 @@ export default function PublicProfilePage() {
                   onClick={() => setMobileMenuOpen(false)}
                 />
                 <span id="public-profile-mobile-nav-title" className="sr-only">
-                  Main menu
+                  {t('header.mainMenu')}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
-                aria-label="Close menu"
+                aria-label={t('header.closeMenu')}
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -164,14 +166,14 @@ export default function PublicProfilePage() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-semibold text-[#2f8444] bg-[#eef7ef]"
               >
-                Home
+                {t('nav.home')}
               </Link>
               <Link
                 to="/listings"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition"
               >
-                Browse Listings
+                {t('publicProfile.browseListings')}
               </Link>
             </nav>
           </aside>
@@ -187,69 +189,72 @@ export default function PublicProfilePage() {
 
         <section className="bg-white border border-gray-100 rounded-xl p-4 sm:p-6">
           <div className="flex items-center justify-between mb-3 gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{display?.name || 'User'}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{display?.name || t('publicProfile.userFallback')}</h1>
             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
               {display?.role || 'USER'}
             </span>
           </div>
           <p className="text-sm text-gray-700">
-            Verification:{' '}
+            {t('publicProfile.verification')}{' '}
             <span className="inline-flex items-center rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-amber-800 font-semibold">
-              {display?.verificationStatus || 'N/A'}
+              {display?.verificationStatus || t('common.na')}
             </span>
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-sm">
             <p className="rounded-lg bg-sky-50 border border-sky-100 px-3 py-2">
-              <span className="text-sky-700 font-medium">Email:</span> {display?.emailMasked || 'N/A'}
+              <span className="text-sky-700 font-medium">{t('publicProfile.fields.email')}</span> {display?.emailMasked || t('common.na')}
             </p>
             <p className="rounded-lg bg-violet-50 border border-violet-100 px-3 py-2">
-              <span className="text-violet-700 font-medium">Phone:</span> {display?.phoneMasked || 'N/A'}
+              <span className="text-violet-700 font-medium">{t('publicProfile.fields.phone')}</span> {display?.phoneMasked || t('common.na')}
             </p>
             <p className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2">
-              <span className="text-emerald-700 font-medium">Area:</span> {display?.area || 'N/A'}
+              <span className="text-emerald-700 font-medium">{t('publicProfile.fields.area')}</span> {display?.area || t('common.na')}
             </p>
             <p className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
-              <span className="text-amber-700 font-medium">Profession:</span> {display?.profession || 'N/A'}
+              <span className="text-amber-700 font-medium">{t('publicProfile.fields.profession')}</span> {display?.profession || t('common.na')}
             </p>
           </div>
           <p className="text-xs text-gray-400 mt-4">
-            Data source: {remoteLoaded ? 'Verified backend profile data' : 'Interaction-based public summary'}
+            {remoteLoaded ? t('publicProfile.dataSource.verified') : t('publicProfile.dataSource.interaction')}
           </p>
         </section>
 
         <section className="bg-white border border-gray-100 rounded-xl p-4 sm:p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Interaction Stats</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">{t('publicProfile.stats.title')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
-              <p className="text-emerald-700 text-xs font-medium">As Tenant</p>
+              <p className="text-emerald-700 text-xs font-medium">{t('publicProfile.stats.asTenant')}</p>
               <p className="text-xl font-bold text-gray-900">{stats?.totalAsTenant || 0}</p>
             </div>
             <div className="bg-teal-50 border border-teal-100 rounded-lg p-3">
-              <p className="text-teal-700 text-xs font-medium">Accepted (Tenant)</p>
+              <p className="text-teal-700 text-xs font-medium">{t('publicProfile.stats.acceptedTenant')}</p>
               <p className="text-xl font-bold text-gray-900">{stats?.acceptedAsTenant || 0}</p>
             </div>
             <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
-              <p className="text-indigo-700 text-xs font-medium">As Owner</p>
+              <p className="text-indigo-700 text-xs font-medium">{t('publicProfile.stats.asOwner')}</p>
               <p className="text-xl font-bold text-gray-900">{stats?.totalAsOwner || 0}</p>
             </div>
             <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
-              <p className="text-amber-700 text-xs font-medium">Accepted (Owner)</p>
+              <p className="text-amber-700 text-xs font-medium">{t('publicProfile.stats.acceptedOwner')}</p>
               <p className="text-xl font-bold text-gray-900">{stats?.acceptedAsOwner || 0}</p>
             </div>
           </div>
         </section>
 
         <section className="bg-white border border-gray-100 rounded-xl p-4 sm:p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Interactions</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">{t('publicProfile.interactions.title')}</h2>
           {recentInteractions?.length ? (
             <div className="space-y-2">
               {recentInteractions.map((item) => (
                 <div key={item.requestId} className="border border-gray-100 rounded-lg px-4 py-3 bg-gray-50/50">
                   <p className="text-sm font-semibold text-gray-900">
-                    Request #{item.requestId} - Listing #{item.listingId}
+                    {t('publicProfile.interactions.requestListing', {
+                      requestId: item.requestId,
+                      listingId: item.listingId,
+                    })}
                   </p>
                   <p className="text-xs text-gray-600 mt-1">
-                    Status:{' '}
+                    {t('publicProfile.interactions.status')}{' '}
                     <span className="inline-flex items-center rounded-md bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-emerald-700 font-semibold">
                       {item.status}
                     </span>{' '}
@@ -259,11 +264,10 @@ export default function PublicProfilePage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">No interactions recorded yet.</p>
+            <p className="text-sm text-gray-500">{t('publicProfile.interactions.empty')}</p>
           )}
         </section>
       </main>
     </div>
   );
 }
-

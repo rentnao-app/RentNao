@@ -8,6 +8,7 @@ import * as profileService from './services/profile.service';
 import * as verificationService from './services/verification.service';
 import { requireAuth } from '@/security';
 import { dispatchTransliteration } from '@/modules/deals/transliteration';
+import { errorHandler } from '@/middlewares/error-handler';
 
 const users = new OpenAPIHono<{
   Variables: {
@@ -17,6 +18,9 @@ const users = new OpenAPIHono<{
 }>({
   defaultHook: defaultValidationHook,
 });
+
+// Register error handler for this sub-router
+users.onError(errorHandler);
 
 // Apply auth middleware to all routes
 users.use('*', requireAuth);
@@ -136,10 +140,9 @@ users.openapi(routes.createProfileRoute, async (c) => {
     throw new AppError(403, 'You can only create your own profile');
   }
 
-  const userResult = await db.query(
-    `SELECT role, contact_phone FROM "User" WHERE user_id = $1`,
-    [userId]
-  );
+  const userResult = await db.query(`SELECT role, contact_phone FROM "User" WHERE user_id = $1`, [
+    userId,
+  ]);
 
   if (userResult.rows.length === 0) {
     throw new AppError(404, 'User not found');
@@ -156,7 +159,10 @@ users.openapi(routes.createProfileRoute, async (c) => {
   const reqBody = body as any;
   dispatchTransliteration(
     {
-      fullName: reqBody.firstName || reqBody.lastName ? `${reqBody.firstName || ''} ${reqBody.lastName || ''}`.trim() : undefined,
+      fullName:
+        reqBody.firstName || reqBody.lastName
+          ? `${reqBody.firstName || ''} ${reqBody.lastName || ''}`.trim()
+          : undefined,
       profession: reqBody.profession,
       religion: reqBody.religion,
       phone: userResult.rows[0].contact_phone || undefined,
@@ -220,10 +226,9 @@ users.openapi(routes.updateProfileRoute, async (c) => {
     throw new AppError(403, 'You can only update your own profile');
   }
 
-  const userResult = await db.query(
-    `SELECT role, contact_phone FROM "User" WHERE user_id = $1`,
-    [userId]
-  );
+  const userResult = await db.query(`SELECT role, contact_phone FROM "User" WHERE user_id = $1`, [
+    userId,
+  ]);
 
   if (userResult.rows.length === 0) {
     throw new AppError(404, 'User not found');
@@ -247,7 +252,10 @@ users.openapi(routes.updateProfileRoute, async (c) => {
   const reqBody = body as any;
   dispatchTransliteration(
     {
-      fullName: reqBody.firstName || reqBody.lastName ? `${reqBody.firstName || ''} ${reqBody.lastName || ''}`.trim() : undefined,
+      fullName:
+        reqBody.firstName || reqBody.lastName
+          ? `${reqBody.firstName || ''} ${reqBody.lastName || ''}`.trim()
+          : undefined,
       profession: reqBody.profession,
       religion: reqBody.religion,
       phone: userResult.rows[0].contact_phone || undefined,
@@ -284,10 +292,7 @@ users.openapi(routes.getRequiredDocumentsRoute, async (c) => {
     throw new AppError(403, 'You can only access your own required documents');
   }
 
-  const userResult = await db.query(
-    `SELECT role FROM "User" WHERE user_id = $1`,
-    [userId]
-  );
+  const userResult = await db.query(`SELECT role FROM "User" WHERE user_id = $1`, [userId]);
 
   if (userResult.rows.length === 0) {
     throw new AppError(404, 'User not found');
@@ -346,10 +351,7 @@ users.openapi(routes.submitVerificationRoute, async (c) => {
     throw new AppError(403, 'You can only submit verification for your own account');
   }
 
-  const userResult = await db.query(
-    `SELECT role FROM "User" WHERE user_id = $1`,
-    [userId]
-  );
+  const userResult = await db.query(`SELECT role FROM "User" WHERE user_id = $1`, [userId]);
 
   if (userResult.rows.length === 0) {
     throw new AppError(404, 'User not found');

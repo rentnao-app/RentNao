@@ -11,6 +11,7 @@ import {
 } from '../lib/api';
 import BrandLogoLink from '../components/BrandLogoLink';
 import GoogleAuthButton from '../components/GoogleAuthButton';
+import { useTranslation } from '../lib/i18n';
 import {
   clipPhoneInput,
   isValidBdMobileLocal11,
@@ -18,10 +19,8 @@ import {
   toLocal11Digits,
 } from '../lib/phone';
 
-const PHONE_HINT =
-  'Use your 11-digit mobile starting with 01 (e.g. 01712345678). Third digit must be 3–9.';
-
 export default function LogIn() {
+  const { t } = useTranslation();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,14 +35,14 @@ export default function LogIn() {
 
     const local11 = toLocal11Digits(clipPhoneInput(phone));
     if (!isValidBdMobileLocal11(local11)) {
-      setError(PHONE_HINT);
+      setError(t('common.phoneHint'));
       setLoading(false);
       return;
     }
 
     const forApi = normalizeBdPhoneForApi(local11);
     if (!forApi) {
-      setError(PHONE_HINT);
+      setError(t('common.phoneHint'));
       setLoading(false);
       return;
     }
@@ -59,7 +58,7 @@ export default function LogIn() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(getApiErrorMessage(body, 'Login failed'));
+        setError(getApiErrorMessage(body, t('auth.login.loginFailed')));
         return;
       }
 
@@ -71,7 +70,7 @@ export default function LogIn() {
       });
 
       if (!user) {
-        setError('Login succeeded but user payload is missing.');
+        setError(t('auth.login.userPayloadMissing'));
         return;
       }
 
@@ -81,20 +80,20 @@ export default function LogIn() {
       const userId = getUserId(user);
       const localRole = getUserRole(user);
       if (!userId) {
-        setError('Login succeeded but user identifier is missing.');
+        setError(t('auth.login.userIdMissing'));
         return;
       }
 
       const { res: statusRes, profileStatus, role, body: statusBody } = await fetchProfileStatus(userId);
       if (!statusRes.ok) {
-        setError('Login succeeded but profile status could not be loaded.');
+        setError(t('auth.login.profileStatusFailed'));
         return;
       }
 
       if (profileStatus === 'PHONE_VERIFICATION_PENDING') {
-        setSuccess('Verification required. Redirecting to OTP...');
+        setSuccess(t('auth.login.verificationRedirect'));
       } else {
-        setSuccess('Login successful! Redirecting...');
+        setSuccess(t('auth.login.successRedirect'));
       }
 
       const target = resolveOnboardingRoute(profileStatus, role || localRole, statusBody?.data?.kycVerificationStatus || null);
@@ -102,7 +101,7 @@ export default function LogIn() {
         window.location.href = target;
       }, 1000);
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred');
+      setError(err.message || t('common.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -110,27 +109,25 @@ export default function LogIn() {
 
   return (
     <div className="min-h-screen bg-green-50 flex flex-col">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <BrandLogoLink />
           <nav className="flex items-center gap-4">
             <Link to="/listings" className="text-sm font-medium text-gray-600 hover:text-teal-700 transition">
-              Browse
+              {t('common.browse')}
             </Link>
             <Link to="/signup" className="bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition">
-              Sign Up
+              {t('common.signUp')}
             </Link>
           </nav>
         </div>
       </header>
 
-      {/* Main */}
       <main className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-            <p className="text-gray-500">Log in with your mobile number or Google</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('auth.login.title')}</h1>
+            <p className="text-gray-500">{t('auth.login.subtitle')}</p>
           </div>
 
           {error && (
@@ -148,7 +145,7 @@ export default function LogIn() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
             <form onSubmit={handleLogIn} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mobile number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('common.mobileNumber')}</label>
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -156,27 +153,27 @@ export default function LogIn() {
                   value={phone}
                   onChange={(e) => setPhone(clipPhoneInput(e.target.value))}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                  placeholder="01XXXXXXXXX"
+                  placeholder={t('common.phonePlaceholder')}
                   required
                 />
-                <p className="mt-1.5 text-xs text-gray-500">{PHONE_HINT}</p>
+                <p className="mt-1.5 text-xs text-gray-500">{t('common.phoneHint')}</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Password
+                  {t('common.password')}
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                  placeholder="Enter your password"
+                  placeholder={t('auth.login.passwordPlaceholder')}
                   required
                 />
                 <div className="mt-2 text-right">
                   <Link to="/forgot-password" className="text-xs font-medium text-teal-700 hover:text-teal-800">
-                    Forgot password?
+                    {t('auth.login.forgotPassword')}
                   </Link>
                 </div>
               </div>
@@ -186,12 +183,12 @@ export default function LogIn() {
                 disabled={loading}
                 className="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Logging In...' : 'Log In'}
+                {loading ? t('auth.login.loggingIn') : t('common.logIn')}
               </button>
 
               <div className="flex items-center gap-3">
                 <div className="h-px bg-gray-200 flex-1"></div>
-                <span className="text-xs text-gray-400 uppercase tracking-wide">or</span>
+                <span className="text-xs text-gray-400 uppercase tracking-wide">{t('common.or')}</span>
                 <div className="h-px bg-gray-200 flex-1"></div>
               </div>
 
@@ -200,13 +197,13 @@ export default function LogIn() {
           </div>
 
           <p className="mt-6 text-center text-gray-500 text-sm">
-            Don&apos;t have an account?{' '}
+            {t('auth.login.noAccount')}{' '}
             <Link to="/signup" className="text-teal-700 hover:text-teal-800 font-semibold">
-              Sign Up
+              {t('common.signUp')}
             </Link>
           </p>
           <p className="mt-3 text-center text-xs font-medium tracking-wide text-gray-500 uppercase">
-            For verified users only
+            {t('common.verifiedUsersOnly')}
           </p>
         </div>
       </main>

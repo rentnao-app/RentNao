@@ -8,8 +8,10 @@ import {
   getUserRole,
   resolveOnboardingRoute,
 } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 
 export default function ProtectedRoute({ component, requiredRole }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [redirectTo, setRedirectTo] = useState(null);
@@ -47,7 +49,6 @@ export default function ProtectedRoute({ component, requiredRole }) {
           return;
         }
 
-        // Any authenticated completed user (e.g. /account) or role must match.
         if (requiredRole == null || requiredRole === '') {
           setAuthorized(true);
         } else if (effectiveRole === requiredRole) {
@@ -71,7 +72,7 @@ export default function ProtectedRoute({ component, requiredRole }) {
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">{t('auth.protectedRoute.loading')}</p>
         </div>
       </div>
     );

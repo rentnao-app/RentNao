@@ -28,6 +28,7 @@ RUN apt-get update \
     chromium \
     fonts-liberation \
     fonts-noto-core \
+    fonts-beng \
   && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production

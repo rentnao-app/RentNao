@@ -28,9 +28,11 @@ import notifications from '@/modules/notifications';
 import testimonials from '@/modules/testimonials';
 import conversations from '@/modules/conversations';
 import { chatWebSocketHandler } from '@/modules/conversations/ws/ws-handler';
-import { startHeartbeat, stopHeartbeat } from '@/modules/conversations/ws/ws-registry';
+import { startHeartbeat, stopHeartbeat, closeAllConnections } from '@/modules/conversations/ws/ws-registry';
 import { startScheduledJobs, stopScheduledJobs } from '@/jobs/scheduler';
 import { bearerAuth } from 'hono/bearer-auth';
+import deals from '@/modules/deals';
+import { closeBrowser as closePdfBrowser } from '@/modules/deals/services/pdf.service.ts';
 
 const app = new OpenAPIHono({
   defaultHook: defaultValidationHook,
@@ -43,12 +45,18 @@ const corsOrigin =
   corsOriginRaw === '*'
     ? '*'
     : corsOriginRaw.includes(',')
-      ? corsOriginRaw.split(',').map((s) => s.trim()).filter(Boolean)
+      ? corsOriginRaw
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
       : corsOriginRaw;
-app.use('*', cors({
-  origin: corsOrigin,
-  credentials: true,
-}));
+app.use(
+  '*',
+  cors({
+    origin: corsOrigin,
+    credentials: true,
+  })
+);
 
 // Root endpoint
 app.get('/', (c) => {
@@ -74,6 +82,7 @@ app.route('/requests', rentalRequests);
 app.route('/notifications', notifications);
 app.route('/testimonials', testimonials);
 app.route('/conversations', conversations);
+app.route('/deals', deals);
 
 // WebSocket endpoint for real-time chat and notifications
 app.get('/ws', upgradeWebSocket(chatWebSocketHandler));
@@ -246,7 +255,14 @@ const gracefulShutdown = async (signal: string) => {
 
   // Stop background tasks first
   stopHeartbeat();
+  closeAllConnections();
   stopScheduledJobs();
+
+  try {
+    await closePdfBrowser();
+  } catch (err: any) {
+    console.error('[App] Failed to close headless browser:', err.message);
+  }
 
   const [dbResult, redisResult] = await Promise.allSettled([
     closeDbConnection(),

@@ -1,7 +1,11 @@
 import { db } from '@/db/client';
 import { storage } from '@/db/s3';
 import { AppError } from '@/errors/base';
-import { REQUIRED_DOCUMENTS_BY_ROLE, ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES } from '../utils/constants';
+import {
+  REQUIRED_DOCUMENTS_BY_ROLE,
+  ALLOWED_MIME_TYPES,
+  MAX_FILE_SIZE_BYTES,
+} from '../utils/constants';
 import type {
   UserRoleType,
   IdentityDocumentTypeType,
@@ -30,7 +34,12 @@ export async function getDocumentUploadUrl(
 
   // Generate S3 file key
   const timestamp = Date.now();
-  const extension = fileName.split('.').pop();
+  const mimeToExt: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'application/pdf': 'pdf',
+  };
+  const extension = mimeToExt[mimeType] || 'bin';
   const fileKey = `kyc/${userId}/${documentType.toLowerCase()}-${timestamp}.${extension}`;
 
   // Get presigned URL
@@ -117,24 +126,43 @@ export async function submitVerification(
   }
 
   // Validate each uploaded object belongs to this user and exists in storage
+  const validatedDocuments = [];
   for (const doc of input.documents) {
     const expectedPrefix = `kyc/${userId}/`;
     if (!doc.filePath.startsWith(expectedPrefix)) {
-      throw new AppError(400, `Invalid file path for ${doc.documentType}. File must be uploaded under ${expectedPrefix}`);
+      throw new AppError(
+        400,
+        `Invalid file path for ${doc.documentType}. File must be uploaded under ${expectedPrefix}`
+      );
     }
 
-    if (!ALLOWED_MIME_TYPES.includes(doc.mimeType as any)) {
-      throw new AppError(400, `Invalid MIME type for ${doc.documentType}. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`);
+    const metadata = await storage.getObjectMetadata(doc.filePath);
+    if (!metadata) {
+      throw new AppError(
+        400,
+        `Uploaded file not found for ${doc.documentType}. Please upload again.`
+      );
     }
 
-    if (!doc.fileSizeBytes || doc.fileSizeBytes <= 0 || doc.fileSizeBytes > MAX_FILE_SIZE_BYTES) {
-      throw new AppError(400, `Invalid file size for ${doc.documentType}. Max allowed is ${MAX_FILE_SIZE_BYTES} bytes`);
+    if (metadata.contentLength <= 0 || metadata.contentLength > MAX_FILE_SIZE_BYTES) {
+      throw new AppError(
+        400,
+        `Invalid file size for ${doc.documentType} on storage. Max allowed is ${MAX_FILE_SIZE_BYTES} bytes`
+      );
     }
 
-    const exists = await storage.exists(doc.filePath);
-    if (!exists) {
-      throw new AppError(400, `Uploaded file not found for ${doc.documentType}. Please upload again.`);
+    if (!ALLOWED_MIME_TYPES.includes(metadata.contentType as any)) {
+      throw new AppError(
+        400,
+        `Invalid MIME type for ${doc.documentType} on storage. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`
+      );
     }
+
+    validatedDocuments.push({
+      ...doc,
+      mimeType: metadata.contentType,
+      fileSizeBytes: metadata.contentLength,
+    });
   }
 
   const client = await db.connect();
@@ -153,7 +181,10 @@ export async function submitVerification(
     if (existingSubmissionResult.rows.length > 0) {
       const existingSubmission = existingSubmissionResult.rows[0];
 
-      if (existingSubmission.submission_status === 'SUBMITTED' || existingSubmission.submission_status === 'UNDER_REVIEW') {
+      if (
+        existingSubmission.submission_status === 'SUBMITTED' ||
+        existingSubmission.submission_status === 'UNDER_REVIEW'
+      ) {
         throw new AppError(409, 'A verification submission is already pending review');
       }
 
@@ -165,10 +196,9 @@ export async function submitVerification(
       submissionId = existingSubmissionResult.rows[0].id;
 
       // Delete old documents for this submission
-      await client.query(
-        `DELETE FROM "UserIdentityDocument" WHERE submission_id = $1`,
-        [submissionId]
-      );
+      await client.query(`DELETE FROM "UserIdentityDocument" WHERE submission_id = $1`, [
+        submissionId,
+      ]);
 
       // Update submission status
       await client.query(
@@ -189,7 +219,7 @@ export async function submitVerification(
     }
 
     // Insert documents
-    for (const doc of input.documents) {
+    for (const doc of validatedDocuments) {
       await client.query(
         `INSERT INTO "UserIdentityDocument" 
          (id, user_id, submission_id, document_type, file_path, file_name, mime_type, file_size_bytes, document_number)
@@ -224,7 +254,7 @@ export async function submitVerification(
       submissionId,
       status: 'SUBMITTED',
       submittedAt: now,
-      documentCount: input.documents.length,
+      documentCount: validatedDocuments.length,
     };
   } catch (error) {
     await client.query('ROLLBACK');
@@ -246,20 +276,22 @@ export async function getSubmissionStatus(userId: string) {
     [userId]
   );
 
-  let currentSubmission: {
-    submissionId: string;
-    status: VerificationSubmissionStatusType;
-    submittedAt: string;
-    reviewedAt?: string;
-    rejectionReason?: string;
-    documents: Array<{
-      documentId: string;
-      documentType: IdentityDocumentTypeType;
-      verificationStatus: DocumentVerificationStatusType;
-      uploadedAt: string;
-      rejectionReason?: string;
-    }>;
-  } | undefined;
+  let currentSubmission:
+    | {
+        submissionId: string;
+        status: VerificationSubmissionStatusType;
+        submittedAt: string;
+        reviewedAt?: string;
+        rejectionReason?: string;
+        documents: Array<{
+          documentId: string;
+          documentType: IdentityDocumentTypeType;
+          verificationStatus: DocumentVerificationStatusType;
+          uploadedAt: string;
+          rejectionReason?: string;
+        }>;
+      }
+    | undefined;
   if (currentResult.rows.length > 0) {
     const submission = currentResult.rows[0];
 
@@ -300,10 +332,10 @@ export async function getSubmissionStatus(userId: string) {
   const timeline = timelineResult.rows
     .filter((row) => row.submitted_at)
     .map((row) => ({
-    submissionId: row.id,
-    status: row.submission_status as VerificationSubmissionStatusType,
-    timestampUtc: row.submitted_at.toISOString(),
-  }));
+      submissionId: row.id,
+      status: row.submission_status as VerificationSubmissionStatusType,
+      timestampUtc: row.submitted_at.toISOString(),
+    }));
 
   return {
     currentSubmission,

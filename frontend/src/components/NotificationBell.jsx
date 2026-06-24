@@ -5,8 +5,10 @@ import {
   fetchUnreadCount,
   markNotificationRead,
 } from '../lib/notifications';
+import { useTranslation } from '../lib/i18n';
 
 export default function NotificationBell() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -55,7 +57,7 @@ export default function NotificationBell() {
             ? 'border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800'
             : 'border-emerald-200 bg-white text-emerald-800 hover:border-emerald-300 hover:bg-emerald-50'
         }`}
-        aria-label="Notifications"
+        aria-label={t('notifications.title')}
         aria-expanded={open}
       >
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -76,16 +78,16 @@ export default function NotificationBell() {
             sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:inset-x-auto sm:w-80 sm:max-w-[min(20rem,calc(100vw-1.5rem))]"
           >
             <div className="p-3 border-b border-gray-100 flex justify-between items-center gap-2 shrink-0">
-              <span className="font-semibold text-gray-900 text-sm">Notifications</span>
+              <span className="font-semibold text-gray-900 text-sm">{t('notifications.title')}</span>
               <Link to="/notifications" className="text-teal-600 text-xs font-medium shrink-0" onClick={() => setOpen(false)}>
-                View all
+                {t('notifications.viewAll')}
               </Link>
             </div>
             <div className="overflow-y-auto max-h-80">
               {loading ? (
-                <div className="p-4 text-center text-gray-400 text-sm">Loading...</div>
+                <div className="p-4 text-center text-gray-400 text-sm">{t('common.loading')}</div>
               ) : items.length === 0 ? (
-                <div className="p-4 text-center text-gray-400 text-sm">No notifications yet.</div>
+                <div className="p-4 text-center text-gray-400 text-sm">{t('notifications.empty')}</div>
               ) : (
                 items.map((item) => (
                   <Link
@@ -103,7 +105,7 @@ export default function NotificationBell() {
             </div>
             <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
               <p className="text-[11px] text-gray-500">
-                {remoteAvailable ? 'Live notifications enabled' : 'Using local notifications fallback'}
+                {remoteAvailable ? t('notifications.liveEnabled') : t('notifications.localFallback')}
               </p>
             </div>
           </div>
@@ -112,4 +114,3 @@ export default function NotificationBell() {
     </div>
   );
 }
-

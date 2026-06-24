@@ -10,6 +10,7 @@ import {
 import { addLocalNotification } from "../lib/notifications";
 import toast from "react-hot-toast";
 import AppHeader from "../components/AppHeader";
+import { useTranslation } from "../lib/i18n";
 
 function getLocalUserRole(user) {
   return getUserRole(user);
@@ -21,6 +22,7 @@ function money(value, currency = "BDT") {
 }
 
 export default function WalletPage() {
+  const { t } = useTranslation();
   const localUser = getCurrentUser();
   const role = getLocalUserRole(localUser);
   const [loading, setLoading] = useState(true);
@@ -66,31 +68,31 @@ export default function WalletPage() {
     const res = await apiFetch("/wallet");
     const body = await res.json().catch(() => ({}));
     if (!res.ok)
-      throw new Error(getApiErrorMessage(body, "Failed to load wallet"));
+      throw new Error(getApiErrorMessage(body, t("wallet.errors.loadWallet")));
     setWallet(body?.data || null);
-  }, []);
+  }, [t]);
 
   const loadTransactions = useCallback(async (page = 1) => {
     const res = await apiFetch(`/wallet/transactions?page=${page}&limit=10`);
     const body = await res.json().catch(() => ({}));
     if (!res.ok)
-      throw new Error(getApiErrorMessage(body, "Failed to load transactions"));
+      throw new Error(getApiErrorMessage(body, t("wallet.errors.loadTransactions")));
     setTransactions(body?.data?.transactions || []);
     setTransactionsPagination(
       body?.data?.pagination || { page, totalPages: 1, total: 0 },
     );
-  }, []);
+  }, [t]);
 
   const loadCharges = useCallback(async (page = 1) => {
     const res = await apiFetch(`/wallet/charges?page=${page}&limit=10`);
     const body = await res.json().catch(() => ({}));
     if (!res.ok)
-      throw new Error(getApiErrorMessage(body, "Failed to load charges"));
+      throw new Error(getApiErrorMessage(body, t("wallet.errors.loadCharges")));
     setCharges(body?.data?.charges || []);
     setChargesPagination(
       body?.data?.pagination || { page, totalPages: 1, total: 0 },
     );
-  }, []);
+  }, [t]);
 
   const bootstrap = useCallback(async () => {
     try {
@@ -101,7 +103,7 @@ export default function WalletPage() {
         loadCharges(chargesPage),
       ]);
     } catch (e) {
-      toast.error(e.message || "Failed to load wallet data");
+      toast.error(e.message || t("wallet.toast.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -111,6 +113,7 @@ export default function WalletPage() {
     loadTransactions,
     loadWallet,
     transactionsPage,
+    t,
   ]);
 
   useEffect(() => {
@@ -124,7 +127,7 @@ export default function WalletPage() {
   useEffect(() => {
     if (!loading) {
       loadTransactions(transactionsPage).catch((e) =>
-        toast.error(e.message || "Failed to load transactions"),
+        toast.error(e.message || t("wallet.errors.loadTransactions")),
       );
     }
   }, [loading, loadTransactions, transactionsPage]);
@@ -132,7 +135,7 @@ export default function WalletPage() {
   useEffect(() => {
     if (!loading) {
       loadCharges(chargesPage).catch((e) =>
-        toast.error(e.message || "Failed to load charges"),
+        toast.error(e.message || t("wallet.errors.loadCharges")),
       );
     }
   }, [chargesPage, loading, loadCharges]);
@@ -153,18 +156,18 @@ export default function WalletPage() {
           pollTimerRef.current = null;
           await Promise.all([loadWallet(), loadTransactions(transactionsPage)]);
           if (data.status === "SUCCESS") {
-            toast.success("Topup completed successfully.");
+            toast.success(t("wallet.toast.completed"));
             addLocalNotification({
-              title: "Topup Successful",
+              title: t("wallet.notification.successTitle"),
               message: `Wallet topup of ${money(data.requestedAmount, data.currency)} completed.`,
               url: "/wallet",
               type: "WALLET",
             });
           }
           if (data.status === "FAILED") {
-            toast.error(data.failureReason || "Topup failed.");
+            toast.error(data.failureReason || t("wallet.toast.failed"));
             addLocalNotification({
-              title: "Topup Failed",
+              title: t("wallet.notification.failedTitle"),
               message:
                 data.failureReason ||
                 "Your wallet topup could not be completed.",
@@ -190,13 +193,14 @@ export default function WalletPage() {
     pendingTopup,
     topupStatus?.topupId,
     transactionsPage,
+    t,
   ]);
 
   const submitTopup = async (e) => {
     e.preventDefault();
     const amountNum = Number(topupAmount);
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
-      toast.error("Enter a valid topup amount");
+      toast.error(t("wallet.toast.invalidAmount"));
       return;
     }
 
@@ -212,7 +216,7 @@ export default function WalletPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok)
-        throw new Error(getApiErrorMessage(body, "Failed to create topup"));
+        throw new Error(getApiErrorMessage(body, t("wallet.toast.failed")));
 
       const topup = body?.data;
       if (!topup) throw new Error("Topup response missing data");
@@ -220,40 +224,40 @@ export default function WalletPage() {
       setTopupAmount("");
 
       if (topup.status === "SUCCESS") {
-        toast.success("Topup completed successfully.");
+        toast.success(t("wallet.toast.completed"));
         addLocalNotification({
-          title: "Topup Successful",
+          title: t("wallet.notification.successTitle"),
           message: `Wallet topup of ${money(topup.requestedAmount, topup.currency)} completed.`,
           url: "/wallet",
           type: "WALLET",
         });
         await Promise.all([loadWallet(), loadTransactions(transactionsPage)]);
       } else if (topup.status === "FAILED") {
-        toast.error(topup.failureReason || "Topup failed.");
+        toast.error(topup.failureReason || t("wallet.toast.failed"));
         addLocalNotification({
-          title: "Topup Failed",
+          title: t("wallet.notification.failedTitle"),
           message:
             topup.failureReason || "Your wallet topup could not be completed.",
           url: "/wallet",
           type: "WALLET",
         });
       } else {
-        toast.success("Topup requested. Checking status...");
+        toast.success(t("wallet.toast.requested"));
         addLocalNotification({
-          title: "Topup Requested",
+          title: t("wallet.notification.requestedTitle"),
           message: `Wallet topup of ${money(topup.requestedAmount, topup.currency)} is processing.`,
           url: "/wallet",
           type: "WALLET",
         });
       }
     } catch (e) {
-      const message = e?.message || "Topup failed";
+      const message = e?.message || t("wallet.toast.failed");
       const isBkashConnectionIssue =
         message.includes("Unable to connect") ||
         message.toLowerCase().includes("bkash integration error");
       toast.error(
         isBkashConnectionIssue
-          ? "Topup service is currently unavailable. Please start the bKash service and try again."
+          ? t("wallet.toast.bkashUnavailable")
           : message,
       );
     } finally {
@@ -275,47 +279,47 @@ export default function WalletPage() {
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Wallet</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("wallet.title")}</h1>
           <Link
             to={returnTo || dashboardPath}
             className="text-sm font-medium text-emerald-800 hover:text-emerald-900"
           >
-            {returnTo ? "Back to payment flow" : "Back to dashboard"}
+            {returnTo ? t("wallet.back.paymentFlow") : t("wallet.back.dashboard")}
           </Link>
         </div>
         <section className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Balance</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">{t("wallet.balance.title")}</h2>
           {wallet ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
-                <p className="text-gray-500">Available Balance</p>
+                <p className="text-gray-500">{t("wallet.balance.available")}</p>
                 <p className="text-2xl font-bold text-teal-700">
                   {money(wallet.availableBalance, wallet.currency)}
                 </p>
               </div>
               <div>
-                <p className="text-gray-500">Wallet Status</p>
+                <p className="text-gray-500">{t("wallet.balance.status")}</p>
                 <p className="font-semibold">{wallet.status}</p>
               </div>
               <div>
-                <p className="text-gray-500">Wallet ID</p>
+                <p className="text-gray-500">{t("wallet.balance.walletId")}</p>
                 <p className="font-mono text-xs break-all">{wallet.walletId}</p>
               </div>
             </div>
           ) : (
-            <p className="text-gray-500">Wallet data unavailable.</p>
+            <p className="text-gray-500">{t("wallet.balance.unavailable")}</p>
           )}
         </section>
 
         <section className="bg-white rounded-xl border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">
-            Topup (bKash)
+            {t("wallet.topup.title")}
           </h2>
           {returnTo && (
             <div className="mb-4 rounded-lg border border-teal-100 bg-teal-50 px-4 py-3 text-sm text-teal-900">
-              Add funds, then return to your previous payment flow.
+              {t("wallet.topup.returnHint")}
               <Link to={returnTo} className="ml-2 font-semibold underline">
-                Return after top-up
+                {t("wallet.topup.returnLink")}
               </Link>
             </div>
           )}
@@ -325,7 +329,7 @@ export default function WalletPage() {
           >
             <div className="w-full md:w-64">
               <label className="block text-sm text-gray-600 mb-1">
-                Amount (BDT)
+                {t("wallet.topup.amountLabel")}
               </label>
               <input
                 type="number"
@@ -342,22 +346,22 @@ export default function WalletPage() {
               disabled={topupLoading}
               className="px-4 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 disabled:opacity-50"
             >
-              {topupLoading ? "Processing..." : "Topup"}
+              {topupLoading ? t("wallet.topup.processing") : t("wallet.topup.submit")}
             </button>
           </form>
 
           {topupStatus && (
             <div className="mt-4 text-sm bg-gray-50 border border-gray-200 rounded-lg p-3">
               <p>
-                <span className="text-gray-500">Topup ID:</span>{" "}
+                <span className="text-gray-500">{t("wallet.topup.statusLabels.topupId")}</span>{" "}
                 <span className="font-mono">{topupStatus.topupId}</span>
               </p>
               <p>
-                <span className="text-gray-500">Status:</span>{" "}
+                <span className="text-gray-500">{t("wallet.topup.statusLabels.status")}</span>{" "}
                 <span className="font-semibold">{topupStatus.status}</span>
               </p>
               <p>
-                <span className="text-gray-500">Amount:</span>{" "}
+                <span className="text-gray-500">{t("wallet.topup.statusLabels.amount")}</span>{" "}
                 {money(topupStatus.requestedAmount, topupStatus.currency)}
               </p>
               {topupStatus.failureReason && (
@@ -370,15 +374,17 @@ export default function WalletPage() {
         <section className="bg-white rounded-xl border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-gray-900">
-              Transactions
+              {t("wallet.transactions.title")}
             </h2>
             <p className="text-xs text-gray-500">
-              Page {transactionsPagination.page} of{" "}
-              {transactionsPagination.totalPages || 1}
+              {t("common.pagination.pageOf", {
+                page: transactionsPagination.page,
+                total: transactionsPagination.totalPages || 1,
+              })}
             </p>
           </div>
           {transactions.length === 0 ? (
-            <p className="text-sm text-gray-500">No transactions found.</p>
+            <p className="text-sm text-gray-500">{t("wallet.transactions.empty")}</p>
           ) : (
             <div className="space-y-2">
               {transactions.map((txn) => (
@@ -402,7 +408,7 @@ export default function WalletPage() {
                     </p>
                   </div>
                   <p className="text-gray-500">
-                    {txn.description || "No description"}
+                    {txn.description || t("common.noDetails")}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
                     {new Date(txn.createdAt).toLocaleString()} | {txn.status}
@@ -418,7 +424,7 @@ export default function WalletPage() {
               onClick={() => setTransactionsPage((p) => Math.max(1, p - 1))}
               className="px-3 py-1.5 border border-gray-300 rounded disabled:opacity-50"
             >
-              Prev
+              {t("common.pagination.prev")}
             </button>
             <button
               type="button"
@@ -428,21 +434,23 @@ export default function WalletPage() {
               onClick={() => setTransactionsPage((p) => p + 1)}
               className="px-3 py-1.5 border border-gray-300 rounded disabled:opacity-50"
             >
-              Next
+              {t("common.pagination.next")}
             </button>
           </div>
         </section>
 
         <section className="bg-white rounded-xl border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900">Charges</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("wallet.charges.title")}</h2>
             <p className="text-xs text-gray-500">
-              Page {chargesPagination.page} of{" "}
-              {chargesPagination.totalPages || 1}
+              {t("common.pagination.pageOf", {
+                page: chargesPagination.page,
+                total: chargesPagination.totalPages || 1,
+              })}
             </p>
           </div>
           {charges.length === 0 ? (
-            <p className="text-sm text-gray-500">No charges found.</p>
+            <p className="text-sm text-gray-500">{t("wallet.charges.empty")}</p>
           ) : (
             <div className="space-y-2">
               {charges.map((charge) => (
@@ -456,7 +464,7 @@ export default function WalletPage() {
                       {money(charge.finalAmount, charge.currency)}
                     </p>
                   </div>
-                  <p className="text-gray-500">Status: {charge.status}</p>
+                  <p className="text-gray-500">{t("wallet.charges.status", { status: charge.status })}</p>
                   <p className="text-xs text-gray-400 mt-1">
                     {new Date(charge.createdAt).toLocaleString()}
                   </p>
@@ -471,7 +479,7 @@ export default function WalletPage() {
               onClick={() => setChargesPage((p) => Math.max(1, p - 1))}
               className="px-3 py-1.5 border border-gray-300 rounded disabled:opacity-50"
             >
-              Prev
+              {t("common.pagination.prev")}
             </button>
             <button
               type="button"
@@ -479,7 +487,7 @@ export default function WalletPage() {
               onClick={() => setChargesPage((p) => p + 1)}
               className="px-3 py-1.5 border border-gray-300 rounded disabled:opacity-50"
             >
-              Next
+              {t("common.pagination.next")}
             </button>
           </div>
         </section>

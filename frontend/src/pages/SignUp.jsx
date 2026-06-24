@@ -5,6 +5,7 @@ import { apiFetch, getApiErrorMessage, setAuthSession } from '../lib/api';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import { addLocalNotification } from '../lib/notifications';
 import { savePublicProfileSnapshot } from '../lib/publicProfiles';
+import { useTranslation } from '../lib/i18n';
 import {
   clipPhoneInput,
   isValidBdMobileLocal11,
@@ -13,10 +14,8 @@ import {
   toLocal11Digits,
 } from '../lib/phone';
 
-const PHONE_HINT =
-  'Enter 11 digits starting with 01 (e.g. 01712345678). Third digit must be 3–9.';
-
 export default function SignUp() {
+  const { t } = useTranslation();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('TENANT');
@@ -32,14 +31,14 @@ export default function SignUp() {
 
     const local11 = toLocal11Digits(clipPhoneInput(phone));
     if (!isValidBdMobileLocal11(local11)) {
-      setError(PHONE_HINT);
+      setError(t('common.phoneHintSignup'));
       setLoading(false);
       return;
     }
 
     const forApi = normalizeBdPhoneForApi(local11);
     if (!forApi) {
-      setError(PHONE_HINT);
+      setError(t('common.phoneHintSignup'));
       setLoading(false);
       return;
     }
@@ -59,7 +58,7 @@ export default function SignUp() {
 
       const body = await registerResponse.json().catch(() => ({}));
       if (!registerResponse.ok) {
-        throw new Error(getApiErrorMessage(body, 'Registration failed'));
+        throw new Error(getApiErrorMessage(body, t('auth.signup.registrationFailed')));
       }
 
       setAuthSession({
@@ -73,7 +72,7 @@ export default function SignUp() {
       if (createdUserId) {
         savePublicProfileSnapshot({
           userId: createdUserId,
-          name: createdUser?.username || 'User',
+          name: createdUser?.username || t('common.user'),
           email: createdUser?.contactEmail || createdUser?.contact_email || '',
           phone: local11,
           role: role || createdUser?.role || '',
@@ -81,12 +80,12 @@ export default function SignUp() {
         });
       }
       addLocalNotification({
-        title: 'Account Created',
-        message: 'Welcome! Verify your mobile number to continue onboarding.',
+        title: t('auth.signup.accountCreatedTitle'),
+        message: t('auth.signup.accountCreatedMessage'),
         url: '/auth-verification?type=PHONE',
         type: 'AUTH',
       });
-      setSuccess('Sign up successful! Redirecting...');
+      setSuccess(t('auth.signup.successRedirect'));
       rememberSignupPhoneLocal11(local11);
       setPhone('');
       setPassword('');
@@ -95,7 +94,7 @@ export default function SignUp() {
         window.location.href = '/auth-verification?type=PHONE';
       }, 1500);
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred');
+      setError(err.message || t('common.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -103,27 +102,25 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen bg-green-50 flex flex-col">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <BrandLogoLink />
           <nav className="flex items-center gap-4">
             <Link to="/listings" className="text-sm font-medium text-gray-600 hover:text-teal-700 transition">
-              Browse
+              {t('common.browse')}
             </Link>
             <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-teal-700 transition">
-              Log In
+              {t('common.logIn')}
             </Link>
           </nav>
         </div>
       </header>
 
-      {/* Main */}
       <main className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create an Account</h1>
-            <p className="text-gray-500">Join RentNao to find or list properties</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('auth.signup.title')}</h1>
+            <p className="text-gray-500">{t('auth.signup.subtitle')}</p>
           </div>
 
           {error && (
@@ -141,7 +138,7 @@ export default function SignUp() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
             <form onSubmit={handleSignUp} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mobile number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('common.mobileNumber')}</label>
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -149,20 +146,20 @@ export default function SignUp() {
                   value={phone}
                   onChange={(e) => setPhone(clipPhoneInput(e.target.value))}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                  placeholder="01XXXXXXXXX"
+                  placeholder={t('common.phonePlaceholder')}
                   required
                 />
-                <p className="mt-1.5 text-xs text-gray-500">{PHONE_HINT}</p>
+                <p className="mt-1.5 text-xs text-gray-500">{t('common.phoneHintSignup')}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('common.password')}</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                  placeholder="At least 8 characters"
+                  placeholder={t('auth.signup.passwordPlaceholder')}
                   required
                   minLength={8}
                   maxLength={128}
@@ -170,7 +167,7 @@ export default function SignUp() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Select Role</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">{t('auth.signup.selectRole')}</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -186,8 +183,8 @@ export default function SignUp() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
                     </div>
-                    <div className="font-semibold">Tenant</div>
-                    <div className="mt-0.5 text-xs font-normal text-gray-500">Rent a Property</div>
+                    <div className="font-semibold">{t('auth.signup.tenant')}</div>
+                    <div className="mt-0.5 text-xs font-normal text-gray-500">{t('auth.signup.rentProperty')}</div>
                   </button>
                   <button
                     type="button"
@@ -203,8 +200,8 @@ export default function SignUp() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" />
                       </svg>
                     </div>
-                    <div className="font-semibold">Owner</div>
-                    <div className="mt-0.5 text-xs font-normal text-gray-500">List your Property</div>
+                    <div className="font-semibold">{t('auth.signup.owner')}</div>
+                    <div className="mt-0.5 text-xs font-normal text-gray-500">{t('auth.signup.listYourProperty')}</div>
                   </button>
                 </div>
               </div>
@@ -214,12 +211,12 @@ export default function SignUp() {
                 disabled={loading}
                 className="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Signing Up...' : 'Sign Up'}
+                {loading ? t('auth.signup.signingUp') : t('common.signUp')}
               </button>
 
               <div className="flex items-center gap-3">
                 <div className="h-px bg-gray-200 flex-1"></div>
-                <span className="text-xs text-gray-400 uppercase tracking-wide">or</span>
+                <span className="text-xs text-gray-400 uppercase tracking-wide">{t('common.or')}</span>
                 <div className="h-px bg-gray-200 flex-1"></div>
               </div>
 
@@ -228,13 +225,13 @@ export default function SignUp() {
           </div>
 
           <p className="mt-6 text-center text-gray-500 text-sm">
-            Already have an account?{' '}
+            {t('auth.signup.hasAccount')}{' '}
             <Link to="/login" className="text-teal-700 hover:text-teal-800 font-semibold">
-              Log In
+              {t('common.logIn')}
             </Link>
           </p>
           <p className="mt-3 text-center text-xs font-medium tracking-wide text-gray-500 uppercase">
-            For verified users only
+            {t('common.verifiedUsersOnly')}
           </p>
         </div>
       </main>

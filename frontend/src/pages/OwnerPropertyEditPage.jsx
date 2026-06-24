@@ -4,6 +4,7 @@ import AppHeader from '../components/AppHeader';
 import { apiFetch, isLoggedIn } from '../lib/api';
 import toast from 'react-hot-toast';
 import ImageUploader from '../components/ImageUploader';
+import { useTranslation } from '../lib/i18n';
 
 const AREA_OPTIONS = [
   'DHANMONDI',
@@ -30,6 +31,7 @@ function toNumberOrUndefined(value) {
 }
 
 export default function OwnerPropertyEditPage() {
+  const { t } = useTranslation();
   const { propertyId } = useParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,6 +60,33 @@ export default function OwnerPropertyEditPage() {
   const [propertyType, setPropertyType] = useState('APARTMENT');
   const [images, setImages] = useState([]);
 
+  const areaOptions = useMemo(
+    () =>
+      AREA_OPTIONS.map((opt) => ({
+        value: opt,
+        label: t(`common.areas.${opt}`, opt),
+      })),
+    [t]
+  );
+
+  const facingOptions = useMemo(
+    () =>
+      FACING_OPTIONS.map((opt) => ({
+        value: opt,
+        label: t(`common.enums.facing.${opt}`, opt),
+      })),
+    [t]
+  );
+
+  const tenantTypeOptions = useMemo(
+    () =>
+      TENANT_TYPE_OPTIONS.map((opt) => ({
+        value: opt,
+        label: t(`common.enums.tenantType.${opt}`, opt),
+      })),
+    [t]
+  );
+
   const sortedImages = useMemo(() => {
     return [...images].sort((a, b) => {
       if (a.isPrimary && !b.isPrimary) return -1;
@@ -70,7 +99,7 @@ export default function OwnerPropertyEditPage() {
     const res = await apiFetch(`/properties/${propertyId}`);
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(body?.error || body?.message || 'Failed to fetch property details');
+      throw new Error(body?.error || body?.message || t('propertyEdit.errors.fetchFailed'));
     }
     const data = body?.data || {};
     setPropertyType(data.propertyType || 'APARTMENT');
@@ -92,16 +121,16 @@ export default function OwnerPropertyEditPage() {
       floorNo: toInputValue(data.floorNo),
       flatNo: data.flatNo || '',
     });
-  }, [propertyId]);
+  }, [propertyId, t]);
 
   const loadImages = useCallback(async () => {
     const res = await apiFetch(`/properties/${propertyId}/images`);
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(body?.error || body?.message || 'Failed to fetch property images');
+      throw new Error(body?.error || body?.message || t('propertyEdit.errors.fetchFailed'));
     }
     setImages(body?.data?.items || []);
-  }, [propertyId]);
+  }, [propertyId, t]);
 
   useEffect(() => {
     const load = async () => {
@@ -113,13 +142,13 @@ export default function OwnerPropertyEditPage() {
         setError('');
         await Promise.all([loadProperty(), loadImages()]);
       } catch (err) {
-        setError(err.message || 'Unable to load property');
+        setError(err.message || t('propertyEdit.errors.fetchFailed'));
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [loadImages, loadProperty]);
+  }, [loadImages, loadProperty, t]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -162,33 +191,33 @@ export default function OwnerPropertyEditPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(body?.error || body?.message || 'Failed to update property');
+        throw new Error(body?.error || body?.message || t('propertyEdit.errors.updateFailed'));
       }
 
-      setSuccessMessage('Property updated successfully.');
-      toast.success('Property saved');
+      setSuccessMessage(t('propertyEdit.toast.updated'));
+      toast.success(t('propertyEdit.toast.saved'));
       await loadProperty();
     } catch (err) {
-      setError(err.message || 'Failed to update property');
+      setError(err.message || t('propertyEdit.errors.updateFailed'));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteImage = async (imageId) => {
-    if (!imageId || !window.confirm('Remove this image permanently?')) return;
+    if (!imageId || !window.confirm(t('propertyEdit.confirm.removeImage'))) return;
     setDeletingImageId(imageId);
     setError('');
     setSuccessMessage('');
     try {
       const res = await apiFetch(`/properties/${propertyId}/images/${imageId}`, { method: 'DELETE' });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || body?.message || 'Failed to delete image');
+      if (!res.ok) throw new Error(body?.error || body?.message || t('propertyEdit.errors.deleteImageFailed'));
       await loadImages();
-      toast.success('Image removed');
+      toast.success(t('propertyEdit.toast.imageRemoved'));
     } catch (err) {
-      setError(err.message || 'Failed to delete image');
-      toast.error(err.message || 'Failed to delete image');
+      setError(err.message || t('propertyEdit.errors.deleteImageFailed'));
+      toast.error(err.message || t('propertyEdit.errors.deleteImageFailed'));
     } finally {
       setDeletingImageId('');
     }
@@ -205,7 +234,7 @@ export default function OwnerPropertyEditPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(body?.error || body?.message || 'Failed to set primary image');
+        throw new Error(body?.error || body?.message || t('propertyEdit.errors.updateFailed'));
       }
 
       setImages((prev) =>
@@ -214,9 +243,9 @@ export default function OwnerPropertyEditPage() {
           isPrimary: img.imageId === imageId,
         }))
       );
-      setSuccessMessage('Primary image updated.');
+      setSuccessMessage(t('propertyEdit.toast.updated'));
     } catch (err) {
-      setError(err.message || 'Failed to set primary image');
+      setError(err.message || t('propertyEdit.errors.updateFailed'));
     } finally {
       setSettingPrimaryId('');
     }
@@ -243,11 +272,11 @@ export default function OwnerPropertyEditPage() {
           to="/owner-dashboard/my-properties"
           className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 mb-3"
         >
-          <span aria-hidden>&larr;</span> My Properties
+          <span aria-hidden>&larr;</span> {t('propertyEdit.backToMyProperties')}
         </Link>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Edit property</h1>
-          <p className="text-sm text-gray-500">Update details anytime. Add or remove photos; choose which image is shown first.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('propertyEdit.title')}</h1>
+          <p className="text-sm text-gray-500">{t('propertyEdit.subtitle')}</p>
 
           {error && (
             <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -262,7 +291,7 @@ export default function OwnerPropertyEditPage() {
 
           <form onSubmit={handleSave} className="mt-6 space-y-5">
             <div>
-              <label className={labelClass}>Title</label>
+              <label className={labelClass}>{t('propertyEdit.fields.title')}</label>
               <input
                 type="text"
                 name="title"
@@ -274,7 +303,7 @@ export default function OwnerPropertyEditPage() {
             </div>
 
             <div>
-              <label className={labelClass}>Description</label>
+              <label className={labelClass}>{t('propertyEdit.fields.description')}</label>
               <textarea
                 name="description"
                 value={form.description}
@@ -285,24 +314,24 @@ export default function OwnerPropertyEditPage() {
             </div>
 
             <div>
-              <label className={labelClass}>Address</label>
+              <label className={labelClass}>{t('propertyEdit.fields.address')}</label>
               <input type="text" name="address" value={form.address} onChange={handleChange} className={inputClass} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>Area</label>
+                <label className={labelClass}>{t('propertyEdit.fields.area')}</label>
                 <select name="areaName" value={form.areaName} onChange={handleChange} className={inputClass} required>
-                  <option value="">Select area</option>
-                  {AREA_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
+                  <option value="">{t('common.selectArea')}</option>
+                  {areaOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className={labelClass}>Size (sqft)</label>
+                <label className={labelClass}>{t('propertyEdit.fields.size')}</label>
                 <input
                   type="number"
                   min="1"
@@ -316,7 +345,7 @@ export default function OwnerPropertyEditPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>Rooms</label>
+                <label className={labelClass}>{t('propertyEdit.fields.rooms')}</label>
                 <input
                   type="number"
                   min="0"
@@ -329,7 +358,7 @@ export default function OwnerPropertyEditPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>Bathrooms</label>
+                <label className={labelClass}>{t('propertyEdit.fields.bathrooms')}</label>
                 <input
                   type="number"
                   min="0"
@@ -342,7 +371,7 @@ export default function OwnerPropertyEditPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>Balconies</label>
+                <label className={labelClass}>{t('propertyEdit.fields.balconies')}</label>
                 <input
                   type="number"
                   min="0"
@@ -355,7 +384,7 @@ export default function OwnerPropertyEditPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>Building Floors</label>
+                <label className={labelClass}>{t('propertyEdit.fields.buildingFloors')}</label>
                 <input
                   type="number"
                   min="1"
@@ -368,22 +397,22 @@ export default function OwnerPropertyEditPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>Building Facing</label>
+                <label className={labelClass}>{t('propertyEdit.fields.buildingFacing')}</label>
                 <select
                   name="buildingFacing"
                   value={form.buildingFacing}
                   onChange={handleChange}
                   className={inputClass}
                 >
-                  {FACING_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
+                  {facingOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className={labelClass}>Floor Number</label>
+                <label className={labelClass}>{t('propertyEdit.fields.floorNumber')}</label>
                 <input
                   type="number"
                   min="1"
@@ -397,7 +426,9 @@ export default function OwnerPropertyEditPage() {
               </div>
               <div>
                 <label className={labelClass}>
-                  Flat / Unit Number {propertyType === 'COMMERCIAL_SPACE' && '(Optional)'}
+                  {propertyType === 'COMMERCIAL_SPACE'
+                    ? t('createListing.fields.flatUnitOptional')
+                    : t('propertyEdit.fields.flatUnit')}
                 </label>
                 <input
                   type="text"
@@ -409,16 +440,16 @@ export default function OwnerPropertyEditPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>Intended Tenant Type</label>
+                <label className={labelClass}>{t('propertyEdit.fields.intendedTenantType')}</label>
                 <select
                   name="intendedTenantType"
                   value={form.intendedTenantType}
                   onChange={handleChange}
                   className={inputClass}
                 >
-                  {TENANT_TYPE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
+                  {tenantTypeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
                     </option>
                   ))}
                 </select>
@@ -428,15 +459,15 @@ export default function OwnerPropertyEditPage() {
             <div className="grid grid-cols-3 gap-4">
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input type="checkbox" checked={form.hasLift} onChange={handleToggle('hasLift')} />
-                Lift
+                {t('propertyEdit.amenities.lift')}
               </label>
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input type="checkbox" checked={form.hasGenerator} onChange={handleToggle('hasGenerator')} />
-                Generator
+                {t('propertyEdit.amenities.generator')}
               </label>
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input type="checkbox" checked={form.hasSecurityGuard} onChange={handleToggle('hasSecurityGuard')} />
-                Security Guard
+                {t('propertyEdit.amenities.securityGuard')}
               </label>
             </div>
 
@@ -445,7 +476,7 @@ export default function OwnerPropertyEditPage() {
               disabled={saving}
               className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-5 py-2.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Saving...' : 'Save changes'}
+              {saving ? t('propertyEdit.saving') : t('propertyEdit.saveChanges')}
             </button>
           </form>
         </div>
@@ -453,10 +484,10 @@ export default function OwnerPropertyEditPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Media</h2>
-              <p className="text-sm text-gray-500 mt-0.5">JPEG, PNG, Webp, MP4, WebM, MOV or M4V - up to 100MB each</p>
+              <h2 className="text-lg font-semibold text-gray-900">{t('propertyEdit.media.title')}</h2>
+              <p className="text-sm text-gray-500 mt-0.5">{t('propertyEdit.media.formats')}</p>
             </div>
-            <span className="text-sm text-gray-500">{sortedImages.length} total</span>
+            <span className="text-sm text-gray-500">{t('propertyEdit.media.total', { n: sortedImages.length })}</span>
           </div>
 
           <div className="mb-6 pb-6 border-b border-gray-100">
@@ -469,7 +500,7 @@ export default function OwnerPropertyEditPage() {
           </div>
 
           {sortedImages.length === 0 ? (
-            <p className="text-sm text-gray-500">No media yet. Use &ldquo;Add photos/videos&rdquo; above.</p>
+            <p className="text-sm text-gray-500">{t('propertyEdit.media.empty')}</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sortedImages.map((image) => {
@@ -485,14 +516,14 @@ export default function OwnerPropertyEditPage() {
                       ) : (
                         <img src={src} alt={image.altText || image.fileName || 'Property image'} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="h-full flex items-center justify-center text-sm text-gray-400">No preview</div>
+                        <div className="h-full flex items-center justify-center text-sm text-gray-400">{t('propertyEdit.media.noPreview')}</div>
                       )}
                     </div>
                     <div className="p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm text-gray-700 truncate">{image.fileName || 'Unnamed image'}</p>
+                        <p className="text-sm text-gray-700 truncate">{image.fileName || t('propertyEdit.media.unnamedImage')}</p>
                         {image.isPrimary && (
-                          <span className="text-xs font-semibold bg-teal-100 text-teal-700 px-2 py-1 rounded-full shrink-0">Primary</span>
+                          <span className="text-xs font-semibold bg-teal-100 text-teal-700 px-2 py-1 rounded-full shrink-0">{t('propertyEdit.media.primary')}</span>
                         )}
                       </div>
                       <button
@@ -501,7 +532,13 @@ export default function OwnerPropertyEditPage() {
                         onClick={() => handleSetPrimary(imgId)}
                         className="w-full text-sm border border-teal-200 text-teal-700 hover:bg-teal-50 rounded-lg py-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {settingPrimaryId === imgId ? 'Updating...' : image.isPrimary ? 'Primary image' : isVideo ? 'Videos cannot be primary' : 'Set as primary'}
+                        {settingPrimaryId === imgId
+                          ? t('propertyEdit.media.updating')
+                          : image.isPrimary
+                            ? t('propertyEdit.media.primaryImage')
+                            : isVideo
+                              ? t('propertyEdit.media.videosNotPrimary')
+                              : t('propertyEdit.media.setPrimary')}
                       </button>
                       <button
                         type="button"
@@ -509,7 +546,7 @@ export default function OwnerPropertyEditPage() {
                         onClick={() => handleDeleteImage(imgId)}
                         className="w-full text-sm border border-red-200 text-red-600 hover:bg-red-50 rounded-lg py-2 transition disabled:opacity-50"
                       >
-                        {deletingImageId === imgId ? 'Removing...' : 'Remove image'}
+                        {deletingImageId === imgId ? t('propertyEdit.media.removing') : t('propertyEdit.media.removeImage')}
                       </button>
                     </div>
                   </div>

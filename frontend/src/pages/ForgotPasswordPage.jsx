@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import BrandLogoLink from '../components/BrandLogoLink';
 import { apiFetch, getApiErrorMessage } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
 import {
   clipPhoneInput,
   isValidBdMobileLocal11,
@@ -9,10 +10,8 @@ import {
   toLocal11Digits,
 } from '../lib/phone';
 
-const PHONE_HINT =
-  'Enter your 11-digit mobile starting with 01 (e.g. 01712345678). Third digit must be 3–9.';
-
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,13 +25,13 @@ export default function ForgotPasswordPage() {
 
     const local11 = toLocal11Digits(clipPhoneInput(identifier));
     if (!isValidBdMobileLocal11(local11)) {
-      setError(PHONE_HINT);
+      setError(t('common.phoneHint'));
       setLoading(false);
       return;
     }
     const forApi = normalizeBdPhoneForApi(local11);
     if (!forApi) {
-      setError(PHONE_HINT);
+      setError(t('common.phoneHint'));
       setLoading(false);
       return;
     }
@@ -48,11 +47,11 @@ export default function ForgotPasswordPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(getApiErrorMessage(body, 'Could not request password reset'));
+        throw new Error(getApiErrorMessage(body, t('auth.forgotPassword.requestFailed')));
       }
-      setSuccess(body?.message || 'If an account exists, reset instructions were sent via SMS.');
+      setSuccess(body?.message || t('auth.forgotPassword.successMessage'));
     } catch (err) {
-      setError(err.message || 'Failed to request reset');
+      setError(err.message || t('auth.forgotPassword.requestError'));
     } finally {
       setLoading(false);
     }
@@ -64,15 +63,15 @@ export default function ForgotPasswordPage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <BrandLogoLink />
           <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-teal-700 transition">
-            Back to Login
+            {t('common.backToLogin')}
           </Link>
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">Forgot Password</h1>
-          <p className="text-gray-500 text-center mb-8">We will send a reset token to your mobile number (SMS).</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">{t('auth.forgotPassword.title')}</h1>
+          <p className="text-gray-500 text-center mb-8">{t('auth.forgotPassword.subtitle')}</p>
 
           {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
           {success && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{success}</div>}
@@ -80,33 +79,33 @@ export default function ForgotPasswordPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mobile number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('common.mobileNumber')}</label>
                 <input
                   type="tel"
                   inputMode="numeric"
                   autoComplete="tel"
                   value={identifier}
                   onChange={(e) => setIdentifier(clipPhoneInput(e.target.value))}
-                  placeholder="01XXXXXXXXX"
+                  placeholder={t('common.phonePlaceholder')}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                   required
                 />
-                <p className="mt-1 text-xs text-gray-500">{PHONE_HINT}</p>
+                <p className="mt-1 text-xs text-gray-500">{t('common.phoneHint')}</p>
               </div>
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
               >
-                {loading ? 'Sending...' : 'Send reset token'}
+                {loading ? t('common.sending') : t('auth.forgotPassword.sendResetToken')}
               </button>
             </form>
           </div>
 
           <p className="mt-6 text-center text-sm text-gray-500">
-            Already have reset token?{' '}
+            {t('auth.forgotPassword.hasToken')}{' '}
             <Link to="/reset-password" className="text-teal-700 font-semibold hover:text-teal-800">
-              Reset Password
+              {t('auth.forgotPassword.resetPassword')}
             </Link>
           </p>
         </div>
@@ -114,4 +113,3 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
-

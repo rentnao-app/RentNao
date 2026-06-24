@@ -1,49 +1,43 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { buildListingsQuery } from '../lib/listingSearchQuery';
+import { useTranslation } from '../lib/i18n';
 
-const LISTING_AREA_OPTIONS = [
-  { value: 'DHANMONDI', label: 'Dhanmondi' },
-  { value: 'GULSHAN', label: 'Gulshan' },
-  { value: 'BANANI', label: 'Banani' },
-  { value: 'UTTARA', label: 'Uttara' },
-  { value: 'MIRPUR', label: 'Mirpur' },
-  { value: 'MOHAMMADPUR', label: 'Mohammadpur' },
-  { value: 'BARIDHARA', label: 'Baridhara' },
-  { value: 'BASHUNDHARA', label: 'Bashundhara' },
-  { value: 'BADDA', label: 'Badda' },
+const LISTING_AREA_VALUES = [
+  'DHANMONDI',
+  'GULSHAN',
+  'BANANI',
+  'UTTARA',
+  'MIRPUR',
+  'MOHAMMADPUR',
+  'BARIDHARA',
+  'BASHUNDHARA',
+  'BADDA',
 ];
 
-const MAX_RENT_OPTIONS = [
-  { value: '', label: 'Max. Rent' },
-  { value: '20000', label: 'BDT 20K' },
-  { value: '35000', label: 'BDT 35K' },
-  { value: '50000', label: 'BDT 50K' },
-  { value: '80000', label: 'BDT 80K' },
-  { value: '100000', label: 'BDT 100K' },
-  { value: '200000', label: 'BDT 200K' },
-  { value: '200K_PLUS', label: 'BDT 200K+' },
+const MAX_RENT_VALUES = [
+  { value: '', labelKey: 'search.maxRent' },
+  { value: '20000', labelKey: 'search.rentOptions.20k' },
+  { value: '35000', labelKey: 'search.rentOptions.35k' },
+  { value: '50000', labelKey: 'search.rentOptions.50k' },
+  { value: '80000', labelKey: 'search.rentOptions.80k' },
+  { value: '100000', labelKey: 'search.rentOptions.100k' },
+  { value: '200000', labelKey: 'search.rentOptions.200k' },
+  { value: '200K_PLUS', labelKey: 'search.rentOptions.200kPlus' },
 ];
 
-const PROPERTY_CATEGORY_OPTIONS = [
-  { value: '', label: 'Property Type' },
-  { value: 'RESIDENTIAL', label: 'Residential' },
-  { value: 'COMMERCIAL', label: 'Commercial' },
+const PROPERTY_CATEGORY_VALUES = [
+  { value: '', labelKey: 'search.propertyType' },
+  { value: 'RESIDENTIAL', labelKey: 'search.categories.residential' },
+  { value: 'COMMERCIAL', labelKey: 'search.categories.commercial' },
 ];
 
-const ROOM_OPTIONS = [
-  { value: '', label: 'Beds' },
-  { value: '1', label: '1' },
-  { value: '2', label: '2' },
-  { value: '3', label: '3' },
-  { value: '4', label: '4' },
-  { value: '5', label: '5+' },
-];
+const ROOM_VALUES = ['', '1', '2', '3', '4', '5'];
 
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest First' },
-  { value: 'price_asc', label: 'Price: Low to High' },
-  { value: 'price_desc', label: 'Price: High to Low' },
+const SORT_VALUES = [
+  { value: 'newest', labelKey: 'search.sort.newest' },
+  { value: 'price_asc', labelKey: 'search.sort.priceAsc' },
+  { value: 'price_desc', labelKey: 'search.sort.priceDesc' },
 ];
 
 const selectChevronStyle = {
@@ -62,9 +56,9 @@ function areaTriggerClassName(compact) {
   return `w-full cursor-pointer list-none border border-[#deeadf] rounded-xl ${pad} ${text} bg-[#fbfefb] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#66aa75] flex items-center justify-between gap-1.5 text-left min-w-0 [&::-webkit-details-marker]:hidden`;
 }
 
-function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area', compact, detailsClassName }) {
+function MultiSelectArea({ areaOptions, selectedValues, onChange, placeholder, compact, detailsClassName }) {
   const detailsRef = useRef(null);
-  const selectedLabels = LISTING_AREA_OPTIONS.filter((o) => selectedValues.includes(o.value)).map((o) => o.label);
+  const selectedLabels = areaOptions.filter((o) => selectedValues.includes(o.value)).map((o) => o.label);
 
   useEffect(() => {
     const onDocClick = (event) => {
@@ -103,7 +97,7 @@ function MultiSelectArea({ selectedValues, onChange, placeholder = 'Area', compa
       <div
         className={`absolute left-0 right-0 z-[100] mt-1 min-w-[12rem] rounded-xl border border-[#deeadf] bg-white py-1 shadow-lg ${panelScrollClass}`}
       >
-        {LISTING_AREA_OPTIONS.map((option) => (
+        {areaOptions.map((option) => (
           <label
             key={option.value}
             className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[#f4faf4]"
@@ -128,12 +122,74 @@ export default function PropertySearchBar({
   initialValues = {},
   navigateOnSubmit = false,
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [areas, setAreas] = useState(() => initialValues.areas || []);
   const [category, setCategory] = useState(() => initialValues.category || '');
   const [maxRentKey, setMaxRentKey] = useState(() => initialValues.maxRentKey || '');
   const [minRooms, setMinRooms] = useState(() => (initialValues.minRooms != null && initialValues.minRooms !== '' ? String(initialValues.minRooms) : ''));
   const [sortBy, setSortBy] = useState(() => initialValues.sort_by || 'newest');
+
+  const areaOptions = useMemo(
+    () =>
+      LISTING_AREA_VALUES.map((value) => ({
+        value,
+        label: t(`common.areas.${value}`),
+      })),
+    [t]
+  );
+
+  const maxRentOptions = useMemo(
+    () =>
+      MAX_RENT_VALUES.map(({ value, labelKey }) => ({
+        value,
+        label: t(labelKey),
+      })),
+    [t]
+  );
+
+  const heroMaxRentOptions = useMemo(
+    () =>
+      maxRentOptions.map((o, i) =>
+        i === 0 ? { ...o, label: t('search.rentPlaceholder') } : o
+      ),
+    [maxRentOptions, t]
+  );
+
+  const propertyCategoryOptions = useMemo(
+    () =>
+      PROPERTY_CATEGORY_VALUES.map(({ value, labelKey }) => ({
+        value,
+        label: t(labelKey),
+      })),
+    [t]
+  );
+
+  const heroPropertyCategoryOptions = useMemo(
+    () =>
+      propertyCategoryOptions.map((o, i) =>
+        i === 0 ? { ...o, label: t('search.typePlaceholder') } : o
+      ),
+    [propertyCategoryOptions, t]
+  );
+
+  const roomOptions = useMemo(
+    () =>
+      ROOM_VALUES.map((value) => ({
+        value,
+        label: value === '' ? t('search.beds') : value === '5' ? t('search.beds5Plus') : value,
+      })),
+    [t]
+  );
+
+  const sortOptions = useMemo(
+    () =>
+      SORT_VALUES.map(({ value, labelKey }) => ({
+        value,
+        label: t(labelKey),
+      })),
+    [t]
+  );
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -168,9 +224,10 @@ export default function PropertySearchBar({
   return (
     <form onSubmit={handleSubmit} className={`${formShell} ${formRow}`}>
       <MultiSelectArea
+        areaOptions={areaOptions}
         selectedValues={areas}
         onChange={setAreas}
-        placeholder="Area"
+        placeholder={t('search.area')}
         compact={isHero}
         detailsClassName={
           isHero
@@ -181,7 +238,7 @@ export default function PropertySearchBar({
 
       <div className={isHero ? heroFieldCell : 'min-w-[min(100%,7.5rem)] flex-1 basis-[6.5rem]'}>
         <label htmlFor="psb-category" className="sr-only">
-          Property type
+          {t('search.propertyTypeSrOnly')}
         </label>
         <select
           id="psb-category"
@@ -190,13 +247,7 @@ export default function PropertySearchBar({
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
-          {(isHero
-            ? [
-                { value: '', label: 'Type' },
-                ...PROPERTY_CATEGORY_OPTIONS.slice(1),
-              ]
-            : PROPERTY_CATEGORY_OPTIONS
-          ).map((o) => (
+          {(isHero ? heroPropertyCategoryOptions : propertyCategoryOptions).map((o) => (
             <option key={o.value || 'any'} value={o.value}>
               {o.label}
             </option>
@@ -206,7 +257,7 @@ export default function PropertySearchBar({
 
       <div className={isHero ? heroFieldCell : 'min-w-[min(100%,7.5rem)] flex-1 basis-[6.5rem]'}>
         <label htmlFor="psb-maxrent" className="sr-only">
-          Max rent
+          {t('search.maxRentSrOnly')}
         </label>
         <select
           id="psb-maxrent"
@@ -215,10 +266,7 @@ export default function PropertySearchBar({
           value={maxRentKey}
           onChange={(e) => setMaxRentKey(e.target.value)}
         >
-          {(isHero
-            ? MAX_RENT_OPTIONS.map((o, i) => (i === 0 ? { ...o, label: 'Rent' } : o))
-            : MAX_RENT_OPTIONS
-          ).map((o) => (
+          {(isHero ? heroMaxRentOptions : maxRentOptions).map((o) => (
             <option key={o.value || 'any'} value={o.value}>
               {o.label}
             </option>
@@ -228,7 +276,7 @@ export default function PropertySearchBar({
 
       <div className={isHero ? heroFieldCell : 'min-w-[min(100%,6.5rem)] flex-1 basis-[5.5rem]'}>
         <label htmlFor="psb-rooms" className="sr-only">
-          Beds
+          {t('search.bedsSrOnly')}
         </label>
         <select
           id="psb-rooms"
@@ -237,7 +285,7 @@ export default function PropertySearchBar({
           value={minRooms}
           onChange={(e) => setMinRooms(e.target.value)}
         >
-          {ROOM_OPTIONS.map((o) => (
+          {roomOptions.map((o) => (
             <option key={o.value || 'any'} value={o.value}>
               {o.label}
             </option>
@@ -248,7 +296,7 @@ export default function PropertySearchBar({
       {showSort && (
         <div className={isHero ? heroFieldCell : 'min-w-[min(100%,10rem)] flex-1 basis-[8rem]'}>
           <label htmlFor="psb-sort" className="sr-only">
-            Sort
+            {t('search.sortSrOnly')}
           </label>
           <select
             id="psb-sort"
@@ -257,7 +305,7 @@ export default function PropertySearchBar({
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
           >
-            {SORT_OPTIONS.map((o) => (
+            {sortOptions.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
@@ -274,7 +322,7 @@ export default function PropertySearchBar({
             : 'min-w-[6.5rem] shrink-0 rounded-xl bg-[#2f8444] px-4 py-3 text-sm font-semibold text-white shadow-sm ring-1 ring-[#256c38]/30 transition hover:bg-[#256c38] sm:min-w-[7.5rem]'
         }
       >
-        Search
+        {t('search.search')}
       </button>
     </form>
   );

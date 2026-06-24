@@ -6,6 +6,7 @@ import { getWishlistState, toggleWishlist } from '../lib/wishlist';
 import PropertySearchBar from '../components/PropertySearchBar';
 import AppHeader from '../components/AppHeader';
 import ListingCard from '../components/ListingCard';
+import { useTranslation } from '../lib/i18n';
 const hero = '/hero-image.png';
 const HERO_TEXT_FONT = 'Avenir, "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif';
 
@@ -111,13 +112,13 @@ function HomeTopReviewCard({ review }) {
 
 function StatCard({ icon, title, subtitle }) {
   return (
-    <div className="bg-white rounded-2xl border border-emerald-100 shadow-[0_8px_24px_rgba(22,101,52,0.10)] px-4 py-4 flex items-center gap-5 hover:shadow-[0_10px_30px_rgba(22,101,52,0.14)] transition">
-      <div className="w-14 h-14 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+    <div className="h-full bg-white rounded-xl sm:rounded-2xl border border-emerald-100 shadow-[0_8px_24px_rgba(22,101,52,0.10)] px-3 py-4 sm:px-4 sm:py-5 flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-start lg:text-left lg:gap-5 hover:shadow-[0_10px_30px_rgba(22,101,52,0.14)] transition">
+      <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
         {icon}
       </div>
-      <div>
-        <p className="font-semibold mb-1 text-gray-800 text-sm">{title}</p>
-        <p className="text-xs text-gray-500">{subtitle}</p>
+      <div className="min-w-0 w-full lg:flex-1">
+        <p className="font-semibold text-gray-800 text-xs sm:text-sm leading-snug">{title}</p>
+        <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-relaxed">{subtitle}</p>
       </div>
     </div>
   );
@@ -125,6 +126,7 @@ function StatCard({ icon, title, subtitle }) {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [topReviews, setTopReviews] = useState([]);
@@ -247,13 +249,13 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#f5faf5] text-gray-800">
-      <AppHeader />
+      <AppHeader centerNav />
 
       <section className="relative overflow-visible bg-[#eef7ef] border-b border-[#ddeee1]">
         <div className="relative w-full">
           <img
             src={hero}
-            alt="Happy couple with rented home"
+            alt={t('home.heroImageAlt')}
             className="w-full h-[440px] sm:h-[460px] md:h-[500px] lg:h-[400px] object-cover object-[60%_center] sm:object-[58%_center] md:object-center lg:object-center brightness-110 saturate-110"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-white/62 via-white/34 to-transparent sm:from-white/48 sm:via-white/28 md:from-white/40 md:via-white/24 lg:from-white/35 lg:via-white/20" />
@@ -263,15 +265,15 @@ export default function HomePage() {
                 className="text-[1.8rem] sm:text-[2.4rem] md:text-5xl lg:text-5xl font-bold leading-[1.15] sm:leading-tight text-[#1e4732] max-w-[19rem] sm:max-w-xl lg:max-w-2xl"
                 style={{ fontFamily: HERO_TEXT_FONT }}
               >
-                Find Your Perfect Home,
+                {t('home.heroTitle')}
                 <br className="hidden sm:block" />
-                No Brokers Needed
+                {t('home.heroTitleBreak')}
               </h1>
               <p
                 className="text-sm sm:text-base md:text-lg text-[#38684a] max-w-[19rem] sm:max-w-xl lg:max-w-2xl lg:mt-5"
                 style={{ fontFamily: HERO_TEXT_FONT }}
               >
-                Connecting Owners &amp; Tenants Directly in Bangladesh.
+                {t('home.heroSubtitle')}
               </p>
               <div className="mt-3 sm:mt-4 md:mt-6 lg:mt-6 w-full max-w-2xl md:max-w-xl lg:max-w-2xl">
                 <PropertySearchBar variant="hero" navigateOnSubmit />
@@ -283,59 +285,51 @@ export default function HomePage() {
         <div className="h-12 sm:h-14 md:h-16 lg:h-8" />
       </section>
 
-      <section className="relative z-[1] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10 md:mt-2 lg:mt-2">
-        <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4 lg:grid-cols-4">
-          <div className="h-full -mt-8 sm:mt-0">
-            <StatCard
-              title="Verified Listings"
-              subtitle="Safe & Trusted Properties"
-              icon={
-                <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2l7 3v6c0 5-3.4 9.7-7 11-3.6-1.3-7-6-7-11V5l7-3zm-1 13l5-5-1.4-1.4L11 12.2l-1.6-1.6L8 12l3 3z" />
-                </svg>
-              }
-            />
-          </div>
-          <div className="h-full">
+      <section className="relative z-[1] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10 md:mt-4 lg:mt-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-3.5 sm:gap-4 items-stretch">
           <StatCard
-            title="Tenant Verification"
-            subtitle="Background checks for peace of mind"
+            title={t('home.statVerifiedTitle')}
+            subtitle={t('home.statVerifiedSubtitle')}
             icon={
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l7 3v6c0 5-3.4 9.7-7 11-3.6-1.3-7-6-7-11V5l7-3zm-1 13l5-5-1.4-1.4L11 12.2l-1.6-1.6L8 12l3 3z" />
+              </svg>
+            }
+          />
+          <StatCard
+            title={t('home.statTenantTitle')}
+            subtitle={t('home.statTenantSubtitle')}
+            icon={
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2a5 5 0 015 5v2h1a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8a2 2 0 012-2h1V7a5 5 0 015-5zm3 9H9v8h6v-8zm-3-7a3 3 0 00-3 3v2h6V7a3 3 0 00-3-3z" />
               </svg>
             }
           />
-          </div>
-          <div className="h-full">
           <StatCard
-            title="Rent Agreements"
-            subtitle="Legal contracts made easy"
+            title={t('home.statAgreementsTitle')}
+            subtitle={t('home.statAgreementsSubtitle')}
             icon={
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M14 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V8l-5-6zm1 7V4.5L18.5 9H15zM8 12h8v1.8H8V12zm0 3.5h8v1.8H8v-1.8z" />
               </svg>
             }
           />
-          </div>
-          <div className="h-full">
           <StatCard
-            title="Rent Collection"
-            subtitle="Hassle-free payment management"
+            title={t('home.statCollectionTitle')}
+            subtitle={t('home.statCollectionSubtitle')}
             icon={
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M3 6h18a2 2 0 012 2v8a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2zm2 3v6h14V9H5zm10 2h4v2h-4v-2z" />
               </svg>
             }
           />
-          </div>
         </div>
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-6">
-          <h2 className="text-3xl font-bold text-[#2f8444]">Featured Properties</h2>
-          <p className="text-gray-600 mt-1">Popular Listings in Your Area</p>
+          <h2 className="text-3xl font-bold text-[#2f8444]">{t('home.featuredTitle')}</h2>
+          <p className="text-gray-600 mt-1">{t('home.featuredSubtitle')}</p>
         </div>
 
         {loading ? (
@@ -343,7 +337,7 @@ export default function HomePage() {
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#2f8444]"></div>
           </div>
         ) : listings.length === 0 ? (
-          <p className="text-center py-10 text-gray-500">No featured properties available right now.</p>
+          <p className="text-center py-10 text-gray-500">{t('home.noFeatured')}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {listings.map((listing) => (
@@ -362,8 +356,8 @@ export default function HomePage() {
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
         <div className="mx-auto w-full max-w-5xl">
-          <h2 className="text-center text-xl font-bold text-[#1e4732] sm:text-2xl">Loved by renters</h2>
-          <p className="mt-1 text-center text-sm text-gray-600">Featured reviews from our community</p>
+          <h2 className="text-center text-xl font-bold text-[#1e4732] sm:text-2xl">{t('home.reviewsTitle')}</h2>
+          <p className="mt-1 text-center text-sm text-gray-600">{t('home.reviewsSubtitle')}</p>
 
           {reviewsLoading ? (
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
@@ -393,7 +387,7 @@ export default function HomePage() {
               ))}
             </div>
           ) : topReviews.length === 0 ? (
-            <p className="mt-6 text-center text-sm text-gray-500">Reviews will appear here once the community shares their experiences.</p>
+            <p className="mt-6 text-center text-sm text-gray-500">{t('home.reviewsEmpty')}</p>
           ) : (
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
               {topReviews.map((review) => (
@@ -408,7 +402,7 @@ export default function HomePage() {
                 to="/review"
                 className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
               >
-                Give us your review
+                {t('home.giveReview')}
               </Link>
             </div>
           ) : null}
@@ -425,7 +419,7 @@ export default function HomePage() {
               <svg className="h-3 w-3 text-emerald-100" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" fill="currentColor" />
               </svg>
-              Verified properties, trusted people
+              {t('home.ctaBadge')}
             </span>
 
             {!loggedIn && (
@@ -434,7 +428,7 @@ export default function HomePage() {
                 onClick={() => navigate('/signup')}
                 className="inline-flex items-center justify-center rounded-lg bg-white text-[#1f5f31] font-semibold px-4 py-2 text-sm shadow-sm hover:bg-[#f3fff5] transition w-full sm:w-auto"
               >
-                Get Started
+                {t('home.getStarted')}
               </button>
             )}
           </div>

@@ -37,6 +37,7 @@ import WalletPage from './pages/WalletPage';
 import AdminTopupApprovalsPage from './pages/AdminTopupApprovalsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SiteFooter from './components/SiteFooter';
+import ArefinDevTestPage from './pages/dev/ArefinDevTestPage';
 
 function AppLayout() {
   const { pathname } = useLocation();
@@ -82,6 +83,12 @@ function AppLayout() {
           <Route path="/admin-dashboard/topup-approvals" element={<ProtectedRoute component={AdminTopupApprovalsPage} requiredRole="ADMIN" />} />
           <Route path="/account" element={<ProtectedRoute component={AccountSettingsPage} requiredRole={null} />} />
           <Route path="/wallet" element={<ProtectedRoute component={WalletPage} requiredRole={null} />} />
+          {import.meta.env.DEV ? (
+            <Route
+              path="/dev/arefin-test"
+              element={<ProtectedRoute component={ArefinDevTestPage} requiredRole={null} />}
+            />
+          ) : null}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>

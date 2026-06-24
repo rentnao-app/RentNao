@@ -38,13 +38,21 @@ const wsRooms = new Map<WSContext, Set<string>>();
 
 // Connection Management
 
-export function addConnection(userId: string, ws: WSContext): void {
+const MAX_CONNECTIONS_PER_USER = 5;
+
+export function addConnection(userId: string, ws: WSContext): boolean {
   // Add to user connections
   let connections = userConnections.get(userId);
   if (!connections) {
     connections = new Set();
     userConnections.set(userId, connections);
   }
+
+  // Enforce per-user connection limit to prevent resource exhaustion/DoS
+  if (connections.size >= MAX_CONNECTIONS_PER_USER) {
+    return false;
+  }
+
   connections.add(ws);
 
   // Reverse lookup
@@ -52,6 +60,8 @@ export function addConnection(userId: string, ws: WSContext): void {
 
   // Init per-connection room tracker
   wsRooms.set(ws, new Set());
+
+  return true;
 }
 
 export function removeConnection(ws: WSContext): void {
@@ -207,6 +217,75 @@ export function isUserInRoom(conversationId: string, userId: string): boolean {
 }
 
 
+// Rate Limiting (in-memory sliding window per user per conversation)
+const MESSAGE_RATE_WINDOW_MS = 10_000; // 10 seconds
+const MESSAGE_RATE_MAX = 10;           // max 10 messages per window
+
+// userId → { conversationId → timestamp[] }
+const messageTimestamps = new Map<string, Map<string, number[]>>();
+
+/**
+ * Check if a user is rate limited in sending messages to a conversation.
+ * Handles both WebSocket and REST endpoints to prevent spamming/DoS.
+ */
+export function isRateLimited(userId: string, conversationId: string): boolean {
+  const now = Date.now();
+  const cutoff = now - MESSAGE_RATE_WINDOW_MS;
+
+  let userMap = messageTimestamps.get(userId);
+  if (!userMap) {
+    userMap = new Map();
+    messageTimestamps.set(userId, userMap);
+  }
+
+  let timestamps = userMap.get(conversationId);
+  if (!timestamps) {
+    timestamps = [];
+  }
+
+  // Prune expired timestamps
+  const filtered = timestamps.filter(t => t > cutoff);
+
+  if (filtered.length >= MESSAGE_RATE_MAX) {
+    userMap.set(conversationId, filtered);
+    return true;
+  }
+
+  filtered.push(now);
+  userMap.set(conversationId, filtered);
+  return false;
+}
+
+/**
+ * Clean up rate limit data when connection drops.
+ */
+export function cleanupRateLimitData(userId: string): void {
+  messageTimestamps.delete(userId);
+}
+
+/**
+ * Periodically prune expired rate limit entries to prevent memory growth for offline/idle users.
+ */
+export function pruneRateLimitData(): void {
+  const now = Date.now();
+  const cutoff = now - MESSAGE_RATE_WINDOW_MS;
+
+  for (const [userId, userMap] of messageTimestamps.entries()) {
+    for (const [conversationId, timestamps] of userMap.entries()) {
+      const filtered = timestamps.filter(t => t > cutoff);
+      if (filtered.length === 0) {
+        userMap.delete(conversationId);
+      } else {
+        userMap.set(conversationId, filtered);
+      }
+    }
+    if (userMap.size === 0) {
+      messageTimestamps.delete(userId);
+    }
+  }
+}
+
+
 // Heartbeat (server-initiated ping to detect dead connections)
 
 const HEARTBEAT_INTERVAL_MS = 30_000; // 30 seconds
@@ -243,6 +322,9 @@ export function startHeartbeat(): void {
     if (deadConnections.length > 0) {
       console.log(`[WS Heartbeat] Cleaned up ${deadConnections.length} dead connection(s). Active: ${wsToUser.size}`);
     }
+
+    // Periodically prune empty rate limit arrays to avoid memory growth
+    pruneRateLimitData();
   }, HEARTBEAT_INTERVAL_MS);
 
   console.log(`[WS Heartbeat] Started (interval: ${HEARTBEAT_INTERVAL_MS / 1000}s)`);
@@ -257,4 +339,34 @@ export function stopHeartbeat(): void {
     heartbeatTimer = null;
     console.log('[WS Heartbeat] Stopped');
   }
+}
+
+
+// Graceful Shutdown
+
+/**
+ * Close all active WebSocket connections and clear in-memory state.
+ * Sends close code 1012 (Service Restart) so clients know to reconnect.
+ * Called during graceful shutdown, after stopHeartbeat().
+ */
+export function closeAllConnections(): void {
+  let closed = 0;
+
+  for (const [ws, userId] of wsToUser) {
+    try {
+      ws.close(1012, 'Server shutting down');
+      closed++;
+    } catch {
+      // Socket may already be dead — ignore
+    }
+  }
+
+  // Purge all in-memory state
+  userConnections.clear();
+  conversationRooms.clear();
+  wsToUser.clear();
+  wsRooms.clear();
+  messageTimestamps.clear();
+
+  console.log(`[WS Shutdown] Closed ${closed} connection(s) and cleared registry.`);
 }
