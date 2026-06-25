@@ -112,13 +112,13 @@ function HomeTopReviewCard({ review }) {
 
 function StatCard({ icon, title, subtitle }) {
   return (
-    <div className="h-full bg-white rounded-xl sm:rounded-2xl border border-emerald-100 shadow-[0_8px_24px_rgba(22,101,52,0.10)] px-3 py-4 sm:px-4 sm:py-5 flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-start lg:text-left lg:gap-5 hover:shadow-[0_10px_30px_rgba(22,101,52,0.14)] transition">
+    <div className="h-full bg-white rounded-xl sm:rounded-2xl border border-emerald-100 shadow-[0_8px_24px_rgba(22,101,52,0.10)] px-3 py-4 sm:px-4 sm:py-5 flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-start lg:text-left lg:gap-5 hover:shadow-[0_10px_30px_rgba(22,101,52,0.14)] transition min-w-0">
       <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
         {icon}
       </div>
       <div className="min-w-0 w-full lg:flex-1">
-        <p className="font-semibold text-gray-800 text-xs sm:text-sm leading-snug">{title}</p>
-        <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-relaxed">{subtitle}</p>
+        <p className="font-semibold text-gray-800 text-xs sm:text-sm leading-snug line-clamp-2">{title}</p>
+        <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-relaxed line-clamp-3">{subtitle}</p>
       </div>
     </div>
   );
@@ -248,41 +248,62 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5faf5] text-gray-800">
+    <div className="min-h-screen bg-[#f5faf5] text-gray-800 overflow-x-clip">
       <AppHeader centerNav />
 
       <section className="relative overflow-visible bg-[#eef7ef] border-b border-[#ddeee1]">
-        <div className="relative w-full">
+        {/* Desktop: full-width hero with text overlay */}
+        <div className="relative hidden w-full lg:block">
           <img
             src={hero}
             alt={t('home.heroImageAlt')}
-            className="w-full h-[440px] sm:h-[460px] md:h-[500px] lg:h-[400px] object-cover object-[60%_center] sm:object-[58%_center] md:object-center lg:object-center brightness-110 saturate-110"
+            className="h-[400px] w-full object-cover object-center brightness-110 saturate-110"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-white/62 via-white/34 to-transparent sm:from-white/48 sm:via-white/28 md:from-white/40 md:via-white/24 lg:from-white/35 lg:via-white/20" />
-          <div className="pointer-events-none absolute inset-0 z-[19] flex items-start lg:items-center">
-            <div className="pointer-events-auto max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-12 md:pt-16 lg:pt-0 flex flex-col justify-start lg:justify-center gap-3 sm:gap-4 md:gap-5 lg:block">
-              <h1
-                className="text-[1.8rem] sm:text-[2.4rem] md:text-5xl lg:text-5xl font-bold leading-[1.15] sm:leading-tight text-[#1e4732] max-w-[19rem] sm:max-w-xl lg:max-w-2xl"
-                style={{ fontFamily: HERO_TEXT_FONT }}
-              >
-                {t('home.heroTitle')}
-                <br className="hidden sm:block" />
-                {t('home.heroTitleBreak')}
-              </h1>
-              <p
-                className="text-sm sm:text-base md:text-lg text-[#38684a] max-w-[19rem] sm:max-w-xl lg:max-w-2xl lg:mt-5"
-                style={{ fontFamily: HERO_TEXT_FONT }}
-              >
-                {t('home.heroSubtitle')}
-              </p>
-              <div className="mt-3 sm:mt-4 md:mt-6 lg:mt-6 w-full max-w-2xl md:max-w-xl lg:max-w-2xl">
-                <PropertySearchBar variant="hero" navigateOnSubmit />
-              </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-white/35 via-white/20 to-transparent" />
+        </div>
+
+        {/* Mobile / tablet: spotlight crop — couple & RENT placard */}
+        <div className="relative px-4 pt-4 sm:px-6 sm:pt-5 lg:hidden">
+          <div className="relative mx-auto max-w-md overflow-hidden rounded-2xl border border-[#d9e9dd] bg-white shadow-[0_8px_24px_rgba(22,101,52,0.12)]">
+            <div className="relative aspect-[5/3] w-full sm:aspect-[16/9]">
+              <img
+                src={hero}
+                alt={t('home.heroImageAlt')}
+                className="absolute inset-0 h-full w-full scale-[1.12] object-cover object-[90%_42%] sm:object-[88%_40%] brightness-105 saturate-110"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-white/15" />
             </div>
           </div>
         </div>
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#1e4732]/5 to-transparent" />
-        <div className="h-12 sm:h-14 md:h-16 lg:h-8" />
+
+        <div className="pointer-events-none relative z-[19] lg:absolute lg:inset-0 lg:flex lg:items-center">
+          <div className="pointer-events-auto mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 pt-5 sm:gap-4 sm:px-6 sm:pt-6 lg:px-8 lg:py-0">
+            <h1
+              className="max-w-full text-[1.65rem] font-bold leading-[1.2] text-[#1e4732] sm:max-w-xl sm:text-[2.4rem] sm:leading-tight lg:max-w-2xl lg:text-5xl"
+              style={{ fontFamily: HERO_TEXT_FONT }}
+            >
+              {t('home.heroTitle')}
+              <br className="hidden sm:block" />
+              {t('home.heroTitleBreak')}
+            </h1>
+            <p
+              className="max-w-full text-sm leading-snug text-[#38684a] sm:max-w-xl sm:text-base md:text-lg lg:mt-5 lg:max-w-2xl"
+              style={{ fontFamily: HERO_TEXT_FONT }}
+            >
+              <span className="lg:hidden">
+                {t('home.heroSubtitleLine1')}
+                <br />
+                {t('home.heroSubtitleLine2')}
+              </span>
+              <span className="hidden lg:inline">{t('home.heroSubtitle')}</span>
+            </p>
+            <div className="mt-1 w-full max-w-2xl sm:mt-2 lg:mt-6">
+              <PropertySearchBar variant="hero" navigateOnSubmit />
+            </div>
+          </div>
+        </div>
+
+        <div className="h-6 sm:h-8 lg:h-8" />
       </section>
 
       <section className="relative z-[1] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10 md:mt-4 lg:mt-2">
@@ -415,7 +436,7 @@ export default function HomePage() {
           <div className="pointer-events-none absolute -left-8 -bottom-8 h-28 w-28 rounded-full bg-[#9bd5a8]/20 blur-3xl" />
 
           <div className="relative z-10 flex flex-col items-center gap-3 sm:gap-4 md:gap-5">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] sm:text-[11px] md:text-[14px] font-semibold uppercase tracking-wide text-emerald-50">
+            <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[10px] sm:text-[11px] md:text-xs font-semibold tracking-wide text-emerald-50 text-center leading-snug">
               <svg className="h-3 w-3 text-emerald-100" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" fill="currentColor" />
               </svg>

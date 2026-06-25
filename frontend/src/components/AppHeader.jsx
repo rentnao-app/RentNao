@@ -69,30 +69,30 @@ export default function AppHeader({ variant = 'app', centerNav = false }) {
 
   const containerClass =
     variant === 'wide'
-      ? 'mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8'
-      : 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
+      ? 'mx-auto max-w-[1500px] px-3 sm:px-6 lg:px-8'
+      : 'mx-auto max-w-7xl px-3 sm:px-6 lg:px-8';
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-emerald-100 bg-white/95 backdrop-blur shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+      <header className="sticky top-0 z-30 border-b border-emerald-100 bg-white/95 backdrop-blur shadow-[0_2px_10px_rgba(15,23,42,0.06)] overflow-x-clip">
         <div
           className={
             centerNav
-              ? `${containerClass} grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-3 py-3 sm:py-3.5`
-              : `${containerClass} relative flex items-center gap-3 py-3 sm:gap-4 sm:py-3.5`
+              ? `${containerClass} flex items-center gap-2 py-2.5 sm:gap-3 sm:py-3.5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-x-3`
+              : `${containerClass} flex items-center gap-2 py-2.5 sm:gap-3 sm:py-3.5`
           }
         >
-          <div className="flex min-w-0 items-center gap-3">
+          <div className={`flex min-w-0 items-center gap-2 sm:gap-3 ${centerNav ? 'lg:col-start-1' : 'shrink-0'}`}>
             <BrandLogoLink className="min-w-0 shrink-0" />
 
             {/* Wallet pill sits next to the brand on the left (logged-in users) */}
             {loggedIn ? <WalletPill /> : null}
           </div>
 
-          {/* Primary nav — centered on homepage, otherwise trailing */}
+          {/* Primary nav — centered on homepage (lg+), otherwise trailing */}
           <nav
-            className={`hidden items-center gap-2 lg:flex ${
-              centerNav ? 'justify-center col-start-2 row-start-1' : 'ml-auto'
+            className={`hidden items-center gap-1.5 xl:gap-2 lg:flex ${
+              centerNav ? 'lg:justify-center lg:col-start-2 lg:row-start-1' : 'ml-auto shrink-0'
             }`}
             aria-label="Primary"
           >
@@ -103,8 +103,8 @@ export default function AppHeader({ variant = 'app', centerNav = false }) {
 
           {/* Language toggle + auth / user actions */}
           <div
-            className={`flex items-center gap-2 sm:gap-3 shrink-0 ${
-              centerNav ? 'col-start-3 row-start-1 justify-self-end' : loggedIn ? '' : 'ml-auto md:ml-0'
+            className={`ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2 shrink-0 ${
+              centerNav ? 'lg:col-start-3 lg:row-start-1 lg:justify-self-end lg:ml-0' : ''
             }`}
           >
             <LanguageToggle className="hidden md:inline-flex shrink-0" />
@@ -121,16 +121,16 @@ export default function AppHeader({ variant = 'app', centerNav = false }) {
                 />
               </>
             ) : (
-              <div className="hidden sm:flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-1.5 sm:gap-2">
                 <Link
                   to="/login"
-                  className="rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition"
+                  className="rounded-lg px-2.5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition sm:px-3"
                 >
                   {t('header.login')}
                 </Link>
                 <Link
                   to="/signup"
-                  className="rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 transition"
+                  className="rounded-lg bg-emerald-700 px-2.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 transition sm:px-3.5"
                 >
                   {t('header.signup')}
                 </Link>
@@ -143,7 +143,7 @@ export default function AppHeader({ variant = 'app', centerNav = false }) {
             {/* Mobile hamburger */}
             <button
               type="button"
-              className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition"
+              className="lg:hidden inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition shrink-0"
               aria-label={t('header.openMenu')}
               aria-expanded={drawerOpen}
               aria-controls="app-mobile-nav"
@@ -182,7 +182,7 @@ function NavLink({ item, pathname }) {
     return (
       <Link
         to={item.to}
-        className={`ml-1 inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 ${
+        className={`ml-1 inline-flex max-w-[9.5rem] xl:max-w-none items-center gap-1.5 rounded-lg bg-emerald-700 px-2.5 py-2 text-xs xl:text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 xl:px-3.5 ${
           active ? 'ring-2 ring-emerald-200' : ''
         }`}
       >
@@ -195,7 +195,7 @@ function NavLink({ item, pathname }) {
     return (
       <Link
         to={item.to}
-        className={`inline-flex items-center rounded-lg border px-3.5 py-2 text-sm font-semibold shadow-sm transition ${
+        className={`inline-flex max-w-[9rem] xl:max-w-none items-center rounded-lg border px-2.5 py-2 text-xs xl:text-sm font-semibold shadow-sm transition xl:px-3.5 ${
           active
             ? 'border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800'
             : 'border-emerald-200 bg-white text-emerald-800 hover:border-emerald-300 hover:bg-emerald-50'
@@ -208,7 +208,7 @@ function NavLink({ item, pathname }) {
   return (
     <Link
       to={item.to}
-      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+      className={`rounded-lg px-2.5 py-2 text-sm font-medium transition xl:px-3 ${
         active
           ? 'bg-emerald-50 text-emerald-800'
           : 'text-gray-700 hover:bg-gray-50 hover:text-emerald-800'
@@ -227,15 +227,15 @@ function WalletPill() {
     <Link
       to="/wallet"
       title={t('header.wallet')}
-      className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 sm:ml-4 sm:px-3 sm:py-2 sm:text-sm"
+      className="ml-1 inline-flex max-w-[11rem] items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 sm:ml-2 sm:max-w-none sm:px-2.5 sm:py-1.5 md:ml-4 md:px-3 md:py-2 md:text-sm"
     >
-      <Icon path="M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" className="h-4 w-4" />
+      <Icon path="M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" className="h-4 w-4 shrink-0" />
       {showSkeleton ? (
         <span className="inline-block h-3 w-12 animate-pulse rounded bg-emerald-200/70" aria-hidden />
       ) : balance == null ? (
-        <span>{t('header.wallet')}</span>
+        <span className="truncate max-sm:sr-only">{t('header.wallet')}</span>
       ) : (
-        <span className="tabular-nums">{formatWalletAmount(balance, currency)}</span>
+        <span className="truncate tabular-nums">{formatWalletAmount(balance, currency)}</span>
       )}
     </Link>
   );
@@ -306,7 +306,7 @@ function MobileDrawer({ onClose, navItems, pathname, loggedIn, userName, userEma
               key={item.to + item.label}
               to={item.to}
               onClick={onClose}
-              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition ${
+              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition break-words ${
                 item.cta
                   ? 'bg-emerald-700 text-white hover:bg-emerald-800 font-semibold'
                   : item.buttonNav

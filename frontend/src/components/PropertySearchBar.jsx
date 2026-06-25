@@ -47,7 +47,7 @@ const selectChevronStyle = {
 function selectClassName(compact) {
   const pad = compact ? 'px-2.5 py-2.5 sm:px-3 sm:py-2.5' : 'px-4 py-3';
   const text = compact ? 'text-xs sm:text-sm' : 'text-sm';
-  return `w-full border border-[#deeadf] rounded-xl ${pad} ${text} bg-[#fbfefb] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#66aa75] appearance-none bg-[length:1rem_1rem] bg-[right_0.5rem_center] sm:bg-[right_0.65rem_center] bg-no-repeat pr-8 sm:pr-9`;
+  return `w-full min-w-0 border border-[#deeadf] rounded-xl ${pad} ${text} bg-[#fbfefb] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#66aa75] appearance-none bg-[length:1rem_1rem] bg-[right_0.5rem_center] sm:bg-[right_0.65rem_center] bg-no-repeat pr-8 sm:pr-9 truncate`;
 }
 
 function areaTriggerClassName(compact) {
@@ -211,7 +211,7 @@ export default function PropertySearchBar({
   const isHero = variant === 'hero';
   const formShell =
     isHero
-      ? 'w-full max-w-2xl md:max-w-xl lg:max-w-[min(100%,42rem)] bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-2.5 sm:p-3 translate-y-[72%] sm:translate-y-[78%] md:translate-y-0 lg:translate-y-0 overflow-visible'
+      ? 'w-full max-w-2xl md:max-w-xl lg:max-w-[min(100%,42rem)] bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-2.5 sm:p-3 max-lg:translate-y-0 overflow-visible'
       : 'w-full bg-white/95 border border-[#d9e9dd] shadow-md rounded-2xl p-3.5 sm:p-4';
 
   const formRow = isHero

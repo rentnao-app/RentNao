@@ -6,8 +6,8 @@ export default function SiteFooter() {
 
   return (
     <footer className="bg-teal-900 text-teal-200 py-6">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col gap-4 md:gap-5">
-        <div className="text-xs sm:text-sm leading-relaxed">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col gap-4 md:gap-5">
+        <div className="text-xs sm:text-sm leading-relaxed break-words">
           <p className="font-semibold text-teal-100">{t('footer.contact')}</p>
           <p className="mt-1">
             <svg className="mr-2 inline-block h-3.5 w-3.5 text-white align-middle" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -31,7 +31,7 @@ export default function SiteFooter() {
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
           <p className="text-xs sm:text-sm">{t('footer.copyright')}</p>
-          <div className="flex flex-wrap gap-5 text-xs sm:text-sm">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs sm:text-sm">
             <Link to="/about" className="hover:text-white transition">
               {t('footer.about')}
             </Link>
