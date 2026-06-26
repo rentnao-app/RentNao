@@ -2,6 +2,7 @@ import pg from 'pg';
 
 type SeedConfig = {
   email: string;
+  phone: string;
   role: 'TENANT' | 'OWNER';
   password: string;
   contactPhone?: string | null;
@@ -43,7 +44,7 @@ async function ensureUser(client: pg.PoolClient, cfg: SeedConfig) {
       `INSERT INTO "User" (user_id, role, onboarding_status, kyc_verification_status, contact_email, contact_phone, is_active)
        VALUES (gen_random_uuid()::text, $1, 'COMPLETED', 'APPROVED', $2, $3, true)
        RETURNING user_id`,
-      [cfg.role, cfg.email, cfg.contactPhone ?? null]
+      [cfg.role, cfg.email, cfg.phone]
     );
     userId = insertedUser.rows[0].user_id as string;
 
@@ -66,8 +67,30 @@ async function ensureUser(client: pg.PoolClient, cfg: SeedConfig) {
          updated_at = NOW(),
          last_login_at = NOW()
      WHERE user_id = $4`,
-    [cfg.role, cfg.email, cfg.contactPhone ?? null, userId]
+    [cfg.role, cfg.email, cfg.phone, userId]
   );
+
+  const existingPhoneCred = await client.query(
+    `SELECT id FROM "Credentials" WHERE user_id = $1 AND identifier_type = 'PHONE' LIMIT 1`,
+    [userId]
+  );
+  if (existingPhoneCred.rows.length > 0) {
+    await client.query(
+      `UPDATE "Credentials"
+       SET identifier = $1,
+           password_hash = $2,
+           verified_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $3`,
+      [cfg.phone, hash, existingPhoneCred.rows[0].id]
+    );
+  } else {
+    await client.query(
+      `INSERT INTO "Credentials" (id, user_id, identifier, identifier_type, password_hash, verified_at)
+       VALUES (gen_random_uuid()::text, $1, $2, 'PHONE', $3, NOW())`,
+      [userId, cfg.phone, hash]
+    );
+  }
 
   await client.query(
     `INSERT INTO "BaseUserProfile" (
@@ -185,7 +208,7 @@ async function ensureUser(client: pg.PoolClient, cfg: SeedConfig) {
     );
   }
 
-  return { userId, email: cfg.email, role: cfg.role, password: cfg.password };
+  return { userId, email: cfg.email, phone: cfg.phone, role: cfg.role, password: cfg.password };
 }
 
 async function main() {
@@ -197,6 +220,7 @@ async function main() {
 
     const tenant = await ensureUser(client, {
       email: 'ten1@gmail.com',
+      phone: '+8801711111111',
       role: 'TENANT',
       password: '11111111',
       firstName: 'Test',
@@ -211,6 +235,7 @@ async function main() {
 
     const owner = await ensureUser(client, {
       email: 'own1@gmail.com',
+      phone: '+8801722222222',
       role: 'OWNER',
       password: '11111111',
       firstName: 'Test',
@@ -225,9 +250,9 @@ async function main() {
 
     const ownerOwn3 = await ensureUser(client, {
       email: 'own3@gmail.com',
+      phone: '+8801733333333',
       role: 'OWNER',
       password: '11111111',
-      contactPhone: '01234567890',
       firstName: 'Test',
       lastName: 'OwnerThree',
       profession: 'Business Owner',

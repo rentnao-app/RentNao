@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from './BrandLogoLink';
+import BrandLogoLink from './BrandLogoLink';
 import LanguageToggle from './LanguageToggle';
 import NotificationBell from './NotificationBell';
 import UserMenu from './UserMenu';
@@ -15,6 +15,7 @@ import {
 } from '../lib/api';
 import { useProfilePhotoDownloadUrl } from '../hooks/useProfilePhotoDownloadUrl';
 import { formatWalletAmount, useWalletBalance } from '../lib/walletBalance';
+import { getOwnerSidebarNavItems } from '../lib/nav/ownerSidebarNav';
 import { useTranslation } from '../lib/i18n';
 
 /**
@@ -61,7 +62,8 @@ export default function AppHeader({ variant = 'app', centerNav = false }) {
     };
   }, [drawerOpen]);
 
-  const navItems = useMemo(() => buildNav(role, loggedIn, t), [role, loggedIn, t]);
+  const headerNavItems = useMemo(() => buildHeaderNav(role, loggedIn, t), [role, loggedIn, t]);
+  const drawerNavItems = useMemo(() => buildDrawerNav(role, loggedIn, t), [role, loggedIn, t]);
   const userName = getUserDisplayName(user);
   const userEmail = user?.contactEmail || user?.contact_email || user?.email || '';
   const userInitials = getUserInitials(user);
@@ -82,43 +84,46 @@ export default function AppHeader({ variant = 'app', centerNav = false }) {
               : `${containerClass} flex items-center gap-2 py-2.5 sm:gap-3 sm:py-3.5`
           }
         >
-          <div className={`flex min-w-0 items-center gap-2 sm:gap-3 ${centerNav ? 'lg:col-start-1' : 'shrink-0'}`}>
+          <div className={`flex min-w-0 flex-1 items-center gap-2 sm:gap-3 ${centerNav ? 'lg:col-start-1 lg:flex-none' : ''}`}>
             <BrandLogoLink className="min-w-0 shrink-0" />
-
-            {/* Wallet pill sits next to the brand on the left (logged-in users) */}
-            {loggedIn ? <WalletPill /> : null}
           </div>
 
-          {/* Primary nav — centered on homepage (lg+), otherwise trailing */}
-          <nav
-            className={`hidden items-center gap-1.5 xl:gap-2 lg:flex ${
-              centerNav ? 'lg:justify-center lg:col-start-2 lg:row-start-1' : 'ml-auto shrink-0'
-            }`}
-            aria-label="Primary"
-          >
-            {navItems.map((item) => (
-              <NavLink key={item.to + item.label} item={item} pathname={location.pathname} />
-            ))}
-          </nav>
+          {/* Primary nav — hidden for roles that use a dashboard sidebar (e.g. owner) */}
+          {headerNavItems.length > 0 ? (
+            <nav
+              className={`hidden items-center gap-1.5 xl:gap-2 lg:flex ${
+                centerNav ? 'lg:justify-center lg:col-start-2 lg:row-start-1' : 'ml-auto shrink-0'
+              }`}
+              aria-label="Primary"
+            >
+              {headerNavItems.map((item) => (
+                <NavLink key={item.to + item.label} item={item} pathname={location.pathname} />
+              ))}
+            </nav>
+          ) : null}
 
-          {/* Language toggle + auth / user actions */}
+          {/* Language toggle — desktop header; mobile uses drawer */}
           <div
-            className={`ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2 shrink-0 ${
+            className={`ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2 lg:gap-3 xl:gap-4 shrink-0 ${
               centerNav ? 'lg:col-start-3 lg:row-start-1 lg:justify-self-end lg:ml-0' : ''
             }`}
           >
-            <LanguageToggle className="hidden md:inline-flex shrink-0" />
+            <LanguageToggle className="hidden lg:inline-flex shrink-0" />
 
             {loggedIn ? (
               <>
+                <WalletPill compact className="lg:hidden" />
+                <WalletPill className="hidden lg:inline-flex" />
                 <NotificationBell />
-                <UserMenu
-                  name={userName}
-                  email={userEmail}
-                  role={role}
-                  initials={userInitials}
-                  avatarUrl={profileAvatarUrl}
-                />
+                <div className="hidden lg:block">
+                  <UserMenu
+                    name={userName}
+                    email={userEmail}
+                    role={role}
+                    initials={userInitials}
+                    avatarUrl={profileAvatarUrl}
+                  />
+                </div>
               </>
             ) : (
               <div className="hidden sm:flex items-center gap-1.5 sm:gap-2">
@@ -137,10 +142,7 @@ export default function AppHeader({ variant = 'app', centerNav = false }) {
               </div>
             )}
 
-            {/* Language — mobile header (compact, beside menu) */}
-            <LanguageToggle compact className="md:hidden shrink-0" />
-
-            {/* Mobile hamburger */}
+            {/* Mobile hamburger — primary nav on small screens */}
             <button
               type="button"
               className="lg:hidden inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition shrink-0"
@@ -164,11 +166,13 @@ export default function AppHeader({ variant = 'app', centerNav = false }) {
       {drawerOpen && (
         <MobileDrawer
           onClose={() => setDrawerOpen(false)}
-          navItems={navItems}
+          navItems={drawerNavItems}
           pathname={location.pathname}
           loggedIn={loggedIn}
           userName={userName}
           userEmail={userEmail}
+          userInitials={userInitials}
+          profileAvatarUrl={profileAvatarUrl}
           role={role}
         />
       )}
@@ -219,7 +223,7 @@ function NavLink({ item, pathname }) {
   );
 }
 
-function WalletPill() {
+function WalletPill({ className = '', compact = false }) {
   const { balance, currency, status } = useWalletBalance();
   const { t } = useTranslation();
   const showSkeleton = status === 'loading' && balance == null;
@@ -227,9 +231,13 @@ function WalletPill() {
     <Link
       to="/wallet"
       title={t('header.wallet')}
-      className="ml-1 inline-flex max-w-[11rem] items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 sm:ml-2 sm:max-w-none sm:px-2.5 sm:py-1.5 md:ml-4 md:px-3 md:py-2 md:text-sm"
+      className={`inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 font-semibold text-emerald-800 transition hover:bg-emerald-100 shrink-0 ${
+        compact
+          ? 'max-w-[7.5rem] px-2 py-1.5 text-[11px] sm:max-w-[9rem] sm:px-2.5 sm:text-xs'
+          : 'max-w-none px-3 py-2 text-sm'
+      } ${className}`}
     >
-      <Icon path="M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" className="h-4 w-4 shrink-0" />
+      <Icon path="M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" className={`shrink-0 ${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
       {showSkeleton ? (
         <span className="inline-block h-3 w-12 animate-pulse rounded bg-emerald-200/70" aria-hidden />
       ) : balance == null ? (
@@ -241,7 +249,17 @@ function WalletPill() {
   );
 }
 
-function MobileDrawer({ onClose, navItems, pathname, loggedIn, userName, userEmail, role }) {
+function MobileDrawer({
+  onClose,
+  navItems,
+  pathname,
+  loggedIn,
+  userName,
+  userEmail,
+  userInitials,
+  profileAvatarUrl,
+  role,
+}) {
   const { t } = useTranslation();
   return (
     <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
@@ -258,14 +276,10 @@ function MobileDrawer({ onClose, navItems, pathname, loggedIn, userName, userEma
         aria-labelledby="app-mobile-nav-title"
         className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <BrandLogoLink imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT} onClick={onClose} />
-            <span id="app-mobile-nav-title" className="sr-only">
-              {t('header.mainMenu')}
-            </span>
-            {loggedIn ? <p className="truncate text-xs text-gray-500">{roleLabel(role, t)}</p> : null}
-          </div>
+        <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-4 py-3.5">
+          <span id="app-mobile-nav-title" className="text-sm font-semibold text-gray-900">
+            {t('header.mainMenu')}
+          </span>
           <button
             type="button"
             onClick={onClose}
@@ -279,65 +293,53 @@ function MobileDrawer({ onClose, navItems, pathname, loggedIn, userName, userEma
         </div>
 
         {loggedIn ? (
-          <div className="border-b border-[#eef4ef] px-5 py-3">
-            <p className="truncate text-sm font-semibold text-gray-900">{userName || t('header.account')}</p>
-            {userEmail ? <p className="truncate text-xs text-gray-500">{userEmail}</p> : null}
-            <Link
-              to="/wallet"
-              onClick={onClose}
-              className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition"
-            >
-              <Icon path="M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" className="h-4 w-4" />
-              <DrawerWalletAmount />
-            </Link>
+          <div className="border-b border-[#eef4ef] px-4 py-4">
+            <div className="flex items-center gap-3">
+              <DrawerAvatar initials={userInitials} avatarUrl={profileAvatarUrl} name={userName} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-gray-900">{userName || t('header.account')}</p>
+                {userEmail && userEmail.toLowerCase() !== (userName || '').toLowerCase() ? (
+                  <p className="truncate text-xs text-gray-500">{userEmail}</p>
+                ) : null}
+                <p className="mt-1 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                  {roleLabel(role, t)}
+                </p>
+              </div>
+            </div>
           </div>
         ) : null}
 
-        <div className="border-b border-[#eef4ef] px-5 py-3 lg:hidden">
+        <div className="border-b border-[#eef4ef] px-4 py-3 lg:hidden">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">{t('language.label')}</p>
           <LanguageToggle />
         </div>
 
-        <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 flex flex-col gap-1.5" aria-label="Primary">
-          {navItems.map((item) => {
-            const active = isActive(item, pathname);
-            return (
-            <Link
-              key={item.to + item.label}
-              to={item.to}
-              onClick={onClose}
-              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition break-words ${
-                item.cta
-                  ? 'bg-emerald-700 text-white hover:bg-emerald-800 font-semibold'
-                  : item.buttonNav
-                    ? active
-                      ? 'border border-emerald-700 bg-emerald-700 font-semibold text-white'
-                      : 'border border-emerald-200 bg-white font-semibold text-emerald-800 hover:border-emerald-300 hover:bg-emerald-50'
-                    : 'text-gray-700 hover:bg-emerald-50/80 font-medium'
-              }`}
-            >
-              {item.label}
-            </Link>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 flex flex-col gap-1" aria-label="Primary">
+          {navItems.map((item) => (
+            <DrawerNavLink key={item.to + item.label} item={item} pathname={pathname} onClose={onClose} />
+          ))}
         </nav>
 
         {loggedIn ? (
           <div className="border-t border-[#eef4ef] p-4">
-            <Link
-              to="/account"
-              onClick={onClose}
-              className="block w-full rounded-xl border border-gray-200 bg-white py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
-            >
-              {t('header.accountSettings')}
-            </Link>
+            {role !== 'OWNER' ? (
+              <Link
+                to="/account"
+                onClick={onClose}
+                className="block w-full rounded-xl border border-gray-200 bg-white py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                {t('header.accountSettings')}
+              </Link>
+            ) : null}
             <button
               type="button"
               onClick={() => {
                 onClose();
                 logout();
               }}
-              className="mt-2 w-full rounded-xl bg-red-50 text-red-600 border border-red-100 py-2.5 text-sm font-semibold hover:bg-red-100 transition"
+              className={`w-full rounded-xl bg-red-50 text-red-600 border border-red-100 py-2.5 text-sm font-semibold hover:bg-red-100 transition ${
+                role !== 'OWNER' ? 'mt-2' : ''
+              }`}
             >
               {t('header.logout')}
             </button>
@@ -365,17 +367,63 @@ function MobileDrawer({ onClose, navItems, pathname, loggedIn, userName, userEma
   );
 }
 
-function DrawerWalletAmount() {
-  const { balance, currency, status } = useWalletBalance();
-  const { t } = useTranslation();
-  if (status === 'loading' && balance == null) {
-    return <span className="inline-block h-3 w-14 animate-pulse rounded bg-emerald-200/70" aria-hidden />;
-  }
-  if (balance == null) return <span>{t('header.wallet')}</span>;
-  return <span className="tabular-nums">{formatWalletAmount(balance, currency)}</span>;
+function DrawerNavLink({ item, pathname, onClose }) {
+  const active = isActive(item, pathname);
+  return (
+    <Link
+      to={item.to}
+      onClick={onClose}
+      aria-current={active ? 'page' : undefined}
+      className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium transition ${
+        active
+          ? 'bg-emerald-50 text-emerald-900 ring-1 ring-emerald-100'
+          : 'text-gray-700 hover:bg-gray-50'
+      }`}
+    >
+      {item.icon ? (
+        <span
+          className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg transition ${
+            active ? 'bg-emerald-700 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          <Icon path={item.icon} className="h-4 w-4" />
+        </span>
+      ) : null}
+      <span className="min-w-0 flex-1 leading-snug">{item.label}</span>
+    </Link>
+  );
 }
 
-function buildNav(role, loggedIn, t) {
+function DrawerAvatar({ initials, avatarUrl, name }) {
+  const [imgErr, setImgErr] = useState(false);
+  const showPhoto = avatarUrl && /^https?:\/\//i.test(String(avatarUrl).trim()) && !imgErr;
+
+  useEffect(() => {
+    setImgErr(false);
+  }, [avatarUrl]);
+
+  if (showPhoto) {
+    return (
+      <img
+        src={avatarUrl}
+        alt=""
+        className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-emerald-100"
+        onError={() => setImgErr(true)}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-emerald-700 text-sm font-semibold text-white ring-2 ring-emerald-100"
+      aria-hidden={!name}
+    >
+      {initials || '?'}
+    </div>
+  );
+}
+
+function buildHeaderNav(role, loggedIn, t) {
   if (!loggedIn) {
     return [
       { to: '/', label: t('nav.home') },
@@ -384,18 +432,9 @@ function buildNav(role, loggedIn, t) {
       { to: '/faq', label: t('nav.faq') },
     ];
   }
+  // Owner dashboard uses left sidebar — no duplicate links in header
   if (role === 'OWNER') {
-    return [
-      { to: '/owner-dashboard', label: t('nav.dashboard') },
-      { to: '/owner-dashboard/my-properties', label: t('nav.myProperties'), cta: true },
-      {
-        to: '/owner-dashboard/create-listing',
-        label: t('nav.listYourProperty'),
-        cta: true,
-        icon: 'M12 4v16m8-8H4',
-      },
-      { to: '/owner-dashboard/requests', label: t('nav.requests') },
-    ];
+    return [];
   }
   if (role === 'TENANT') {
     return [
@@ -418,8 +457,70 @@ function buildNav(role, loggedIn, t) {
   ];
 }
 
+function buildDrawerNav(role, loggedIn, t) {
+  if (!loggedIn) {
+    return [
+      { to: '/', label: t('nav.home'), icon: 'M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z' },
+      { to: '/listings', label: t('nav.browse'), icon: 'M21 21l-4.35-4.35M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z' },
+      { to: '/about', label: t('nav.about'), icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z' },
+      { to: '/faq', label: t('nav.faq'), icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z' },
+    ];
+  }
+  if (role === 'OWNER') {
+    return getOwnerSidebarNavItems(t);
+  }
+  if (role === 'TENANT') {
+    return [
+      {
+        to: '/tenant-dashboard',
+        label: t('nav.dashboard'),
+        buttonNav: true,
+        icon: 'M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z',
+      },
+      {
+        to: '/listings',
+        label: t('nav.browse'),
+        buttonNav: true,
+        icon: 'M21 21l-4.35-4.35M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z',
+      },
+      {
+        to: '/tenant-dashboard/applications',
+        label: t('nav.myApplications'),
+        buttonNav: true,
+        icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z',
+      },
+      {
+        to: '/tenant-dashboard/wishlist',
+        label: t('nav.wishlist'),
+        buttonNav: true,
+        icon: 'M4.318 6.318a4.5 4.5 0 0 0 0 6.364L12 20.364l7.682-7.682a4.5 4.5 0 0 0-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 0 0-6.364 0z',
+      },
+    ];
+  }
+  if (role === 'ADMIN') {
+    return [
+      {
+        to: '/admin-dashboard',
+        label: t('nav.dashboard'),
+        icon: 'M3 11.5L12 4l9 7.5v8a2 2 0 0 1-2 2h-5v-7H10v7H5a2 2 0 0 1-2-2v-8z',
+      },
+      {
+        to: '/admin-dashboard/topup-approvals',
+        label: t('nav.topupApprovals'),
+        icon: 'M17 9V7a4 4 0 1 0-8 0v2M5 9h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z',
+      },
+      { to: '/listings', label: t('nav.listings'), icon: 'M21 21l-4.35-4.35M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z' },
+    ];
+  }
+  return [
+    { to: '/', label: t('nav.home') },
+    { to: '/listings', label: t('nav.browse') },
+  ];
+}
+
 function isActive(item, pathname) {
   if (!item?.to) return false;
+  if (item.exact) return pathname === item.to;
   if (item.to === '/') return pathname === '/';
   return pathname === item.to || pathname.startsWith(`${item.to}/`);
 }
