@@ -434,7 +434,18 @@ function buildHeaderNav(role, loggedIn, t) {
   }
   // Owner dashboard uses left sidebar — no duplicate links in header
   if (role === 'OWNER') {
-    return [];
+    return [
+      { to: '/owner-dashboard', label: t('nav.dashboard') },
+      { to: '/owner-dashboard/my-properties', label: t('nav.myProperties'), cta: true },
+      {
+        to: '/owner-dashboard/create-listing',
+        label: t('nav.listYourProperty'),
+        cta: true,
+        icon: 'M12 4v16m8-8H4',
+      },
+      { to: '/owner-dashboard/requests', label: t('nav.requests') },
+      { to: '/chats', label: t('nav.chats') },
+    ];
   }
   if (role === 'TENANT') {
     return [
@@ -442,6 +453,7 @@ function buildHeaderNav(role, loggedIn, t) {
       { to: '/listings', label: t('nav.browse'), buttonNav: true },
       { to: '/tenant-dashboard/applications', label: t('nav.myApplications'), buttonNav: true },
       { to: '/tenant-dashboard/wishlist', label: t('nav.wishlist'), buttonNav: true },
+      { to: '/chats', label: t('nav.chats'), buttonNav: true },
     ];
   }
   if (role === 'ADMIN') {
