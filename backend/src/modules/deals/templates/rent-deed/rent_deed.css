@@ -9,9 +9,9 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-family: 'Noto Serif Bengali', serif;
+    font-family: 'Arial', sans-serif;
     font-size: 12pt;
-    font-weight: 600;
+    font-weight: 400;
     line-height: 1.4;
     color: #000000;
 }
@@ -20,7 +20,7 @@ body {
 .page {
     width: 210mm;
     height: 297mm;
-    background-color: #fdf5cd; /* স্ট্যাম্প পেপারের হালকা হলুদ আভা */
+    background-color: #f9f8d6; /* স্ট্যাম্প পেপারের হালকা হলুদ আভা */
     margin: 20px auto;
     padding: 15mm 20mm; 
     box-sizing: border-box;
@@ -71,7 +71,7 @@ body {
 
 .party-label {
     text-align: right;
-    font-weight: 600;
+    font-weight: 400;
     margin-bottom: 25px;
     margin-top: -10px;
 }

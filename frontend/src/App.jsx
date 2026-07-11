@@ -38,6 +38,8 @@ import ListingPage from './pages/ListingPage';
 import ListingDetailsPage from './pages/ListingDetailsPage';
 import WalletPage from './pages/WalletPage';
 import AdminTopupApprovalsPage from './pages/AdminTopupApprovalsPage';
+import ChatsPage from './pages/ChatsPage';
+import ChatThreadPage from './pages/ChatThreadPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SiteFooter from './components/SiteFooter';
 import PlatformReviewPrompt from './components/PlatformReviewPrompt';
@@ -45,7 +47,7 @@ import ArefinDevTestPage from './pages/dev/ArefinDevTestPage';
 
 function AppLayout() {
   const { pathname } = useLocation();
-  const hideFooter = pathname.startsWith('/admin-dashboard');
+  const hideFooter = pathname.startsWith('/admin-dashboard') || pathname.startsWith('/chats');
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-clip max-w-full">
@@ -86,6 +88,8 @@ function AppLayout() {
           <Route path="/owner-dashboard/requests" element={<ProtectedRoute component={IncomingRequestsPage} requiredRole="OWNER" />} />
           <Route path="/dashboard/rentals" element={<ProtectedRoute component={MyRentalsPage} requiredRole={null} />} />
           <Route path="/notifications" element={<ProtectedRoute component={NotificationsPage} requiredRole={null} />} />
+          <Route path="/chats" element={<ProtectedRoute component={ChatsPage} requiredRole={null} />} />
+          <Route path="/chats/:conversationId" element={<ProtectedRoute component={ChatThreadPage} requiredRole={null} />} />
           <Route path="/admin-dashboard" element={<ProtectedRoute component={AdminDashboard} requiredRole="ADMIN" />} />
           <Route path="/admin-dashboard/topup-approvals" element={<ProtectedRoute component={AdminTopupApprovalsPage} requiredRole="ADMIN" />} />
           <Route path="/account" element={<ProtectedRoute component={AccountSettingsPage} requiredRole={null} />} />
