@@ -1,19 +1,14 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { apiFetch, AUTH_UPDATE_EVENT, getCurrentUser, getUserId, isLoggedIn } from '../lib/api';
 import { getWishlistState, toggleWishlist } from '../lib/wishlist';
+import PropertySearchBar from '../components/PropertySearchBar';
 import AppHeader from '../components/AppHeader';
-import HomeHeroSection from '../components/home/HomeHeroSection';
-import HomeWhySection from '../components/home/HomeWhySection';
-import HomeFeaturedSection from '../components/home/HomeFeaturedSection';
-import HomeComparisonSection from '../components/home/HomeComparisonSection';
-import HomePaymentsSection from '../components/home/HomePaymentsSection';
-import HomeCTASection from '../components/home/HomeCTASection';
-import { homeSectionContentMt, homeSectionInner, homeSectionPy } from '../components/home/homeLayout';
-import { useHomeAos } from '../hooks/useHomeAos';
-import { aosFadeUp, aosStagger } from '../lib/aos';
+import ListingCard from '../components/ListingCard';
 import { useTranslation } from '../lib/i18n';
+const hero = '/hero-image.png';
+const HERO_TEXT_FONT = 'Avenir, "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif';
 
 function isHttpUrl(s) {
   if (!s || typeof s !== 'string') return false;
@@ -88,7 +83,7 @@ function HomeReviewAvatar({ name, src }) {
   );
 }
 
-function HomeTopReviewCard({ review, aosDelay = 0 }) {
+function HomeTopReviewCard({ review }) {
   const name = review?.user?.displayName || 'Community member';
   const body = excerpt(review?.content || '', 120);
   const dateText = formatReviewDate(review?.createdAt);
@@ -97,7 +92,6 @@ function HomeTopReviewCard({ review, aosDelay = 0 }) {
   return (
     <Link
       to="/review"
-      {...aosFadeUp(aosDelay)}
       className="group flex h-full min-h-0 flex-col rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f8444]"
     >
       <div className="mb-3 flex items-start gap-3">
@@ -116,7 +110,22 @@ function HomeTopReviewCard({ review, aosDelay = 0 }) {
   );
 }
 
+function StatCard({ icon, title, subtitle }) {
+  return (
+    <div className="h-full bg-white rounded-xl sm:rounded-2xl border border-emerald-100 shadow-[0_8px_24px_rgba(22,101,52,0.10)] px-3 py-4 sm:px-4 sm:py-5 flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-start lg:text-left lg:gap-5 hover:shadow-[0_10px_30px_rgba(22,101,52,0.14)] transition min-w-0">
+      <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+        {icon}
+      </div>
+      <div className="min-w-0 w-full lg:flex-1">
+        <p className="font-semibold text-gray-800 text-xs sm:text-sm leading-snug line-clamp-2">{title}</p>
+        <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-relaxed line-clamp-3">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -130,12 +139,10 @@ export default function HomePage() {
   const canWishlist = loggedIn && userRole === 'TENANT';
   const [wishlistIds, setWishlistIds] = useState(new Set());
 
-  useHomeAos([loading, reviewsLoading, listings.length, topReviews.length]);
-
   useEffect(() => {
     const loadListings = async () => {
       try {
-        const res = await apiFetch('/properties/public/listings?limit=8');
+        const res = await apiFetch('/properties/public/listings?limit=6');
         const body = await res.json().catch(() => ({}));
         if (res.ok) {
           setListings(body?.data?.items || []);
@@ -241,35 +248,140 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#fafcfb] text-gray-800">
+    <div className="min-h-screen bg-[#f5faf5] text-gray-800 overflow-x-clip">
       <AppHeader centerNav />
 
-      <HomeHeroSection />
+      <section className="relative overflow-visible bg-[#eef7ef] border-b border-[#ddeee1]">
+        {/* Desktop: full-width hero with text overlay */}
+        <div className="relative hidden w-full lg:block">
+          <img
+            src={hero}
+            alt={t('home.heroImageAlt')}
+            className="h-[400px] w-full object-cover object-center brightness-110 saturate-110"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/35 via-white/20 to-transparent" />
+        </div>
 
-      <HomeWhySection />
-
-      <HomeFeaturedSection
-        listings={listings}
-        loading={loading}
-        canWishlist={canWishlist}
-        wishlistIds={wishlistIds}
-        onToggleWishlist={handleToggleWishlist}
-        onViewCountUpdate={handleViewCountUpdate}
-      />
-
-      <HomeComparisonSection />
-
-      <HomePaymentsSection />
-
-      <section className={`bg-[#fafcfb] ${homeSectionPy}`}>
-        <div className={`${homeSectionInner} max-w-5xl`}>
-          <div {...aosFadeUp()}>
-            <h2 className="text-center text-xl font-bold text-[#1e4732] sm:text-2xl">{t('home.reviewsTitle')}</h2>
-            <p className="mt-1 text-center text-sm text-gray-600">{t('home.reviewsSubtitle')}</p>
+        {/* Mobile / tablet: spotlight crop — couple & RENT placard */}
+        <div className="relative px-4 pt-4 sm:px-6 sm:pt-5 lg:hidden">
+          <div className="relative mx-auto max-w-md overflow-hidden rounded-2xl border border-[#d9e9dd] bg-white shadow-[0_8px_24px_rgba(22,101,52,0.12)]">
+            <div className="relative aspect-[5/3] w-full sm:aspect-[16/9]">
+              <img
+                src={hero}
+                alt={t('home.heroImageAlt')}
+                className="absolute inset-0 h-full w-full scale-[1.12] object-cover object-[90%_42%] sm:object-[88%_40%] brightness-105 saturate-110"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-white/15" />
+            </div>
           </div>
+        </div>
+
+        <div className="pointer-events-none relative z-[19] lg:absolute lg:inset-0 lg:flex lg:items-center">
+          <div className="pointer-events-auto mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 pt-5 sm:gap-4 sm:px-6 sm:pt-6 lg:px-8 lg:py-0">
+            <h1
+              className="max-w-full text-[1.65rem] font-bold leading-[1.2] text-[#1e4732] sm:max-w-xl sm:text-[2.4rem] sm:leading-tight lg:max-w-2xl lg:text-5xl"
+              style={{ fontFamily: HERO_TEXT_FONT }}
+            >
+              {t('home.heroTitle')}
+              <br className="hidden sm:block" />
+              {t('home.heroTitleBreak')}
+            </h1>
+            <p
+              className="max-w-full text-sm leading-snug text-[#38684a] sm:max-w-xl sm:text-base md:text-lg lg:mt-5 lg:max-w-2xl"
+              style={{ fontFamily: HERO_TEXT_FONT }}
+            >
+              <span className="lg:hidden">
+                {t('home.heroSubtitleLine1')}
+                <br />
+                {t('home.heroSubtitleLine2')}
+              </span>
+              <span className="hidden lg:inline">{t('home.heroSubtitle')}</span>
+            </p>
+            <div className="mt-1 w-full max-w-2xl sm:mt-2 lg:mt-6">
+              <PropertySearchBar variant="hero" navigateOnSubmit />
+            </div>
+          </div>
+        </div>
+
+        <div className="h-6 sm:h-8 lg:h-8" />
+      </section>
+
+      <section className="relative z-[1] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10 md:mt-4 lg:mt-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-3.5 sm:gap-4 items-stretch">
+          <StatCard
+            title={t('home.statVerifiedTitle')}
+            subtitle={t('home.statVerifiedSubtitle')}
+            icon={
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l7 3v6c0 5-3.4 9.7-7 11-3.6-1.3-7-6-7-11V5l7-3zm-1 13l5-5-1.4-1.4L11 12.2l-1.6-1.6L8 12l3 3z" />
+              </svg>
+            }
+          />
+          <StatCard
+            title={t('home.statTenantTitle')}
+            subtitle={t('home.statTenantSubtitle')}
+            icon={
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2a5 5 0 015 5v2h1a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8a2 2 0 012-2h1V7a5 5 0 015-5zm3 9H9v8h6v-8zm-3-7a3 3 0 00-3 3v2h6V7a3 3 0 00-3-3z" />
+              </svg>
+            }
+          />
+          <StatCard
+            title={t('home.statAgreementsTitle')}
+            subtitle={t('home.statAgreementsSubtitle')}
+            icon={
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V8l-5-6zm1 7V4.5L18.5 9H15zM8 12h8v1.8H8V12zm0 3.5h8v1.8H8v-1.8z" />
+              </svg>
+            }
+          />
+          <StatCard
+            title={t('home.statCollectionTitle')}
+            subtitle={t('home.statCollectionSubtitle')}
+            icon={
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 6h18a2 2 0 012 2v8a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2zm2 3v6h14V9H5zm10 2h4v2h-4v-2z" />
+              </svg>
+            }
+          />
+        </div>
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center mb-6">
+          <h2 className="text-3xl font-bold text-[#2f8444]">{t('home.featuredTitle')}</h2>
+          <p className="text-gray-600 mt-1">{t('home.featuredSubtitle')}</p>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#2f8444]"></div>
+          </div>
+        ) : listings.length === 0 ? (
+          <p className="text-center py-10 text-gray-500">{t('home.noFeatured')}</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {listings.map((listing) => (
+              <ListingCard
+                key={listing.listingId}
+                item={listing}
+                canWishlist={canWishlist}
+                isWishlisted={wishlistIds.has(String(listing.listingId))}
+                onToggleWishlist={handleToggleWishlist}
+                onViewCountUpdate={handleViewCountUpdate}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
+        <div className="mx-auto w-full max-w-5xl">
+          <h2 className="text-center text-xl font-bold text-[#1e4732] sm:text-2xl">{t('home.reviewsTitle')}</h2>
+          <p className="mt-1 text-center text-sm text-gray-600">{t('home.reviewsSubtitle')}</p>
 
           {reviewsLoading ? (
-            <div className={`grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5 ${homeSectionContentMt}`}>
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
               {[0, 1, 2].map((k) => (
                 <div
                   key={k}
@@ -296,17 +408,17 @@ export default function HomePage() {
               ))}
             </div>
           ) : topReviews.length === 0 ? (
-            <p className={`text-center text-sm text-gray-500 ${homeSectionContentMt}`}>{t('home.reviewsEmpty')}</p>
+            <p className="mt-6 text-center text-sm text-gray-500">{t('home.reviewsEmpty')}</p>
           ) : (
-            <div className={`grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5 ${homeSectionContentMt}`}>
-              {topReviews.map((review, index) => (
-                <HomeTopReviewCard key={review.id} review={review} aosDelay={aosStagger(index, 70)} />
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
+              {topReviews.map((review) => (
+                <HomeTopReviewCard key={review.id} review={review} />
               ))}
             </div>
           )}
 
           {showGiveReviewCta ? (
-            <div className={`flex justify-center ${homeSectionContentMt}`} {...aosFadeUp(120)}>
+            <div className="mt-6 flex justify-center">
               <Link
                 to="/review"
                 className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
@@ -318,7 +430,31 @@ export default function HomePage() {
         </div>
       </section>
 
-      <HomeCTASection />
+      <section className="flex justify-center px-4 sm:px-6 lg:px-8 pb-8 sm:pb-10 lg:pb-12">
+        <div className="relative w-full max-w-[420px] sm:max-w-[560px] md:max-w-[760px] lg:max-w-[920px] overflow-hidden rounded-xl sm:rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-[#2f8444] via-[#2a7a3f] to-[#1f5f31] text-white shadow-[0_12px_30px_rgba(31,95,49,0.22)] px-4 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 text-center">
+          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute -left-8 -bottom-8 h-28 w-28 rounded-full bg-[#9bd5a8]/20 blur-3xl" />
+
+          <div className="relative z-10 flex flex-col items-center gap-3 sm:gap-4 md:gap-5">
+            <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[10px] sm:text-[11px] md:text-xs font-semibold tracking-wide text-emerald-50 text-center leading-snug">
+              <svg className="h-3 w-3 text-emerald-100" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" fill="currentColor" />
+              </svg>
+              {t('home.ctaBadge')}
+            </span>
+
+            {!loggedIn && (
+              <button
+                type="button"
+                onClick={() => navigate('/signup')}
+                className="inline-flex items-center justify-center rounded-lg bg-white text-[#1f5f31] font-semibold px-4 py-2 text-sm shadow-sm hover:bg-[#f3fff5] transition w-full sm:w-auto"
+              >
+                {t('home.getStarted')}
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
 
     </div>
   );

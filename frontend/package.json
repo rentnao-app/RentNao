@@ -14,8 +14,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "aos": "^2.3.4",
-    "lucide-react": "^1.24.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",

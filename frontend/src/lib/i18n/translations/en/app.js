@@ -1007,14 +1007,6 @@ export default {
       submitted: 'Your review is live for everyone to see. Thank you!',
       submitFailed: 'Could not submit your review',
     },
-    promptModal: {
-      title: 'Enjoying RentNao?',
-      description: 'Leave a quick review — it only takes a moment.',
-      guestPlaceholder: 'Sign in to write your review…',
-      submit: 'Submit',
-      signInToSubmit: 'Sign in to submit',
-      close: 'Close',
-    },
     status: {
       PENDING: 'Pending review',
       FLAGGED: 'Flagged',

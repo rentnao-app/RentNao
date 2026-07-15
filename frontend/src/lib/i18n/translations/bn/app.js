@@ -1008,14 +1008,6 @@ export default {
       submitted: 'আপনার রিভিউ সবার জন্য লাইভ। ধন্যবাদ!',
       submitFailed: 'আপনার রিভিউ জমা দেওয়া যায়নি',
     },
-    promptModal: {
-      title: 'RentNao ভালো লাগছে?',
-      description: 'একটি দ্রুত রিভিউ দিন — মাত্র এক মিনিট।',
-      guestPlaceholder: 'রিভিউ লিখতে সাইন ইন করুন…',
-      submit: 'জমা দিন',
-      signInToSubmit: 'জমা দিতে সাইন ইন',
-      close: 'বন্ধ',
-    },
     status: {
       PENDING: 'পর্যালোচনা অপেক্ষমাণ',
       FLAGGED: 'ফ্ল্যাগ করা',
