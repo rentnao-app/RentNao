@@ -182,11 +182,13 @@ export async function listPropertiesByOwnerUserId(ownerUserId: string) {
 export async function createProperty(userId: string, input: CreatePropertyInput) {
   const ownerId = await getOwnerIdByUserId(userId);
   const propertyId = createId();
+  const propertyType = input.propertyType || 'APARTMENT';
 
   const result = await db.query(
     `INSERT INTO "Property" (
       property_id,
       owner_id,
+      property_type,
       property_size_sqft,
       room_count,
       bathroom_count,
@@ -206,13 +208,14 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       floor_no,
       flat_no
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+      $1, $2, $3::"PropertyType", $4, $5, $6, $7, $8, $9, $10,
+      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
     )
     RETURNING *`,
     [
       propertyId,
       ownerId,
+      propertyType,
       input.propertySizeSqft,
       input.roomCount,
       input.bathroomCount,
@@ -289,6 +292,7 @@ export async function updateMyPropertyById(userId: string, propertyId: string, i
   if (input.hasGenerator !== undefined) addUpdate('has_generator', input.hasGenerator);
   if (input.hasSecurityGuard !== undefined) addUpdate('has_security_guard', input.hasSecurityGuard);
   if (input.intendedTenantType !== undefined) addUpdate('intended_tenant_type', input.intendedTenantType);
+  if (input.propertyType !== undefined) addUpdate('property_type', input.propertyType);
   if (input.floorNo !== undefined) addUpdate('floor_no', input.floorNo);
   if (input.flatNo !== undefined) addUpdate('flat_no', input.flatNo);
 
@@ -891,6 +895,7 @@ export async function getListingDetailForAdmin(listingId: string) {
       p.title,
       p.description,
       p.area_name,
+      p.property_type,
       p.property_size_sqft,
       p.room_count,
       p.bathroom_count,
@@ -959,6 +964,7 @@ export async function getListingDetailForAdmin(listingId: string) {
     listingEndDate: row.listing_end_date ? row.listing_end_date.toISOString() : null,
     listingStatus: row.listing_status,
     areaName: row.area_name,
+    propertyType: row.property_type || 'APARTMENT',
     propertySizeSqft: Number(row.property_size_sqft),
     roomCount: Number(row.room_count),
     bathroomCount: Number(row.bathroom_count),
@@ -966,6 +972,7 @@ export async function getListingDetailForAdmin(listingId: string) {
     intendedTenantType: row.intended_tenant_type,
     primaryImagePath: row.primary_image_path,
     primaryImageUrl,
+    viewCount: Number(row.view_count ?? 0),
     createdAt: row.created_at.toISOString(),
     buildingFloors: Number(row.building_floors),
     buildingFacing: row.building_facing,
@@ -988,6 +995,43 @@ export async function getListingDetailForAdmin(listingId: string) {
     isUnlocked: true,
     unlockRequiredFields: [] as Array<'address' | 'exactLat' | 'exactLng' | 'owner'>,
     unlockFeeCode: 'LISTING_UNLOCK',
+  };
+}
+
+export async function updateListingPropertyTypeForAdmin(
+  listingId: string,
+  propertyType: 'APARTMENT' | 'COMMERCIAL_SPACE'
+) {
+  const listingResult = await db.query(
+    `SELECT listing_id, property_id
+     FROM "Listing"
+     WHERE listing_id = $1
+     LIMIT 1`,
+    [listingId]
+  );
+
+  if (listingResult.rows.length === 0) {
+    throw new AppError(404, 'Listing not found');
+  }
+
+  const propertyId = listingResult.rows[0].property_id as string;
+
+  const updateResult = await db.query(
+    `UPDATE "Property"
+     SET property_type = $1::"PropertyType"
+     WHERE property_id = $2
+     RETURNING property_id, property_type`,
+    [propertyType, propertyId]
+  );
+
+  if (updateResult.rows.length === 0) {
+    throw new AppError(404, 'Property not found');
+  }
+
+  return {
+    listingId,
+    propertyId: updateResult.rows[0].property_id as string,
+    propertyType: updateResult.rows[0].property_type as 'APARTMENT' | 'COMMERCIAL_SPACE',
   };
 }
 

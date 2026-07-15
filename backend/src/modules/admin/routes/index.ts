@@ -27,7 +27,7 @@ export {
   reviewKycSubmissionRoute,
 } from './kyc.routes';
 
-export { listAdminListingsRoute, getAdminListingDetailRoute } from './listing.routes';
+export { listAdminListingsRoute, getAdminListingDetailRoute, updateAdminListingPropertyTypeRoute } from './listing.routes';
 
 export {
   listTopupRequestsRoute,

@@ -6,7 +6,11 @@ import {
   publicListingListResponseSchema,
   unlockedListingDetailSchema,
 } from '@/modules/properties/schemas';
-import { errorResponseSchema } from '../schemas';
+import {
+  errorResponseSchema,
+  updateAdminPropertyTypeSchema,
+  updateAdminPropertyTypeResponseSchema,
+} from '../schemas';
 
 export const listAdminListingsRoute = createRoute({
   method: 'get',
@@ -42,7 +46,7 @@ export const getAdminListingDetailRoute = createRoute({
   path: '/listings/{listingId}',
   tags: ['Admin - Listings'],
   summary: 'Get full listing detail (admin)',
-  description: 'Returns full property and owner contact details for any listing.',
+  description: 'Returns full property, media/documents, and owner contact details for any listing.',
   request: {
     params: listingIdParamSchema,
   },
@@ -55,6 +59,43 @@ export const getAdminListingDetailRoute = createRoute({
             success: z.boolean(),
             data: unlockedListingDetailSchema,
           }),
+        },
+      },
+    },
+    403: {
+      description: 'Forbidden',
+      content: { 'application/json': { schema: errorResponseSchema } },
+    },
+    404: {
+      description: 'Not found',
+      content: { 'application/json': { schema: errorResponseSchema } },
+    },
+  },
+  security: [{ bearerAuth: [] }],
+});
+
+export const updateAdminListingPropertyTypeRoute = createRoute({
+  method: 'patch',
+  path: '/listings/{listingId}/property-type',
+  tags: ['Admin - Listings'],
+  summary: 'Update property type for a listing',
+  description: "Admin override to change the property type on the listing's property record.",
+  request: {
+    params: listingIdParamSchema,
+    body: {
+      content: {
+        'application/json': {
+          schema: updateAdminPropertyTypeSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Property type updated',
+      content: {
+        'application/json': {
+          schema: updateAdminPropertyTypeResponseSchema,
         },
       },
     },
