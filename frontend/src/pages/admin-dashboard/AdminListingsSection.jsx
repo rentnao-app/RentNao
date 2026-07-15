@@ -2,12 +2,21 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from '../../lib/i18n';
 import {
   LISTING_STATUS_FILTERS,
+  PROPERTY_TYPE_OPTIONS,
   formatBdt,
   formatDate,
   listingStatusTone,
   toLabel,
 } from './adminDashboardUtils';
 import { Icon } from './AdminUi';
+
+function isVideoMime(mimeType) {
+  return String(mimeType || '').startsWith('video/');
+}
+
+function isImageMime(mimeType) {
+  return String(mimeType || '').startsWith('image/') || !mimeType;
+}
 
 export default function AdminListingsSection({
   listings,
@@ -20,11 +29,16 @@ export default function AdminListingsSection({
   selectedListingDetails,
   selectingListingId,
   handleSelectListing,
+  propertyTypeEdit,
+  setPropertyTypeEdit,
+  handleListingPropertyTypePatch,
+  busy,
 }) {
   const { t } = useTranslation();
   const totalPages = listingsPagination?.totalPages ?? 1;
   const canPrev = listingsPage > 1;
   const canNext = listingsPage < totalPages;
+  const mediaItems = selectedListingDetails?.images || [];
 
   return (
     <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
@@ -126,6 +140,11 @@ export default function AdminListingsSection({
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${listingStatusTone(selectedListingDetails.listingStatus)}`}>
                   {toLabel(selectedListingDetails.listingStatus, t)}
                 </span>
+                {selectedListingDetails.propertyType ? (
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    {toLabel(selectedListingDetails.propertyType, t)}
+                  </span>
+                ) : null}
                 {selectedListingDetails.listingStatus === 'ACTIVE' ? (
                   <Link
                     to={`/listings/${selectedListingDetails.listingId}`}
@@ -149,6 +168,10 @@ export default function AdminListingsSection({
                 <p className="break-all text-sm font-semibold text-slate-900">{selectedListingDetails.listingId}</p>
               </div>
               <div>
+                <p className="text-xs text-slate-500">{t('admin.listings.propertyType')}</p>
+                <p className="text-sm font-semibold text-slate-900">{toLabel(selectedListingDetails.propertyType, t)}</p>
+              </div>
+              <div>
                 <p className="text-xs text-slate-500">{t('admin.listings.area')}</p>
                 <p className="text-sm font-semibold text-slate-900">{toLabel(selectedListingDetails.areaName, t)}</p>
               </div>
@@ -160,6 +183,12 @@ export default function AdminListingsSection({
                 <p className="text-xs text-slate-500">{t('admin.listings.roomsBathsBalcony')}</p>
                 <p className="text-sm font-semibold text-slate-900">
                   {selectedListingDetails.roomCount} / {selectedListingDetails.bathroomCount} / {selectedListingDetails.balconyCount}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">{t('admin.listings.floorFlat')}</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {selectedListingDetails.floorNo ?? t('admin.labels.na')} / {selectedListingDetails.flatNo || t('admin.labels.na')}
                 </p>
               </div>
               <div>
@@ -176,6 +205,10 @@ export default function AdminListingsSection({
               <div>
                 <p className="text-xs text-slate-500">{t('admin.listings.created')}</p>
                 <p className="text-sm font-semibold text-slate-900">{formatDate(selectedListingDetails.createdAt, t)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">{t('admin.listings.views')}</p>
+                <p className="text-sm font-semibold text-slate-900">{selectedListingDetails.viewCount ?? 0}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">{t('admin.listings.building')}</p>
@@ -216,37 +249,99 @@ export default function AdminListingsSection({
                   <p className="text-xs text-slate-600">{t('admin.listings.ownerPhone')}</p>
                   <p className="text-sm font-medium text-slate-900">{selectedListingDetails.ownerContact?.phone || t('admin.labels.na')}</p>
                 </div>
+                {selectedListingDetails.propertyAddressBn ? (
+                  <div className="sm:col-span-2">
+                    <p className="text-xs text-slate-600">{t('admin.listings.addressBn')}</p>
+                    <p className="text-sm font-medium text-slate-900">{selectedListingDetails.propertyAddressBn}</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="mb-6 rounded-2xl border border-slate-200 p-4">
+              <label className="mb-2 block text-sm font-semibold text-slate-800">{t('admin.listings.editPropertyType')}</label>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  value={propertyTypeEdit}
+                  onChange={(e) => setPropertyTypeEdit(e.target.value)}
+                  className="min-w-[12rem] flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                >
+                  {PROPERTY_TYPE_OPTIONS.map((type) => (
+                    <option key={type} value={type}>
+                      {toLabel(type, t)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={busy || propertyTypeEdit === selectedListingDetails.propertyType}
+                  onClick={handleListingPropertyTypePatch}
+                  className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {t('admin.listings.savePropertyType')}
+                </button>
               </div>
             </div>
 
             <div>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">{t('admin.listings.images')}</h3>
-              {(selectedListingDetails.images || []).length === 0 ? (
-                <p className="text-sm text-slate-500">{t('admin.listings.noImages')}</p>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                {t('admin.listings.mediaDocuments')}
+              </h3>
+              {mediaItems.length === 0 ? (
+                <p className="text-sm text-slate-500">{t('admin.listings.noMedia')}</p>
               ) : (
-                <div className="flex flex-wrap gap-3">
-                  {(selectedListingDetails.images || []).map((img) =>
-                    img.url ? (
-                      <a
-                        key={img.imageId}
-                        href={img.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block overflow-hidden rounded-xl border border-slate-200 shadow-sm"
-                      >
-                        <img src={img.url} alt={img.fileName || ''} className="h-36 w-48 object-cover" />
-                        {img.isPrimary ? (
-                          <span className="block bg-slate-900/80 px-2 py-1 text-center text-[10px] font-semibold text-white">
+                <div className="space-y-3">
+                  {mediaItems.map((media) => (
+                    <div key={media.imageId} className="rounded-xl border border-slate-200 p-4">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-slate-900">{media.fileName || media.imageId}</p>
+                        {media.isPrimary ? (
+                          <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white">
                             {t('admin.listings.primary')}
                           </span>
                         ) : null}
-                      </a>
-                    ) : (
-                      <div key={img.imageId} className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-xs text-slate-500">
-                        {t('admin.listings.urlUnavailable', { name: img.fileName || img.imageId })}
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                          {isVideoMime(media.mimeType)
+                            ? t('admin.listings.video')
+                            : isImageMime(media.mimeType)
+                              ? t('admin.listings.image')
+                              : t('admin.listings.file')}
+                        </span>
                       </div>
-                    )
-                  )}
+                      <p className="text-xs text-slate-500">{media.mimeType || t('admin.labels.na')}</p>
+                      {media.url ? (
+                        <div className="mt-3">
+                          <a
+                            href={media.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+                          >
+                            {t('admin.listings.openDocument')}
+                          </a>
+                          {isVideoMime(media.mimeType) ? (
+                            <video
+                              src={media.url}
+                              controls
+                              className="mt-3 max-h-72 w-full max-w-xl rounded-lg border border-slate-200 bg-black"
+                            >
+                              <track kind="captions" />
+                            </video>
+                          ) : isImageMime(media.mimeType) ? (
+                            <img
+                              src={media.url}
+                              alt={media.fileName || ''}
+                              className="mt-3 max-h-72 w-full max-w-md rounded-lg border border-slate-200 object-contain"
+                            />
+                          ) : null}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs text-slate-500">
+                          {t('admin.listings.urlUnavailable', { name: media.fileName || media.imageId })}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

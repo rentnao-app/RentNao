@@ -42,7 +42,8 @@ export const createPropertySchema = z.object({
   hasGenerator: z.boolean(),
   hasSecurityGuard: z.boolean(),
   intendedTenantType: TenantType,
-  // propertyType: PropertyType.optional(),
+  // propertyType accepted when provided (defaults to APARTMENT in DB)
+  propertyType: PropertyType.optional(),
   floorNo: z.number().int().positive().openapi({ example: 4 }),
   flatNo: z.string().max(50).optional().openapi({ example: '4A' }),
 });
@@ -333,6 +334,7 @@ export const publicListingDetailSchema = publicListingSummarySchema.extend({
 });
 
 export const unlockedListingDetailSchema = publicListingSummarySchema.extend({
+  propertyType: PropertyType.optional(),
   buildingFloors: z.number(),
   buildingFacing: BuildingFacing,
   hasLift: z.boolean(),
@@ -347,6 +349,7 @@ export const unlockedListingDetailSchema = publicListingSummarySchema.extend({
     imageId: z.string(),
     storagePath: z.string(),
     fileName: z.string(),
+    mimeType: z.string().nullable().optional(),
     isPrimary: z.boolean(),
     displayOrder: z.number(),
     url: z.string().url().nullable().optional(),

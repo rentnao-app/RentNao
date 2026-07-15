@@ -48,6 +48,7 @@ export default function AdminDashboard() {
   const [roleEdit, setRoleEdit] = useState('TENANT');
   const [onboardingEdit, setOnboardingEdit] = useState('AUTH_PENDING');
   const [kycOverrideEdit, setKycOverrideEdit] = useState('PENDING');
+  const [propertyTypeEdit, setPropertyTypeEdit] = useState('APARTMENT');
   const [activeSection, setActiveSection] = useState('dashboard');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [feePolicies, setFeePolicies] = useState([]);
@@ -269,7 +270,7 @@ export default function AdminDashboard() {
       });
       setRoleEdit(mergedUser?.role || 'TENANT');
       setOnboardingEdit(mergedUser?.onboarding_status || 'AUTH_PENDING');
-      setKycOverrideEdit('PENDING');
+      setKycOverrideEdit(mergedUser?.kyc_verification_status || 'PENDING');
       setActiveSection('users');
     } catch (err) {
       toast.error(err?.message || t('admin.toasts.loadUserFailed'));
@@ -284,12 +285,37 @@ export default function AdminDashboard() {
       const res = await apiFetch(`/admin/listings/${item.listingId}`);
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body?.error || t('admin.toasts.loadListingFailed'));
-      setSelectedListingDetails(body?.data || null);
+      const detail = body?.data || null;
+      setSelectedListingDetails(detail);
+      setPropertyTypeEdit(detail?.propertyType || 'APARTMENT');
       setActiveSection('listings');
     } catch (e) {
       toast.error(e.message || t('admin.toasts.loadListingFailed'));
     } finally {
       setSelectingListingId(null);
+    }
+  };
+
+  const handleListingPropertyTypePatch = async () => {
+    if (!selectedListingDetails?.listingId) return;
+    setBusy(true);
+    try {
+      const res = await apiFetch(`/admin/listings/${selectedListingDetails.listingId}/property-type`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyType: propertyTypeEdit }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || t('admin.toasts.updateFailed'));
+      toast.success(t('admin.toasts.propertyTypeUpdated'));
+      await handleSelectListing({ listingId: selectedListingDetails.listingId });
+      if (activeSection === 'listings') {
+        await loadListings();
+      }
+    } catch (e) {
+      toast.error(e.message || t('admin.toasts.operationFailed'));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -890,6 +916,10 @@ export default function AdminDashboard() {
                 selectedListingDetails={selectedListingDetails}
                 selectingListingId={selectingListingId}
                 handleSelectListing={handleSelectListing}
+                propertyTypeEdit={propertyTypeEdit}
+                setPropertyTypeEdit={setPropertyTypeEdit}
+                handleListingPropertyTypePatch={handleListingPropertyTypePatch}
+                busy={busy}
               />
             ) : null}
             {activeSection === 'fees' ? (

@@ -89,6 +89,7 @@ enum PropertyCategory {
 
 enum PropertyType {
   APARTMENT
+  COMMERCIAL_SPACE
 }
 
 enum AreaName {
