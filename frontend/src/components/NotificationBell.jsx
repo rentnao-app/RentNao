@@ -4,6 +4,7 @@ import {
   fetchNotifications,
   fetchUnreadCount,
   markNotificationRead,
+  markAllNotificationsRead,
 } from '../lib/notifications';
 import { useTranslation } from '../lib/i18n';
 
@@ -47,11 +48,21 @@ export default function NotificationBell() {
     setOpen(false);
   };
 
+  const handleToggleOpen = () => {
+    const nextOpen = !open;
+    setOpen(nextOpen);
+    if (nextOpen && unreadCount > 0) {
+      void markAllNotificationsRead();
+      setUnreadCount(0);
+      setItems((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    }
+  };
+
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={handleToggleOpen}
         className={`relative inline-flex h-9 w-9 items-center justify-center rounded-lg border shadow-sm transition ${
           open
             ? 'border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800'
@@ -65,7 +76,7 @@ export default function NotificationBell() {
         </svg>
         {unreadCount > 0 && (
           <span className={`absolute -right-0.5 -top-0.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white ring-2 ${open ? 'ring-emerald-700' : 'ring-white'}`}>
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount}
           </span>
         )}
       </button>

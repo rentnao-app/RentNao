@@ -66,7 +66,7 @@ export async function createConversationOnUnlock(
     {
       conversation_id: conversationId,
       property_id: propertyId,
-      url: '/owner-dashboard/conversations',
+      url: '/chats',
     }
   );
 
@@ -128,7 +128,7 @@ export async function acceptConversation(
     {
       conversation_id: conversationId,
       property_id: conv.property_id,
-      url: `/conversations/${conversationId}`,
+      url: `/chats/${conversationId}`,
     }
   );
 
@@ -185,7 +185,7 @@ export async function closeConversation(
     {
       conversation_id: conversationId,
       property_id: conv.property_id,
-      url: `/conversations/${conversationId}`,
+      url: `/chats/${conversationId}`,
     }
   );
 
