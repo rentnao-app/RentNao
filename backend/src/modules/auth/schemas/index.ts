@@ -49,3 +49,14 @@ export {
   type PasswordResetVerifyInput,
   type PasswordResetConfirmInput,
 } from './password.schemas';
+
+// Google OAuth schemas
+export {
+  googleInitiateQuerySchema,
+  googleCallbackQuerySchema,
+  googleExchangeSchema,
+  googleExchangeResponseSchema,
+  type GoogleInitiateQuery,
+  type GoogleCallbackQuery,
+  type GoogleExchangeInput,
+} from './google-oauth.schemas';

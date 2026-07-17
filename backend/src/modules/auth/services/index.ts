@@ -34,5 +34,26 @@ export {
   getVerificationTokenTTL,
 } from './token-storage.service';
 
+// Google OAuth services
+export {
+  getRequiredGoogleEnv,
+  getGoogleCallbackUrl,
+  buildRedirect,
+  createStateToken,
+  verifyStateToken,
+  exchangeCodeForTokens,
+  verifyGoogleIdToken,
+  findUserForGoogle,
+  normalizeRequestedRole,
+  canSwitchRoleForGoogleSignup,
+  switchUserRole,
+  upsertGoogleAccount,
+  createUserFromGoogle,
+  toFrontendUser,
+  createExchangeCode,
+  verifyExchangeCode,
+  generateTokensForUser,
+} from './google-oauth.service';
+
 // Re-export types for convenience
 export type { AuthTokens, UserWithTokens } from '../types/auth.types';
