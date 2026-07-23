@@ -1,6 +1,7 @@
 export const ONBOARDING_OPTIONS = ['AUTH_PENDING', 'PROFILE_PENDING', 'UNDER_REVIEW', 'COMPLETED'];
 export const ROLE_OPTIONS = ['TENANT', 'OWNER', 'ADMIN'];
 export const KYC_OVERRIDE_OPTIONS = ['PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'];
+export const PROPERTY_TYPE_OPTIONS = ['APARTMENT', 'COMMERCIAL_SPACE'];
 
 export const LISTING_STATUS_FILTERS = [
   { value: '', labelKey: 'admin.filters.listingStatus.all' },
@@ -16,6 +17,7 @@ export const normalizeUser = (u) => ({
   user_id: u?.user_id || u?.userId,
   role: u?.role,
   onboarding_status: u?.onboarding_status || u?.onboardingStatus,
+  kyc_verification_status: u?.kyc_verification_status || u?.kycVerificationStatus || null,
   email: u?.email || u?.contact_email || u?.contactEmail || null,
   contact_email: u?.contact_email || u?.contactEmail,
   contact_phone: u?.contact_phone || u?.contactPhone,

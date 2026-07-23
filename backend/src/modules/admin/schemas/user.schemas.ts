@@ -50,6 +50,7 @@ const userSummarySchema = z.object({
   userId: z.string(),
   role: UserRole,
   onboardingStatus: OnboardingStatus,
+  kycVerificationStatus: KycVerificationStatus.optional(),
   contactEmail: z.string().email().nullable(),
   contactPhone: z.string().nullable(),
   isActive: z.boolean(),
@@ -62,6 +63,38 @@ const credentialSchema = z.object({
   identifier: z.string(),
   identifierType: IdentifierType,
   verifiedAt: z.string().datetime().nullable(),
+});
+
+const userKycDocumentSchema = z.object({
+  documentId: z.string(),
+  documentType: z.string(),
+  documentNumber: z.string().optional().nullable(),
+  fileName: z.string().optional().nullable(),
+  mimeType: z.string().optional().nullable(),
+  fileSizeBytes: z.number().optional().nullable(),
+  uploadedAt: z.string().datetime().optional().nullable(),
+  verificationStatus: z.string().optional().nullable(),
+  reviewedAt: z.string().datetime().optional().nullable(),
+  rejectionReason: z.string().optional().nullable(),
+  filePath: z.string().nullable().optional(),
+  signedUrl: z.string().nullable().optional(),
+});
+
+const userKycSubmissionSchema = z.object({
+  submissionId: z.string(),
+  userId: z.string(),
+  userEmail: z.string().email().nullable().optional(),
+  userPhone: z.string().nullable().optional(),
+  userRole: UserRole.optional(),
+  displayName: z.string().optional(),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  profilePhotoUrl: z.string().nullable().optional(),
+  status: z.string(),
+  submittedAt: z.string().datetime().optional().nullable(),
+  reviewedAt: z.string().datetime().optional().nullable(),
+  rejectionReason: z.string().optional().nullable(),
+  documents: z.array(userKycDocumentSchema),
 });
 
 export const userListResponseSchema = z.object({
@@ -84,6 +117,7 @@ export const userDetailResponseSchema = z.object({
       lastLoginAt: z.string().datetime().nullable(),
     }),
     credentials: z.array(credentialSchema),
+    kycSubmission: userKycSubmissionSchema.nullable().optional(),
   }),
 });
 

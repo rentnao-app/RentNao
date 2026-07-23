@@ -27,6 +27,9 @@ import NotificationsPage from './pages/NotificationsPage';
 import AboutPage from './pages/AboutPage';
 import TermsPage from './pages/TermsPage';
 import FAQPage from './pages/FAQPage';
+import CareersPage from './pages/CareersPage';
+import BlogsPage from './pages/BlogsPage';
+import BlogPostPage from './pages/BlogPostPage';
 import ServicesPage from './pages/ServicesPage';
 import ReviewPage from './pages/ReviewPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -39,6 +42,7 @@ import ChatsPage from './pages/ChatsPage';
 import ChatThreadPage from './pages/ChatThreadPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SiteFooter from './components/SiteFooter';
+import PlatformReviewPrompt from './components/PlatformReviewPrompt';
 import ArefinDevTestPage from './pages/dev/ArefinDevTestPage';
 
 function AppLayout() {
@@ -64,6 +68,9 @@ function AppLayout() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/faq" element={<FAQPage />} />
+          <Route path="/careers" element={<CareersPage />} />
+          <Route path="/blogs" element={<BlogsPage />} />
+          <Route path="/blogs/:slug" element={<BlogPostPage />} />
           <Route path="/service" element={<ServicesPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/review" element={<ReviewPage />} />
@@ -97,6 +104,7 @@ function AppLayout() {
         </Routes>
       </div>
       {!hideFooter ? <SiteFooter /> : null}
+      <PlatformReviewPrompt />
     </div>
   );
 }

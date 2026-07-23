@@ -13,6 +13,7 @@ import type {
 } from '../schemas';
 import type { PaginationMeta } from '@/types/common';
 import { mapUserRow } from './helpers';
+import { getKycSubmissionDetail } from './kyc.service';
 
 export async function listUsers(
   query: ListUsersQuery,
@@ -87,7 +88,7 @@ export async function listUsers(
 export async function getUserById(userId: string) {
   const userResult = await db.query(
     `SELECT 
-      user_id, role, onboarding_status,
+      user_id, role, onboarding_status, kyc_verification_status,
       contact_email, contact_phone, is_active, 
       created_at, updated_at, deleted_at, last_login_at
      FROM "User"
@@ -108,11 +109,31 @@ export async function getUserById(userId: string) {
     [userId]
   );
 
+  // Prefer an APPROVED KYC submission so verified users show their documents
+  // in Admin → Users; otherwise fall back to the most recent submission.
+  const submissionResult = await db.query(
+    `SELECT id
+     FROM "VerificationSubmission"
+     WHERE user_id = $1
+     ORDER BY
+       CASE WHEN submission_status = 'APPROVED' THEN 0 ELSE 1 END,
+       submitted_at DESC NULLS LAST,
+       created_at DESC
+     LIMIT 1`,
+    [userId]
+  );
+
+  let kycSubmission = null;
+  if (submissionResult.rows.length > 0) {
+    kycSubmission = await getKycSubmissionDetail(submissionResult.rows[0].id);
+  }
+
   return {
     user: {
       userId: user.user_id,
       role: user.role,
       onboardingStatus: user.onboarding_status,
+      kycVerificationStatus: user.kyc_verification_status,
       contactEmail: user.contact_email,
       contactPhone: user.contact_phone,
       isActive: user.is_active,
@@ -126,6 +147,7 @@ export async function getUserById(userId: string) {
       identifierType: c.identifier_type,
       verifiedAt: c.verified_at,
     })),
+    kycSubmission,
   };
 }
 

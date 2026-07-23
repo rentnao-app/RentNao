@@ -9,6 +9,7 @@ import {
   getUserContact,
   getUserEmail,
   roleTone,
+  statusTone,
   toLabel,
 } from './adminDashboardUtils';
 
@@ -36,6 +37,17 @@ export default function AdminUsersSection({
   handleRestoreUser,
 }) {
   const { t } = useTranslation();
+  const kycSubmission = selectedUserDetails?.kycSubmission || null;
+  const kycDocuments = kycSubmission?.documents || [];
+  const kycStatus =
+    selectedUser?.kyc_verification_status ||
+    selectedUserDetails?.user?.kyc_verification_status ||
+    selectedUserDetails?.user?.kycVerificationStatus ||
+    null;
+  const showKycDocuments =
+    kycStatus === 'APPROVED' ||
+    kycSubmission?.status === 'APPROVED' ||
+    kycDocuments.length > 0;
 
   return (
     <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
@@ -145,6 +157,10 @@ export default function AdminUsersSection({
                 <p className="text-sm font-semibold text-slate-900">{toLabel(selectedUser.onboarding_status, t)}</p>
               </div>
               <div>
+                <p className="text-xs text-slate-500">{t('admin.users.kycStatus')}</p>
+                <p className="text-sm font-semibold text-slate-900">{toLabel(kycStatus, t)}</p>
+              </div>
+              <div>
                 <p className="text-xs text-slate-500">{t('admin.users.joinedLabel')}</p>
                 <p className="text-sm font-semibold text-slate-900">{formatDate(selectedUser.created_at, t)}</p>
               </div>
@@ -179,6 +195,76 @@ export default function AdminUsersSection({
                 </div>
               )}
             </div>
+
+            {showKycDocuments ? (
+              <div className="mb-6">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+                    {t('admin.users.kycDocuments')}
+                  </h3>
+                  {kycSubmission?.status ? (
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusTone(kycSubmission.status)}`}>
+                      {toLabel(kycSubmission.status, t)}
+                    </span>
+                  ) : null}
+                </div>
+
+                {kycSubmission?.profilePhotoUrl ? (
+                  <div className="mb-3 rounded-xl border border-slate-200 p-4">
+                    <p className="mb-2 text-sm font-semibold text-slate-900">{t('admin.users.profilePhoto')}</p>
+                    <img
+                      src={kycSubmission.profilePhotoUrl}
+                      alt={t('admin.users.profilePhoto')}
+                      className="max-h-40 rounded-lg border border-slate-200 object-cover"
+                    />
+                  </div>
+                ) : null}
+
+                {kycDocuments.length === 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                    {t('admin.users.noKycDocuments')}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {kycDocuments.map((doc) => (
+                      <div key={doc.documentId} className="rounded-xl border border-slate-200 p-4">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-slate-900">{toLabel(doc.documentType, t)}</p>
+                          {doc.verificationStatus ? (
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusTone(doc.verificationStatus)}`}>
+                              {toLabel(doc.verificationStatus, t)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {doc.fileName || t('admin.kyc.unnamedFile')}
+                          {doc.mimeType ? ` - ${doc.mimeType}` : ''}
+                        </p>
+                        {doc.signedUrl ? (
+                          <div className="mt-2">
+                            <a
+                              href={doc.signedUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+                            >
+                              {t('admin.kyc.openDocument')}
+                            </a>
+                            {String(doc.mimeType || '').startsWith('image/') ? (
+                              <img
+                                src={doc.signedUrl}
+                                alt={doc.fileName || doc.documentType}
+                                className="mt-3 max-h-72 w-full max-w-md rounded-lg border border-slate-200 object-contain"
+                              />
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 p-4">

@@ -3,4 +3,6 @@ export * from './user.schemas';
 export * from './session.schemas';
 export * from './stats.schemas';
 export * from './kyc.schemas';
+export * from './fee-policy.schemas';
 export * from './discount.schemas';
+export * from './listing.schemas';

@@ -229,4 +229,117 @@ export default {
       createAccount: 'Create account',
     },
   },
+  careers: {
+    eyebrow: 'Join our team',
+    title: 'Careers at RentNao',
+    intro:
+      'Help us build Bangladesh’s digital rental ecosystem. We’re looking for people who care about trust, design, and solving real housing problems.',
+    apply: 'Apply now',
+    outro: 'Don’t see a fit? Email us at samiuz2001@gmail.com — we’re always open to meeting talented people.',
+    back: 'Back',
+    nav: [
+      { to: '/about', label: 'About' },
+      { to: '/blogs', label: 'Blog' },
+    ],
+    openings: [
+      {
+        id: 'frontend-engineer',
+        title: 'Frontend Engineer',
+        department: 'Engineering',
+        location: 'Dhaka · Hybrid',
+        type: 'Full-time',
+        applySubject: 'Application: Frontend Engineer — RentNao',
+        summary: 'Build responsive, accessible interfaces for tenants and property owners across web.',
+        bullets: [
+          'Ship features in React with Tailwind CSS',
+          'Work closely with product and backend on rental flows',
+          'Improve performance, i18n, and mobile experience',
+        ],
+      },
+      {
+        id: 'product-designer',
+        title: 'Product Designer',
+        department: 'Design',
+        location: 'Dhaka · Remote-friendly',
+        type: 'Full-time',
+        applySubject: 'Application: Product Designer — RentNao',
+        summary: 'Design clear, trustworthy experiences for listing, verification, and rent payments.',
+        bullets: [
+          'Own end-to-end UX for key rental journeys',
+          'Create wireframes, prototypes, and UI specs',
+          'Partner with engineering on design system consistency',
+        ],
+      },
+      {
+        id: 'customer-success',
+        title: 'Customer Success Associate',
+        department: 'Operations',
+        location: 'Dhaka · On-site',
+        type: 'Full-time',
+        applySubject: 'Application: Customer Success Associate — RentNao',
+        summary: 'Support owners and tenants as they list properties, verify accounts, and use the platform.',
+        bullets: [
+          'Respond to user questions via email and in-app channels',
+          'Document common issues and feed insights to product',
+          'Help users complete KYC and onboarding smoothly',
+        ],
+      },
+    ],
+  },
+  blogs: {
+    eyebrow: 'Insights',
+    title: 'RentNao Blog',
+    intro: 'Stories and ideas on smarter renting, verified listings, and building trust in Bangladesh’s rental market.',
+    readMore: 'Read more',
+    allPosts: 'All posts',
+    back: 'Back',
+    nav: [
+      { to: '/about', label: 'About' },
+      { to: '/careers', label: 'Careers' },
+    ],
+    posts: [
+      {
+        slug: 'future-of-renting-bangladesh',
+        category: 'Industry',
+        title: 'The Future of Renting in Bangladesh',
+        excerpt:
+          'Why digital listings, verified tenants, and wallet-based rent payments are changing how Bangladesh rents.',
+        date: '2026-05-12',
+        readTime: '4 min read',
+        body: [
+          'Renting in Bangladesh has long relied on physical searching, broker networks, and cash payments. That model creates friction for tenants and uncertainty for owners.',
+          'RentNao is building a digital-first alternative: verified users, rich property media, direct communication, and secure rent collection through an integrated wallet.',
+          'As more owners list for free and tenants discover properties online, the rental market can become faster, more transparent, and more trustworthy for everyone involved.',
+        ],
+      },
+      {
+        slug: 'why-verified-tenants-matter',
+        category: 'Trust & Safety',
+        title: 'Why Verified Tenants Matter for Owners',
+        excerpt:
+          'KYC verification helps owners connect with serious renters and reduces the risk of wasted visits and misinformation.',
+        date: '2026-04-28',
+        readTime: '3 min read',
+        body: [
+          'Property owners often spend time showing units to unqualified or unverified visitors. That cost adds up quickly, especially in busy cities like Dhaka.',
+          'RentNao requires identity verification before users can fully engage on the platform. That means owners see who they are talking to and tenants know listings come from real people.',
+          'Verification is not about exclusion — it is about building a community where both sides can rent with confidence.',
+        ],
+      },
+      {
+        slug: 'digital-rent-payments',
+        category: 'FinTech',
+        title: 'Making Rent Payments as Easy as a Subscription',
+        excerpt:
+          'Automatic wallet-based rent collection can save owners follow-ups and give tenants a clear payment history.',
+        date: '2026-03-15',
+        readTime: '5 min read',
+        body: [
+          'Monthly rent reminders, cash handoffs, and manual record-keeping are still common across Bangladesh. They are inconvenient for tenants and stressful for owners.',
+          'With RentNao Wallet, rent can be scheduled, tracked, and paid digitally. Owners receive funds without chasing payments, and tenants get a transparent history of every transaction.',
+          'Combining property discovery with fintech infrastructure is how we turn renting from a paperwork problem into a smooth, repeatable experience.',
+        ],
+      },
+    ],
+  },
 };
