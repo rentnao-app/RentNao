@@ -95,7 +95,8 @@ export async function getKycSubmissionDetail(submissionId: string) {
   const submissionResult = await db.query(
     `SELECT vs.id, vs.user_id, vs.submission_status, vs.submitted_at, vs.reviewed_at, 
             vs.rejection_reason, u.contact_email, u.contact_phone, u.role,
-            bp.first_name, bp.last_name, bp.profile_picture_path
+            bp.first_name, bp.last_name, bp.profile_picture_path,
+            bp.full_name_bn, bp.date_of_birth, bp.gender
      FROM "VerificationSubmission" vs
      JOIN "User" u ON vs.user_id = u.user_id
      LEFT JOIN "BaseUserProfile" bp ON bp.user_id = u.user_id
@@ -133,6 +134,9 @@ export async function getKycSubmissionDetail(submissionId: string) {
     displayName,
     firstName: submission.first_name || null,
     lastName: submission.last_name || null,
+    fullNameBn: submission.full_name_bn || null,
+    dateOfBirth: submission.date_of_birth ? new Date(submission.date_of_birth).toISOString().split('T')[0] : null,
+    gender: submission.gender || null,
     profilePhotoUrl: await presignDocumentUrl(submission.profile_picture_path),
     status: submission.submission_status,
     submittedAt: submission.submitted_at,
