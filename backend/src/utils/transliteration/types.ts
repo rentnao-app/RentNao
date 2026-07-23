@@ -16,6 +16,8 @@ export interface EnglishProfileData {
   flatNo?: string;
 
   fullName?: string;
+  fatherName?: string;
+  motherName?: string;
   propertyAddress?: string;
   profession?: string;
   religion?: string;
@@ -34,6 +36,8 @@ export interface BanglaProfileData {
 
   // ── Phonetic results ──
   full_name_bn: string | null;
+  father_name_bn: string | null;
+  mother_name_bn: string | null;
   property_address_bn: string | null;
   profession_bn: string | null;
   religion_bn: string | null;

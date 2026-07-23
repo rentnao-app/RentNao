@@ -318,6 +318,8 @@ model BaseUserProfile {
   religion      String?
   profession    String?
   job_category  JobCategory?
+  father_name   String       @default("")
+  mother_name   String       @default("")
 
   profile_picture_path String?
 
@@ -329,9 +331,11 @@ model BaseUserProfile {
   // Transliteration (Bengali)
   full_name_bn  String?
   profession_bn String?
-  religion_bn   String?
-  phone_bn      String?
-  nid_bn        String?
+  religion_bn    String?
+  phone_bn       String?
+  nid_bn         String?
+  father_name_bn String?
+  mother_name_bn String?
 
   created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)

@@ -7,7 +7,7 @@ import * as schemas from './schemas';
 import * as profileService from './services/profile.service';
 import * as verificationService from './services/verification.service';
 import { requireAuth } from '@/security';
-import { dispatchTransliteration } from '@/modules/deals/transliteration';
+import { dispatchTransliteration } from '@/utils/transliteration';
 import { errorHandler } from '@/middlewares/error-handler';
 
 const users = new OpenAPIHono<{

@@ -96,7 +96,8 @@ export async function getKycSubmissionDetail(submissionId: string) {
     `SELECT vs.id, vs.user_id, vs.submission_status, vs.submitted_at, vs.reviewed_at, 
             vs.rejection_reason, u.contact_email, u.contact_phone, u.role,
             bp.first_name, bp.last_name, bp.profile_picture_path,
-            bp.full_name_bn, bp.date_of_birth, bp.gender
+            bp.full_name_bn, bp.date_of_birth, bp.gender,
+            bp.father_name, bp.mother_name, bp.father_name_bn, bp.mother_name_bn
      FROM "VerificationSubmission" vs
      JOIN "User" u ON vs.user_id = u.user_id
      LEFT JOIN "BaseUserProfile" bp ON bp.user_id = u.user_id
@@ -135,6 +136,10 @@ export async function getKycSubmissionDetail(submissionId: string) {
     firstName: submission.first_name || null,
     lastName: submission.last_name || null,
     fullNameBn: submission.full_name_bn || null,
+    fatherName: submission.father_name || null,
+    motherName: submission.mother_name || null,
+    fatherNameBn: submission.father_name_bn || null,
+    motherNameBn: submission.mother_name_bn || null,
     dateOfBirth: submission.date_of_birth ? new Date(submission.date_of_birth).toISOString().split('T')[0] : null,
     gender: submission.gender || null,
     profilePhotoUrl: await presignDocumentUrl(submission.profile_picture_path),

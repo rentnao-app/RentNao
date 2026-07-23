@@ -1,6 +1,6 @@
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { AppError } from '@/errors/base';
-import { dispatchTransliteration } from '@/modules/deals/transliteration';
+import { dispatchTransliteration } from '@/utils/transliteration';
 import {
   createPropertyImageRoute,
   createListingRoute,

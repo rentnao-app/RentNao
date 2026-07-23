@@ -75,6 +75,8 @@ export interface ProfileData {
   // Base profile fields
   firstName?: string;
   lastName?: string;
+  fatherName?: string;
+  motherName?: string;
   dateOfBirth?: string;
   gender?: string;
   religion?: string;
@@ -111,7 +113,7 @@ export interface ProfileCompletionStatus {
  * Check completion for base profile (all roles)
  */
 function checkBaseCompletion(profile: any): ProfileCompletionSection {
-  const requiredFields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'religion', 'profession', 'job_category', 'profile_picture_path', 'current_lat', 'current_lng', 'current_area'];
+  const requiredFields = ['first_name', 'last_name', 'father_name', 'mother_name', 'date_of_birth', 'gender', 'religion', 'profession', 'job_category', 'profile_picture_path', 'current_lat', 'current_lng', 'current_area'];
   const filledFields: string[] = [];
   const missingFields: string[] = [];
 
@@ -282,6 +284,14 @@ export async function createOrUpdateProfile(
         updateFields.push(`last_name = $${paramIndex++}`);
         updateValues.push(data.lastName);
       }
+      if (data.fatherName) {
+        updateFields.push(`father_name = $${paramIndex++}`);
+        updateValues.push(data.fatherName);
+      }
+      if (data.motherName) {
+        updateFields.push(`mother_name = $${paramIndex++}`);
+        updateValues.push(data.motherName);
+      }
       if (data.dateOfBirth) {
         updateFields.push(`date_of_birth = $${paramIndex++}::date`);
         updateValues.push(data.dateOfBirth);
@@ -330,14 +340,16 @@ export async function createOrUpdateProfile(
       // Create new base profile
       await client.query(
         `INSERT INTO "BaseUserProfile" (
-          id, user_id, first_name, last_name, date_of_birth, gender, religion, profession, 
+          id, user_id, first_name, last_name, father_name, mother_name, date_of_birth, gender, religion, profession, 
           job_category, profile_picture_path, current_lat, current_lng, current_area
-        ) VALUES ($1, $2, $3, $4, $5::date, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7::date, $8, $9, $10, $11, $12, $13, $14, $15)`,
         [
           createId(),
           userId,
           data.firstName || null,
           data.lastName || null,
+          data.fatherName || null,
+          data.motherName || null,
           data.dateOfBirth || null,
           data.gender || null,
           data.religion || null,
