@@ -56,6 +56,7 @@ export default function OwnerPropertyEditPage() {
     hasSecurityGuard: false,
     hasGarage: false,
     hasCcCamera: false,
+    hasGas: false,
     nearbyMetroStation: false,
     nearbyPublicTransports: false,
     nearbyMosque: false,
@@ -131,6 +132,7 @@ export default function OwnerPropertyEditPage() {
       hasSecurityGuard: Boolean(data.hasSecurityGuard),
       hasGarage: Boolean(data.hasGarage),
       hasCcCamera: Boolean(data.hasCcCamera),
+      hasGas: Boolean(data.hasGas),
       nearbyMetroStation: Boolean(data.nearbyMetroStation),
       nearbyPublicTransports: Boolean(data.nearbyPublicTransports),
       nearbyMosque: Boolean(data.nearbyMosque),
@@ -204,6 +206,7 @@ export default function OwnerPropertyEditPage() {
         hasSecurityGuard: Boolean(form.hasSecurityGuard),
         hasGarage: Boolean(form.hasGarage),
         hasCcCamera: Boolean(form.hasCcCamera),
+        hasGas: Boolean(form.hasGas),
         nearbyMetroStation: Boolean(form.nearbyMetroStation),
         nearbyPublicTransports: Boolean(form.nearbyPublicTransports),
         nearbyMosque: Boolean(form.nearbyMosque),
@@ -498,6 +501,7 @@ export default function OwnerPropertyEditPage() {
                   ['hasSecurityGuard', 'propertyEdit.amenities.securityGuard'],
                   ['hasGarage', 'propertyEdit.amenities.garage'],
                   ['hasCcCamera', 'propertyEdit.amenities.ccCamera'],
+                  ['hasGas', 'propertyEdit.amenities.gas'],
                 ].map(([name, labelKey]) => (
                   <label key={name} className="flex items-center gap-2 text-sm text-gray-700">
                     <input type="checkbox" checked={form[name]} onChange={handleToggle(name)} />

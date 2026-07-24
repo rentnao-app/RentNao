@@ -313,6 +313,7 @@ export default function CreateListingPage() {
     has_security_guard: false,
     has_garage: false,
     has_cc_camera: false,
+    has_gas: false,
     nearby_metro_station: false,
     nearby_public_transports: false,
     nearby_mosque: false,
@@ -483,6 +484,7 @@ export default function CreateListingPage() {
     hasSecurityGuard: !!form.has_security_guard,
     hasGarage: !!form.has_garage,
     hasCcCamera: !!form.has_cc_camera,
+    hasGas: !!form.has_gas,
     nearbyMetroStation: !!form.nearby_metro_station,
     nearbyPublicTransports: !!form.nearby_public_transports,
     nearbyMosque: !!form.nearby_mosque,
@@ -1061,6 +1063,7 @@ export default function CreateListingPage() {
                       ["has_security_guard", "createListing.amenities.securityGuard"],
                       ["has_garage", "createListing.amenities.garage"],
                       ["has_cc_camera", "createListing.amenities.ccCamera"],
+                      ["has_gas", "createListing.amenities.gas"],
                     ].map(([name, labelKey]) => (
                       <label
                         key={name}

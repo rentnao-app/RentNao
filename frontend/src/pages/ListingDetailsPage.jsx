@@ -620,6 +620,12 @@ export default function ListingDetailsPage() {
                   </span>
                 </p>
                 <p>
+                  <span className="text-slate-400">{t("listingDetails.details.gas")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.hasGas ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
                   <span className="text-slate-400">{t("listingDetails.details.metroStation")}</span>{" "}
                   <span className="font-medium text-slate-800">
                     {listing.nearbyMetroStation ? t("common.yes") : t("common.no")}

@@ -32,6 +32,7 @@ function mapAmenityFlags(row: any) {
     hasSecurityGuard: Boolean(row.has_security_guard),
     hasGarage: Boolean(row.has_garage),
     hasCcCamera: Boolean(row.has_cc_camera),
+    hasGas: Boolean(row.has_gas),
     nearbyMetroStation: Boolean(row.nearby_metro_station),
     nearbyPublicTransports: Boolean(row.nearby_public_transports),
     nearbyMosque: Boolean(row.nearby_mosque),
@@ -223,6 +224,7 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       has_security_guard,
       has_garage,
       has_cc_camera,
+      has_gas,
       nearby_metro_station,
       nearby_public_transports,
       nearby_mosque,
@@ -238,7 +240,7 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
     ) VALUES (
       $1, $2, $3::"PropertyType", $4, $5, $6, $7, $8, $9, $10,
       $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-      $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32
+      $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33
     )
     RETURNING *`,
     [
@@ -262,6 +264,7 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       input.hasSecurityGuard,
       Boolean(input.hasGarage),
       Boolean(input.hasCcCamera),
+      Boolean(input.hasGas),
       Boolean(input.nearbyMetroStation),
       Boolean(input.nearbyPublicTransports),
       Boolean(input.nearbyMosque),
@@ -333,6 +336,7 @@ export async function updateMyPropertyById(userId: string, propertyId: string, i
   if (input.hasSecurityGuard !== undefined) addUpdate('has_security_guard', input.hasSecurityGuard);
   if (input.hasGarage !== undefined) addUpdate('has_garage', input.hasGarage);
   if (input.hasCcCamera !== undefined) addUpdate('has_cc_camera', input.hasCcCamera);
+  if (input.hasGas !== undefined) addUpdate('has_gas', input.hasGas);
   if (input.nearbyMetroStation !== undefined) addUpdate('nearby_metro_station', input.nearbyMetroStation);
   if (input.nearbyPublicTransports !== undefined) addUpdate('nearby_public_transports', input.nearbyPublicTransports);
   if (input.nearbyMosque !== undefined) addUpdate('nearby_mosque', input.nearbyMosque);
@@ -851,6 +855,7 @@ export async function getPublicListingDetail(listingId: string) {
       p.has_security_guard,
       p.has_garage,
       p.has_cc_camera,
+      p.has_gas,
       p.nearby_metro_station,
       p.nearby_public_transports,
       p.nearby_mosque,
@@ -968,6 +973,7 @@ export async function getListingDetailForAdmin(listingId: string) {
       p.has_security_guard,
       p.has_garage,
       p.has_cc_camera,
+      p.has_gas,
       p.nearby_metro_station,
       p.nearby_public_transports,
       p.nearby_mosque,
@@ -1052,6 +1058,7 @@ export async function getListingDetailForAdmin(listingId: string) {
     hasSecurityGuard: Boolean(row.has_security_guard),
     hasGarage: Boolean(row.has_garage),
     hasCcCamera: Boolean(row.has_cc_camera),
+    hasGas: Boolean(row.has_gas),
     nearbyMetroStation: Boolean(row.nearby_metro_station),
     nearbyPublicTransports: Boolean(row.nearby_public_transports),
     nearbyMosque: Boolean(row.nearby_mosque),
@@ -1247,6 +1254,7 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
         p.has_security_guard,
         p.has_garage,
         p.has_cc_camera,
+        p.has_gas,
         p.nearby_metro_station,
         p.nearby_public_transports,
         p.nearby_mosque,
@@ -1330,6 +1338,7 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       hasSecurityGuard: Boolean(row.has_security_guard),
       hasGarage: Boolean(row.has_garage),
       hasCcCamera: Boolean(row.has_cc_camera),
+      hasGas: Boolean(row.has_gas),
       nearbyMetroStation: Boolean(row.nearby_metro_station),
       nearbyPublicTransports: Boolean(row.nearby_public_transports),
       nearbyMosque: Boolean(row.nearby_mosque),
@@ -1397,6 +1406,7 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       p.has_security_guard,
       p.has_garage,
       p.has_cc_camera,
+      p.has_gas,
       p.nearby_metro_station,
       p.nearby_public_transports,
       p.nearby_mosque,
@@ -1479,6 +1489,7 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
     hasSecurityGuard: Boolean(row.has_security_guard),
     hasGarage: Boolean(row.has_garage),
     hasCcCamera: Boolean(row.has_cc_camera),
+    hasGas: Boolean(row.has_gas),
     nearbyMetroStation: Boolean(row.nearby_metro_station),
     nearbyPublicTransports: Boolean(row.nearby_public_transports),
     nearbyMosque: Boolean(row.nearby_mosque),

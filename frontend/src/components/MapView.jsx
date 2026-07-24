@@ -4,8 +4,10 @@ import {
   createMapOptions,
   destroyMapInstance,
   formatGoogleMapsError,
+  GOOGLE_MAPS_AUTH_FAILURE,
   loadGoogleMaps,
   normalizeLatLng,
+  subscribeToGoogleMapsAuthFailure,
   waitForMapContainer,
 } from '../lib/googleMaps';
 
@@ -21,6 +23,10 @@ export default function MapView({ lat, lng, height = '200px' }) {
     const container = containerRef.current;
     if (!container || !position) return;
     let cancelled = false;
+
+    const unsubscribeAuthFailure = subscribeToGoogleMapsAuthFailure(() => {
+      if (!cancelled) setLoadError(formatGoogleMapsError(new Error(GOOGLE_MAPS_AUTH_FAILURE)));
+    });
 
     loadGoogleMaps()
       .then(async (maps) => {
@@ -55,6 +61,7 @@ export default function MapView({ lat, lng, height = '200px' }) {
 
     return () => {
       cancelled = true;
+      unsubscribeAuthFailure();
       destroyMapInstance(mapRef.current, mapsRef.current);
       clearMapContainer(containerRef.current);
       mapRef.current = null;
