@@ -54,6 +54,17 @@ export default function OwnerPropertyEditPage() {
     hasLift: false,
     hasGenerator: false,
     hasSecurityGuard: false,
+    hasGarage: false,
+    hasCcCamera: false,
+    nearbyMetroStation: false,
+    nearbyPublicTransports: false,
+    nearbyMosque: false,
+    nearbySchool: false,
+    nearbyGym: false,
+    nearbyTurf: false,
+    nearbyPlayingField: false,
+    nearbyBazar: false,
+    nearbySupershop: false,
     floorNo: '',
     flatNo: '',
   });
@@ -118,6 +129,17 @@ export default function OwnerPropertyEditPage() {
       hasLift: Boolean(data.hasLift),
       hasGenerator: Boolean(data.hasGenerator),
       hasSecurityGuard: Boolean(data.hasSecurityGuard),
+      hasGarage: Boolean(data.hasGarage),
+      hasCcCamera: Boolean(data.hasCcCamera),
+      nearbyMetroStation: Boolean(data.nearbyMetroStation),
+      nearbyPublicTransports: Boolean(data.nearbyPublicTransports),
+      nearbyMosque: Boolean(data.nearbyMosque),
+      nearbySchool: Boolean(data.nearbySchool),
+      nearbyGym: Boolean(data.nearbyGym),
+      nearbyTurf: Boolean(data.nearbyTurf),
+      nearbyPlayingField: Boolean(data.nearbyPlayingField),
+      nearbyBazar: Boolean(data.nearbyBazar),
+      nearbySupershop: Boolean(data.nearbySupershop),
       floorNo: toInputValue(data.floorNo),
       flatNo: data.flatNo || '',
     });
@@ -180,6 +202,17 @@ export default function OwnerPropertyEditPage() {
         hasLift: Boolean(form.hasLift),
         hasGenerator: Boolean(form.hasGenerator),
         hasSecurityGuard: Boolean(form.hasSecurityGuard),
+        hasGarage: Boolean(form.hasGarage),
+        hasCcCamera: Boolean(form.hasCcCamera),
+        nearbyMetroStation: Boolean(form.nearbyMetroStation),
+        nearbyPublicTransports: Boolean(form.nearbyPublicTransports),
+        nearbyMosque: Boolean(form.nearbyMosque),
+        nearbySchool: Boolean(form.nearbySchool),
+        nearbyGym: Boolean(form.nearbyGym),
+        nearbyTurf: Boolean(form.nearbyTurf),
+        nearbyPlayingField: Boolean(form.nearbyPlayingField),
+        nearbyBazar: Boolean(form.nearbyBazar),
+        nearbySupershop: Boolean(form.nearbySupershop),
         floorNo: toNumberOrUndefined(form.floorNo),
         flatNo: (form.flatNo ?? '').trim() || undefined,
       };
@@ -456,19 +489,44 @@ export default function OwnerPropertyEditPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" checked={form.hasLift} onChange={handleToggle('hasLift')} />
-                {t('propertyEdit.amenities.lift')}
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" checked={form.hasGenerator} onChange={handleToggle('hasGenerator')} />
-                {t('propertyEdit.amenities.generator')}
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" checked={form.hasSecurityGuard} onChange={handleToggle('hasSecurityGuard')} />
-                {t('propertyEdit.amenities.securityGuard')}
-              </label>
+            <div>
+              <p className="mb-2 text-sm font-semibold text-gray-800">{t('propertyEdit.amenities.title')}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  ['hasLift', 'propertyEdit.amenities.lift'],
+                  ['hasGenerator', 'propertyEdit.amenities.generator'],
+                  ['hasSecurityGuard', 'propertyEdit.amenities.securityGuard'],
+                  ['hasGarage', 'propertyEdit.amenities.garage'],
+                  ['hasCcCamera', 'propertyEdit.amenities.ccCamera'],
+                ].map(([name, labelKey]) => (
+                  <label key={name} className="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={form[name]} onChange={handleToggle(name)} />
+                    {t(labelKey)}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-semibold text-gray-800">{t('propertyEdit.amenities.nearbyTitle')}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  ['nearbyMetroStation', 'propertyEdit.amenities.metroStation'],
+                  ['nearbyPublicTransports', 'propertyEdit.amenities.publicTransports'],
+                  ['nearbyMosque', 'propertyEdit.amenities.mosque'],
+                  ['nearbySchool', 'propertyEdit.amenities.school'],
+                  ['nearbyGym', 'propertyEdit.amenities.gym'],
+                  ['nearbyTurf', 'propertyEdit.amenities.turf'],
+                  ['nearbyPlayingField', 'propertyEdit.amenities.playingField'],
+                  ['nearbyBazar', 'propertyEdit.amenities.bazar'],
+                  ['nearbySupershop', 'propertyEdit.amenities.supershop'],
+                ].map(([name, labelKey]) => (
+                  <label key={name} className="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={form[name]} onChange={handleToggle(name)} />
+                    {t(labelKey)}
+                  </label>
+                ))}
+              </div>
             </div>
 
             <button
