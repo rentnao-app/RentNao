@@ -1,5 +1,37 @@
 let loadPromise = null;
 
+// Google reports key/billing/referer rejections asynchronously via this global,
+// long after `new google.maps.Map()` has already resolved, so it can never
+// surface through a try/catch around map creation.
+export const GOOGLE_MAPS_AUTH_FAILURE = 'GoogleMapsAuthFailure';
+
+let authFailed = false;
+const authFailureListeners = new Set();
+
+function installAuthFailureHandler() {
+  if (typeof window === 'undefined' || window.__rentnaoGoogleMapsAuthHooked) return;
+  window.__rentnaoGoogleMapsAuthHooked = true;
+
+  const previousHandler = window.gm_authFailure;
+  window.gm_authFailure = () => {
+    authFailed = true;
+    authFailureListeners.forEach((listener) => listener());
+    if (typeof previousHandler === 'function') previousHandler();
+  };
+}
+
+export function subscribeToGoogleMapsAuthFailure(listener) {
+  installAuthFailureHandler();
+
+  if (authFailed) {
+    listener();
+    return () => {};
+  }
+
+  authFailureListeners.add(listener);
+  return () => authFailureListeners.delete(listener);
+}
+
 export function normalizeLatLng(value) {
   if (!value) return null;
   if (value.lat === null || value.lat === undefined || value.lng === null || value.lng === undefined) return null;
@@ -47,6 +79,8 @@ export async function loadGoogleMaps() {
   if (!apiKey) {
     throw new Error('Missing VITE_GOOGLE_MAPS_API_KEY in frontend/.env');
   }
+
+  installAuthFailureHandler();
 
   if (!loadPromise) {
     loadPromise = new Promise((resolve, reject) => {
@@ -110,6 +144,9 @@ export function formatGoogleMapsError(error) {
 
   if (message.includes('Missing VITE_GOOGLE_MAPS_API_KEY')) {
     return 'Google Maps API key is missing. Add VITE_GOOGLE_MAPS_API_KEY to frontend/.env and restart the dev server.';
+  }
+  if (message.includes(GOOGLE_MAPS_AUTH_FAILURE)) {
+    return 'Google Maps rejected the API key for this site. In Google Cloud Console check that the key still exists, that Maps JavaScript API is enabled, that billing is active, and that this domain is allowed. See the browser console for the exact reason.';
   }
   if (message.includes('RefererNotAllowed') || message.includes('referer')) {
     return 'Google Maps blocked localhost. In Google Cloud → Keys & Credentials → your API key → add http://localhost:5173/* under Website restrictions, save, wait 2 minutes, then refresh.';

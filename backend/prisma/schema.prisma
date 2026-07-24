@@ -395,6 +395,7 @@ model Property {
   has_security_guard Boolean        @default(false)
   has_garage         Boolean        @default(false)
   has_cc_camera      Boolean        @default(false)
+  has_gas            Boolean        @default(false)
 
   // Nearby landmarks / facilities
   nearby_metro_station      Boolean @default(false)
