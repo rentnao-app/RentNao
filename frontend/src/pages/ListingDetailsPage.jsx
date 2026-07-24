@@ -608,6 +608,72 @@ export default function ListingDetailsPage() {
                   </span>
                 </p>
                 <p>
+                  <span className="text-slate-400">{t("listingDetails.details.garage")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.hasGarage ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.ccCamera")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.hasCcCamera ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.metroStation")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyMetroStation ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.publicTransports")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyPublicTransports ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.mosque")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyMosque ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.school")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbySchool ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.gym")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyGym ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.turf")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyTurf ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.playingField")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyPlayingField ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.bazar")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyBazar ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.supershop")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbySupershop ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
                   <span className="text-slate-400">{t("listingDetails.details.floorNumber")}</span>{" "}
                   <span className="font-medium text-slate-800">
                     {listing.floorNo ?? t("common.dash")}

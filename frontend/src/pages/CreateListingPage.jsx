@@ -311,6 +311,17 @@ export default function CreateListingPage() {
     has_lift: false,
     has_generator: false,
     has_security_guard: false,
+    has_garage: false,
+    has_cc_camera: false,
+    nearby_metro_station: false,
+    nearby_public_transports: false,
+    nearby_mosque: false,
+    nearby_school: false,
+    nearby_gym: false,
+    nearby_turf: false,
+    nearby_playing_field: false,
+    nearby_bazar: false,
+    nearby_supershop: false,
     intended_tenant_type: "BOTH",
     rent: "",
     floor_no: "",
@@ -470,6 +481,17 @@ export default function CreateListingPage() {
     hasLift: !!form.has_lift,
     hasGenerator: !!form.has_generator,
     hasSecurityGuard: !!form.has_security_guard,
+    hasGarage: !!form.has_garage,
+    hasCcCamera: !!form.has_cc_camera,
+    nearbyMetroStation: !!form.nearby_metro_station,
+    nearbyPublicTransports: !!form.nearby_public_transports,
+    nearbyMosque: !!form.nearby_mosque,
+    nearbySchool: !!form.nearby_school,
+    nearbyGym: !!form.nearby_gym,
+    nearbyTurf: !!form.nearby_turf,
+    nearbyPlayingField: !!form.nearby_playing_field,
+    nearbyBazar: !!form.nearby_bazar,
+    nearbySupershop: !!form.nearby_supershop,
     intendedTenantType: form.intended_tenant_type,
     propertyType: isCommercialFlow ? "COMMERCIAL_SPACE" : "APARTMENT",
     floorNo: form.floor_no ? parseInt(form.floor_no, 10) : undefined,
@@ -1033,48 +1055,68 @@ export default function CreateListingPage() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        name="has_lift"
-                        checked={form.has_lift}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            has_lift: e.target.checked,
-                          }))
-                        }
-                      />
-                      {t("createListing.amenities.lift")}
-                    </label>
-                    <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        name="has_generator"
-                        checked={form.has_generator}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            has_generator: e.target.checked,
-                          }))
-                        }
-                      />
-                      {t("createListing.amenities.generator")}
-                    </label>
-                    <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        name="has_security_guard"
-                        checked={form.has_security_guard}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            has_security_guard: e.target.checked,
-                          }))
-                        }
-                      />
-                      {t("createListing.amenities.securityGuard")}
-                    </label>
+                    {[
+                      ["has_lift", "createListing.amenities.lift"],
+                      ["has_generator", "createListing.amenities.generator"],
+                      ["has_security_guard", "createListing.amenities.securityGuard"],
+                      ["has_garage", "createListing.amenities.garage"],
+                      ["has_cc_camera", "createListing.amenities.ccCamera"],
+                    ].map(([name, labelKey]) => (
+                      <label
+                        key={name}
+                        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700"
+                      >
+                        <input
+                          type="checkbox"
+                          name={name}
+                          checked={form[name]}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              [name]: e.target.checked,
+                            }))
+                          }
+                        />
+                        {t(labelKey)}
+                      </label>
+                    ))}
+                  </div>
+
+                  <div>
+                    <p className="mb-2 text-sm font-semibold text-gray-800">
+                      {t("createListing.amenities.nearbyTitle")}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {[
+                        ["nearby_metro_station", "createListing.amenities.metroStation"],
+                        ["nearby_public_transports", "createListing.amenities.publicTransports"],
+                        ["nearby_mosque", "createListing.amenities.mosque"],
+                        ["nearby_school", "createListing.amenities.school"],
+                        ["nearby_gym", "createListing.amenities.gym"],
+                        ["nearby_turf", "createListing.amenities.turf"],
+                        ["nearby_playing_field", "createListing.amenities.playingField"],
+                        ["nearby_bazar", "createListing.amenities.bazar"],
+                        ["nearby_supershop", "createListing.amenities.supershop"],
+                      ].map(([name, labelKey]) => (
+                        <label
+                          key={name}
+                          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700"
+                        >
+                          <input
+                            type="checkbox"
+                            name={name}
+                            checked={form[name]}
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                [name]: e.target.checked,
+                              }))
+                            }
+                          />
+                          {t(labelKey)}
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}
