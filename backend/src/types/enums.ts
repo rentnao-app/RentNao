@@ -104,7 +104,7 @@ export type TenantTypeType = z.infer<typeof TenantType>;
 export const PropertyCategory = z.enum(['RESIDENTIAL', 'COMMERCIAL']);
 export type PropertyCategoryType = z.infer<typeof PropertyCategory>;
 
-export const PropertyType = z.enum(['APARTMENT']);
+export const PropertyType = z.enum(['APARTMENT', 'COMMERCIAL_SPACE']);
 export type PropertyTypeType = z.infer<typeof PropertyType>;
 
 export const AreaName = z.enum([

@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { aosFadeUp, aosStagger } from '../lib/aos';
+import { useFooterAos } from '../hooks/useHomeAos';
 import { useTranslation } from '../lib/i18n';
 
 function SocialIcon({ href, label, children }) {
@@ -34,6 +36,7 @@ function FooterColumn({ title, links }) {
 
 export default function SiteFooter() {
   const { t } = useTranslation();
+  useFooterAos();
 
   const productLinks = [
     { to: '/listings', label: t('footer.browseProperties') },
@@ -142,7 +145,68 @@ export default function SiteFooter() {
             <Link to="/terms" className="transition hover:text-white">
               {t('footer.cookiesShort')}
             </Link>
+
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-[#5f6f68]">{t('footer.description')}</p>
+
+            <div className="mt-5 flex items-center gap-3.5">
+              <SocialIconButton href={SOCIAL_LINKS.facebook} label={t('footer.socialFacebook')}>
+                <FacebookIcon />
+              </SocialIconButton>
+              <SocialIconButton href={SOCIAL_LINKS.linkedin} label={t('footer.socialLinkedIn')}>
+                <LinkedInIcon />
+              </SocialIconButton>
+            </div>
           </div>
+
+          <FooterNavColumn title={t('footer.platform')} aosDelay={aosStagger(1, 70)}>
+            <FooterNavItem>
+              <FooterLink to="/listings">{t('footer.browseListings')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/services">{t('footer.services')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/faq">{t('footer.faq')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/review">{t('footer.reviews')}</FooterLink>
+            </FooterNavItem>
+          </FooterNavColumn>
+
+          <FooterNavColumn title={t('footer.company')} aosDelay={aosStagger(2, 70)}>
+            <FooterNavItem>
+              <FooterLink to="/about">{t('footer.about')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/careers">{t('footer.careers')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/blogs">{t('footer.blogs')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink href="mailto:samiuz2001@gmail.com">{t('footer.contact')}</FooterLink>
+            </FooterNavItem>
+          </FooterNavColumn>
+
+          <FooterNavColumn title={t('footer.legal')} aosDelay={aosStagger(3, 70)}>
+            <FooterNavItem>
+              <FooterLink to="/terms">{t('footer.termsOfService')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/terms">{t('footer.privacyPolicy')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/terms">{t('footer.cookiePolicy')}</FooterLink>
+            </FooterNavItem>
+          </FooterNavColumn>
+        </div>
+
+        <div
+          className="mt-12 flex flex-col gap-3 border-t border-[#e3ebe6] pt-8 text-sm text-[#6b7f74] sm:flex-row sm:items-center sm:justify-between"
+          {...aosFadeUp(120)}
+        >
+          <p>{t('footer.copyright')}</p>
+          <p>{t('footer.tagline')}</p>
         </div>
       </div>
     </footer>

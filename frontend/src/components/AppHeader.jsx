@@ -163,19 +163,18 @@ export default function AppHeader({ variant = 'app', centerNav = false }) {
         </div>
       </header>
 
-      {drawerOpen && (
-        <MobileDrawer
-          onClose={() => setDrawerOpen(false)}
-          navItems={drawerNavItems}
-          pathname={location.pathname}
-          loggedIn={loggedIn}
-          userName={userName}
-          userEmail={userEmail}
-          userInitials={userInitials}
-          profileAvatarUrl={profileAvatarUrl}
-          role={role}
-        />
-      )}
+      <MobileDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        navItems={drawerNavItems}
+        pathname={location.pathname}
+        loggedIn={loggedIn}
+        userName={userName}
+        userEmail={userEmail}
+        userInitials={userInitials}
+        profileAvatarUrl={profileAvatarUrl}
+        role={role}
+      />
     </>
   );
 }
@@ -250,6 +249,7 @@ function WalletPill({ className = '', compact = false }) {
 }
 
 function MobileDrawer({
+  open,
   onClose,
   navItems,
   pathname,
@@ -261,11 +261,32 @@ function MobileDrawer({
   role,
 }) {
   const { t } = useTranslation();
+  const [mounted, setMounted] = useState(open);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      const frame = window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => setVisible(true));
+      });
+      return () => window.cancelAnimationFrame(frame);
+    }
+
+    setVisible(false);
+    const timer = window.setTimeout(() => setMounted(false), 380);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
+  if (!mounted) return null;
+
   return (
     <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
       <button
         type="button"
-        className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px]"
+        className={`absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px] transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+          visible ? 'opacity-100' : 'opacity-0'
+        }`}
         aria-label={t('header.closeMenu')}
         onClick={onClose}
       />
@@ -274,7 +295,9 @@ function MobileDrawer({
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-mobile-nav-title"
-        className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+        className={`relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col border-l border-[#dceadf] bg-white pb-[env(safe-area-inset-bottom,0px)] pt-[env(safe-area-inset-top,0px)] shadow-[-12px_0_40px_rgba(30,71,50,0.12)] transition-transform duration-[380ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none motion-reduce:transform-none ${
+          visible ? 'translate-x-0' : 'translate-x-full'
+        }`}
       >
         <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-4 py-3.5">
           <span id="app-mobile-nav-title" className="text-sm font-semibold text-gray-900">
@@ -434,7 +457,18 @@ function buildHeaderNav(role, loggedIn, t) {
   }
   // Owner dashboard uses left sidebar — no duplicate links in header
   if (role === 'OWNER') {
-    return [];
+    return [
+      { to: '/owner-dashboard', label: t('nav.dashboard') },
+      { to: '/owner-dashboard/my-properties', label: t('nav.myProperties'), cta: true },
+      {
+        to: '/owner-dashboard/create-listing',
+        label: t('nav.listYourProperty'),
+        cta: true,
+        icon: 'M12 4v16m8-8H4',
+      },
+      { to: '/owner-dashboard/requests', label: t('nav.requests') },
+      { to: '/chats', label: t('nav.chats') },
+    ];
   }
   if (role === 'TENANT') {
     return [
@@ -442,6 +476,7 @@ function buildHeaderNav(role, loggedIn, t) {
       { to: '/listings', label: t('nav.browse'), buttonNav: true },
       { to: '/tenant-dashboard/applications', label: t('nav.myApplications'), buttonNav: true },
       { to: '/tenant-dashboard/wishlist', label: t('nav.wishlist'), buttonNav: true },
+      { to: '/chats', label: t('nav.chats'), buttonNav: true },
     ];
   }
   if (role === 'ADMIN') {

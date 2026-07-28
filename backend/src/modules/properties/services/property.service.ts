@@ -25,6 +25,26 @@ function toNumberOrNull(value: any): number | null {
   return Number(value);
 }
 
+function mapAmenityFlags(row: any) {
+  return {
+    hasLift: Boolean(row.has_lift),
+    hasGenerator: Boolean(row.has_generator),
+    hasSecurityGuard: Boolean(row.has_security_guard),
+    hasGarage: Boolean(row.has_garage),
+    hasCcCamera: Boolean(row.has_cc_camera),
+    hasGas: Boolean(row.has_gas),
+    nearbyMetroStation: Boolean(row.nearby_metro_station),
+    nearbyPublicTransports: Boolean(row.nearby_public_transports),
+    nearbyMosque: Boolean(row.nearby_mosque),
+    nearbySchool: Boolean(row.nearby_school),
+    nearbyGym: Boolean(row.nearby_gym),
+    nearbyTurf: Boolean(row.nearby_turf),
+    nearbyPlayingField: Boolean(row.nearby_playing_field),
+    nearbyBazar: Boolean(row.nearby_bazar),
+    nearbySupershop: Boolean(row.nearby_supershop),
+  };
+}
+
 function mapProperty(row: any) {
   return {
     propertyId: row.property_id,
@@ -42,9 +62,7 @@ function mapProperty(row: any) {
     address: row.address,
     buildingFloors: row.building_floors === null || row.building_floors === undefined ? null : Number(row.building_floors),
     buildingFacing: row.building_facing,
-    hasLift: row.has_lift,
-    hasGenerator: row.has_generator,
-    hasSecurityGuard: row.has_security_guard,
+    ...mapAmenityFlags(row),
     intendedTenantType: row.intended_tenant_type,
     floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
     flatNo: row.flat_no || null,
@@ -182,11 +200,13 @@ export async function listPropertiesByOwnerUserId(ownerUserId: string) {
 export async function createProperty(userId: string, input: CreatePropertyInput) {
   const ownerId = await getOwnerIdByUserId(userId);
   const propertyId = createId();
+  const propertyType = input.propertyType || 'APARTMENT';
 
   const result = await db.query(
     `INSERT INTO "Property" (
       property_id,
       owner_id,
+      property_type,
       property_size_sqft,
       room_count,
       bathroom_count,
@@ -202,17 +222,31 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       has_lift,
       has_generator,
       has_security_guard,
+      has_garage,
+      has_cc_camera,
+      has_gas,
+      nearby_metro_station,
+      nearby_public_transports,
+      nearby_mosque,
+      nearby_school,
+      nearby_gym,
+      nearby_turf,
+      nearby_playing_field,
+      nearby_bazar,
+      nearby_supershop,
       intended_tenant_type,
       floor_no,
       flat_no
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+      $1, $2, $3::"PropertyType", $4, $5, $6, $7, $8, $9, $10,
+      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+      $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33
     )
     RETURNING *`,
     [
       propertyId,
       ownerId,
+      propertyType,
       input.propertySizeSqft,
       input.roomCount,
       input.bathroomCount,
@@ -228,6 +262,18 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       input.hasLift,
       input.hasGenerator,
       input.hasSecurityGuard,
+      Boolean(input.hasGarage),
+      Boolean(input.hasCcCamera),
+      Boolean(input.hasGas),
+      Boolean(input.nearbyMetroStation),
+      Boolean(input.nearbyPublicTransports),
+      Boolean(input.nearbyMosque),
+      Boolean(input.nearbySchool),
+      Boolean(input.nearbyGym),
+      Boolean(input.nearbyTurf),
+      Boolean(input.nearbyPlayingField),
+      Boolean(input.nearbyBazar),
+      Boolean(input.nearbySupershop),
       input.intendedTenantType,
       input.floorNo || 1,
       input.flatNo || null,
@@ -288,7 +334,20 @@ export async function updateMyPropertyById(userId: string, propertyId: string, i
   if (input.hasLift !== undefined) addUpdate('has_lift', input.hasLift);
   if (input.hasGenerator !== undefined) addUpdate('has_generator', input.hasGenerator);
   if (input.hasSecurityGuard !== undefined) addUpdate('has_security_guard', input.hasSecurityGuard);
+  if (input.hasGarage !== undefined) addUpdate('has_garage', input.hasGarage);
+  if (input.hasCcCamera !== undefined) addUpdate('has_cc_camera', input.hasCcCamera);
+  if (input.hasGas !== undefined) addUpdate('has_gas', input.hasGas);
+  if (input.nearbyMetroStation !== undefined) addUpdate('nearby_metro_station', input.nearbyMetroStation);
+  if (input.nearbyPublicTransports !== undefined) addUpdate('nearby_public_transports', input.nearbyPublicTransports);
+  if (input.nearbyMosque !== undefined) addUpdate('nearby_mosque', input.nearbyMosque);
+  if (input.nearbySchool !== undefined) addUpdate('nearby_school', input.nearbySchool);
+  if (input.nearbyGym !== undefined) addUpdate('nearby_gym', input.nearbyGym);
+  if (input.nearbyTurf !== undefined) addUpdate('nearby_turf', input.nearbyTurf);
+  if (input.nearbyPlayingField !== undefined) addUpdate('nearby_playing_field', input.nearbyPlayingField);
+  if (input.nearbyBazar !== undefined) addUpdate('nearby_bazar', input.nearbyBazar);
+  if (input.nearbySupershop !== undefined) addUpdate('nearby_supershop', input.nearbySupershop);
   if (input.intendedTenantType !== undefined) addUpdate('intended_tenant_type', input.intendedTenantType);
+  if (input.propertyType !== undefined) addUpdate('property_type', input.propertyType);
   if (input.floorNo !== undefined) addUpdate('floor_no', input.floorNo);
   if (input.flatNo !== undefined) addUpdate('flat_no', input.flatNo);
 
@@ -794,6 +853,18 @@ export async function getPublicListingDetail(listingId: string) {
       p.has_lift,
       p.has_generator,
       p.has_security_guard,
+      p.has_garage,
+      p.has_cc_camera,
+      p.has_gas,
+      p.nearby_metro_station,
+      p.nearby_public_transports,
+      p.nearby_mosque,
+      p.nearby_school,
+      p.nearby_gym,
+      p.nearby_turf,
+      p.nearby_playing_field,
+      p.nearby_bazar,
+      p.nearby_supershop,
       p.floor_no,
       p.property_address_bn,
       p.floor_no_bn,
@@ -863,9 +934,7 @@ export async function getPublicListingDetail(listingId: string) {
     createdAt: row.created_at.toISOString(),
     buildingFloors: Number(row.building_floors),
     buildingFacing: row.building_facing,
-    hasLift: Boolean(row.has_lift),
-    hasGenerator: Boolean(row.has_generator),
-    hasSecurityGuard: Boolean(row.has_security_guard),
+    ...mapAmenityFlags(row),
     floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
     propertyAddressBn: row.property_address_bn || null,
     floorNoBn: row.floor_no_bn || null,
@@ -891,6 +960,7 @@ export async function getListingDetailForAdmin(listingId: string) {
       p.title,
       p.description,
       p.area_name,
+      p.property_type,
       p.property_size_sqft,
       p.room_count,
       p.bathroom_count,
@@ -901,6 +971,18 @@ export async function getListingDetailForAdmin(listingId: string) {
       p.has_lift,
       p.has_generator,
       p.has_security_guard,
+      p.has_garage,
+      p.has_cc_camera,
+      p.has_gas,
+      p.nearby_metro_station,
+      p.nearby_public_transports,
+      p.nearby_mosque,
+      p.nearby_school,
+      p.nearby_gym,
+      p.nearby_turf,
+      p.nearby_playing_field,
+      p.nearby_bazar,
+      p.nearby_supershop,
       p.address,
       p.exact_lat,
       p.exact_lng,
@@ -959,6 +1041,7 @@ export async function getListingDetailForAdmin(listingId: string) {
     listingEndDate: row.listing_end_date ? row.listing_end_date.toISOString() : null,
     listingStatus: row.listing_status,
     areaName: row.area_name,
+    propertyType: row.property_type || 'APARTMENT',
     propertySizeSqft: Number(row.property_size_sqft),
     roomCount: Number(row.room_count),
     bathroomCount: Number(row.bathroom_count),
@@ -966,12 +1049,25 @@ export async function getListingDetailForAdmin(listingId: string) {
     intendedTenantType: row.intended_tenant_type,
     primaryImagePath: row.primary_image_path,
     primaryImageUrl,
+    viewCount: Number(row.view_count ?? 0),
     createdAt: row.created_at.toISOString(),
     buildingFloors: Number(row.building_floors),
     buildingFacing: row.building_facing,
     hasLift: Boolean(row.has_lift),
     hasGenerator: Boolean(row.has_generator),
     hasSecurityGuard: Boolean(row.has_security_guard),
+    hasGarage: Boolean(row.has_garage),
+    hasCcCamera: Boolean(row.has_cc_camera),
+    hasGas: Boolean(row.has_gas),
+    nearbyMetroStation: Boolean(row.nearby_metro_station),
+    nearbyPublicTransports: Boolean(row.nearby_public_transports),
+    nearbyMosque: Boolean(row.nearby_mosque),
+    nearbySchool: Boolean(row.nearby_school),
+    nearbyGym: Boolean(row.nearby_gym),
+    nearbyTurf: Boolean(row.nearby_turf),
+    nearbyPlayingField: Boolean(row.nearby_playing_field),
+    nearbyBazar: Boolean(row.nearby_bazar),
+    nearbySupershop: Boolean(row.nearby_supershop),
     floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
     flatNo: row.flat_no || null,
     propertyAddressBn: row.property_address_bn || null,
@@ -988,6 +1084,43 @@ export async function getListingDetailForAdmin(listingId: string) {
     isUnlocked: true,
     unlockRequiredFields: [] as Array<'address' | 'exactLat' | 'exactLng' | 'owner'>,
     unlockFeeCode: 'LISTING_UNLOCK',
+  };
+}
+
+export async function updateListingPropertyTypeForAdmin(
+  listingId: string,
+  propertyType: 'APARTMENT' | 'COMMERCIAL_SPACE'
+) {
+  const listingResult = await db.query(
+    `SELECT listing_id, property_id
+     FROM "Listing"
+     WHERE listing_id = $1
+     LIMIT 1`,
+    [listingId]
+  );
+
+  if (listingResult.rows.length === 0) {
+    throw new AppError(404, 'Listing not found');
+  }
+
+  const propertyId = listingResult.rows[0].property_id as string;
+
+  const updateResult = await db.query(
+    `UPDATE "Property"
+     SET property_type = $1::"PropertyType"
+     WHERE property_id = $2
+     RETURNING property_id, property_type`,
+    [propertyType, propertyId]
+  );
+
+  if (updateResult.rows.length === 0) {
+    throw new AppError(404, 'Property not found');
+  }
+
+  return {
+    listingId,
+    propertyId: updateResult.rows[0].property_id as string,
+    propertyType: updateResult.rows[0].property_type as 'APARTMENT' | 'COMMERCIAL_SPACE',
   };
 }
 
@@ -1119,6 +1252,18 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
         p.has_lift,
         p.has_generator,
         p.has_security_guard,
+        p.has_garage,
+        p.has_cc_camera,
+        p.has_gas,
+        p.nearby_metro_station,
+        p.nearby_public_transports,
+        p.nearby_mosque,
+        p.nearby_school,
+        p.nearby_gym,
+        p.nearby_turf,
+        p.nearby_playing_field,
+        p.nearby_bazar,
+        p.nearby_supershop,
         p.address,
         p.exact_lat,
         p.exact_lng,
@@ -1191,6 +1336,18 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       hasLift: Boolean(row.has_lift),
       hasGenerator: Boolean(row.has_generator),
       hasSecurityGuard: Boolean(row.has_security_guard),
+      hasGarage: Boolean(row.has_garage),
+      hasCcCamera: Boolean(row.has_cc_camera),
+      hasGas: Boolean(row.has_gas),
+      nearbyMetroStation: Boolean(row.nearby_metro_station),
+      nearbyPublicTransports: Boolean(row.nearby_public_transports),
+      nearbyMosque: Boolean(row.nearby_mosque),
+      nearbySchool: Boolean(row.nearby_school),
+      nearbyGym: Boolean(row.nearby_gym),
+      nearbyTurf: Boolean(row.nearby_turf),
+      nearbyPlayingField: Boolean(row.nearby_playing_field),
+      nearbyBazar: Boolean(row.nearby_bazar),
+      nearbySupershop: Boolean(row.nearby_supershop),
       floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
       flatNo: row.flat_no || null,
       propertyAddressBn: row.property_address_bn || null,
@@ -1247,6 +1404,18 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       p.has_lift,
       p.has_generator,
       p.has_security_guard,
+      p.has_garage,
+      p.has_cc_camera,
+      p.has_gas,
+      p.nearby_metro_station,
+      p.nearby_public_transports,
+      p.nearby_mosque,
+      p.nearby_school,
+      p.nearby_gym,
+      p.nearby_turf,
+      p.nearby_playing_field,
+      p.nearby_bazar,
+      p.nearby_supershop,
       p.address,
       p.exact_lat,
       p.exact_lng,
@@ -1318,6 +1487,18 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
     hasLift: Boolean(row.has_lift),
     hasGenerator: Boolean(row.has_generator),
     hasSecurityGuard: Boolean(row.has_security_guard),
+    hasGarage: Boolean(row.has_garage),
+    hasCcCamera: Boolean(row.has_cc_camera),
+    hasGas: Boolean(row.has_gas),
+    nearbyMetroStation: Boolean(row.nearby_metro_station),
+    nearbyPublicTransports: Boolean(row.nearby_public_transports),
+    nearbyMosque: Boolean(row.nearby_mosque),
+    nearbySchool: Boolean(row.nearby_school),
+    nearbyGym: Boolean(row.nearby_gym),
+    nearbyTurf: Boolean(row.nearby_turf),
+    nearbyPlayingField: Boolean(row.nearby_playing_field),
+    nearbyBazar: Boolean(row.nearby_bazar),
+    nearbySupershop: Boolean(row.nearby_supershop),
     floorNo: row.floor_no === null || row.floor_no === undefined ? null : Number(row.floor_no),
     flatNo: row.flat_no || null,
     propertyAddressBn: row.property_address_bn || null,

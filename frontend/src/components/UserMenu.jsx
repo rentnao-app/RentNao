@@ -145,6 +145,19 @@ export default function UserMenu({ name = '', email = '', role = '', initials = 
                 {t('userMenu.notifications')}
               </Link>
             </li>
+            {(role === 'TENANT' || role === 'OWNER') && (
+              <li>
+                <Link
+                  to="/chats"
+                  onClick={close}
+                  className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-emerald-50/60 hover:text-emerald-800"
+                  role="menuitem"
+                >
+                  <Icon path="M8 12h8m-8 4h5m-9 4h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
+                  {t('userMenu.chats')}
+                </Link>
+              </li>
+            )}
           </ul>
 
           <div className="border-t border-gray-100 p-2">

@@ -27,6 +27,9 @@ import NotificationsPage from './pages/NotificationsPage';
 import AboutPage from './pages/AboutPage';
 import TermsPage from './pages/TermsPage';
 import FAQPage from './pages/FAQPage';
+import CareersPage from './pages/CareersPage';
+import BlogsPage from './pages/BlogsPage';
+import BlogPostPage from './pages/BlogPostPage';
 import ServicesPage from './pages/ServicesPage';
 import ReviewPage from './pages/ReviewPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -35,13 +38,16 @@ import ListingPage from './pages/ListingPage';
 import ListingDetailsPage from './pages/ListingDetailsPage';
 import WalletPage from './pages/WalletPage';
 import AdminTopupApprovalsPage from './pages/AdminTopupApprovalsPage';
+import ChatsPage from './pages/ChatsPage';
+import ChatThreadPage from './pages/ChatThreadPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SiteFooter from './components/SiteFooter';
+import PlatformReviewPrompt from './components/PlatformReviewPrompt';
 import ArefinDevTestPage from './pages/dev/ArefinDevTestPage';
 
 function AppLayout() {
   const { pathname } = useLocation();
-  const hideFooter = pathname.startsWith('/admin-dashboard');
+  const hideFooter = pathname.startsWith('/admin-dashboard') || pathname.startsWith('/chats');
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-clip max-w-full">
@@ -62,6 +68,9 @@ function AppLayout() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/faq" element={<FAQPage />} />
+          <Route path="/careers" element={<CareersPage />} />
+          <Route path="/blogs" element={<BlogsPage />} />
+          <Route path="/blogs/:slug" element={<BlogPostPage />} />
           <Route path="/service" element={<ServicesPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/review" element={<ReviewPage />} />
@@ -80,6 +89,8 @@ function AppLayout() {
           <Route path="/owner-dashboard/requests" element={<ProtectedRoute component={IncomingRequestsPage} requiredRole="OWNER" />} />
           <Route path="/dashboard/rentals" element={<ProtectedRoute component={MyRentalsPage} requiredRole={null} />} />
           <Route path="/notifications" element={<ProtectedRoute component={NotificationsPage} requiredRole={null} />} />
+          <Route path="/chats" element={<ProtectedRoute component={ChatsPage} requiredRole={null} />} />
+          <Route path="/chats/:conversationId" element={<ProtectedRoute component={ChatThreadPage} requiredRole={null} />} />
           <Route path="/admin-dashboard" element={<ProtectedRoute component={AdminDashboard} requiredRole="ADMIN" />} />
           <Route path="/admin-dashboard/topup-approvals" element={<ProtectedRoute component={AdminTopupApprovalsPage} requiredRole="ADMIN" />} />
           <Route path="/account" element={<ProtectedRoute component={AccountSettingsPage} requiredRole={null} />} />
@@ -94,6 +105,7 @@ function AppLayout() {
         </Routes>
       </div>
       {!hideFooter ? <SiteFooter /> : null}
+      <PlatformReviewPrompt />
     </div>
   );
 }
