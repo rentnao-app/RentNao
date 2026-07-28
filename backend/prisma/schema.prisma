@@ -89,6 +89,7 @@ enum PropertyCategory {
 
 enum PropertyType {
   APARTMENT
+  COMMERCIAL_SPACE
 }
 
 enum AreaName {
@@ -392,6 +393,21 @@ model Property {
   has_lift           Boolean        @default(false)
   has_generator      Boolean        @default(false)
   has_security_guard Boolean        @default(false)
+  has_garage         Boolean        @default(false)
+  has_cc_camera      Boolean        @default(false)
+  has_gas            Boolean        @default(false)
+
+  // Nearby landmarks / facilities
+  nearby_metro_station      Boolean @default(false)
+  nearby_public_transports  Boolean @default(false)
+  nearby_mosque             Boolean @default(false)
+  nearby_school             Boolean @default(false)
+  nearby_gym                Boolean @default(false)
+  nearby_turf               Boolean @default(false)
+  nearby_playing_field      Boolean @default(false)
+  nearby_bazar              Boolean @default(false)
+  nearby_supershop          Boolean @default(false)
+
   floor_no           Int            @default(1)
   flat_no            String?
 

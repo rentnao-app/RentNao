@@ -4,8 +4,10 @@ import {
   createMapOptions,
   destroyMapInstance,
   formatGoogleMapsError,
+  GOOGLE_MAPS_AUTH_FAILURE,
   loadGoogleMaps,
   normalizeLatLng,
+  subscribeToGoogleMapsAuthFailure,
   waitForMapContainer,
 } from '../lib/googleMaps';
 import { useTranslation } from '../lib/i18n';
@@ -94,6 +96,10 @@ export default function MapPicker({ value = null, onChange, height = '300px' }) 
     if (!container || typeof window === 'undefined') return;
     let cancelled = false;
 
+    const unsubscribeAuthFailure = subscribeToGoogleMapsAuthFailure(() => {
+      if (!cancelled) setLoadError(formatGoogleMapsError(new Error(GOOGLE_MAPS_AUTH_FAILURE)));
+    });
+
     loadGoogleMaps()
       .then(async (maps) => {
         if (!maps || cancelled || !containerRef.current || mapRef.current) return;
@@ -147,6 +153,7 @@ export default function MapPicker({ value = null, onChange, height = '300px' }) 
 
     return () => {
       cancelled = true;
+      unsubscribeAuthFailure();
       destroyMapInstance(mapRef.current, mapsRef.current, clickListenerRef.current);
       clearMapContainer(containerRef.current);
       clickListenerRef.current = null;

@@ -19,6 +19,7 @@ export {
   listListingsForAdmin,
   getPublicListingDetail,
   getListingDetailForAdmin,
+  updateListingPropertyTypeForAdmin,
   unlockListingForTenant,
   getUnlockedListingDetailForTenant,
 } from './property.service';

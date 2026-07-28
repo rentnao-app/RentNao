@@ -6,6 +6,7 @@ import ImageGallery from "../components/ImageGallery";
 import MapView from "../components/MapView";
 import WishlistHeartButton from "../components/WishlistHeartButton";
 import { getWishlistState } from "../lib/wishlist";
+import { findConversationByProperty } from "../lib/conversations";
 import {
   getTenantRequestForListing,
   withdrawTenantRequest,
@@ -65,6 +66,7 @@ export default function ListingDetailsPage() {
   const [requestLoading, setRequestLoading] = useState(false);
   const [requestRecord, setRequestRecord] = useState(null);
   const [wishlisted, setWishlisted] = useState(false);
+  const [chatConversationId, setChatConversationId] = useState(null);
   const [requestMessage, setRequestMessage] = useState("");
   const [sendingRequest, setSendingRequest] = useState(false);
   const [loggedIn] = useState(() => isLoggedIn());
@@ -154,6 +156,24 @@ export default function ListingDetailsPage() {
     };
     void load();
   }, [loadListing, t]);
+
+  useEffect(() => {
+    if (!isTenant || !listing?.propertyId) {
+      setChatConversationId(null);
+      return;
+    }
+    if (!listing?.isUnlocked) {
+      setChatConversationId(null);
+      return;
+    }
+    let cancelled = false;
+    void findConversationByProperty(listing.propertyId).then((cid) => {
+      if (!cancelled) setChatConversationId(cid);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isTenant, listing?.propertyId, listing?.isUnlocked]);
 
   useEffect(() => {
     let cancelled = false;
@@ -588,6 +608,78 @@ export default function ListingDetailsPage() {
                   </span>
                 </p>
                 <p>
+                  <span className="text-slate-400">{t("listingDetails.details.garage")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.hasGarage ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.ccCamera")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.hasCcCamera ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.gas")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.hasGas ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.metroStation")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyMetroStation ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.publicTransports")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyPublicTransports ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.mosque")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyMosque ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.school")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbySchool ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.gym")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyGym ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.turf")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyTurf ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.playingField")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyPlayingField ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.bazar")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbyBazar ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-slate-400">{t("listingDetails.details.supershop")}</span>{" "}
+                  <span className="font-medium text-slate-800">
+                    {listing.nearbySupershop ? t("common.yes") : t("common.no")}
+                  </span>
+                </p>
+                <p>
                   <span className="text-slate-400">{t("listingDetails.details.floorNumber")}</span>{" "}
                   <span className="font-medium text-slate-800">
                     {listing.floorNo ?? t("common.dash")}
@@ -940,6 +1032,10 @@ export default function ListingDetailsPage() {
                           t("listingDetails.toast.unlockFailed"),
                         );
                       await loadListing();
+                      const conversationId = body?.data?.conversationId;
+                      if (conversationId) {
+                        setChatConversationId(conversationId);
+                      }
                       toast.success(body?.message || t("listingDetails.toast.unlocked"));
                     } catch (e) {
                       toast.error(e.message || t("listingDetails.toast.unlockFailed"));
@@ -962,19 +1058,29 @@ export default function ListingDetailsPage() {
                 {t("listingDetails.contact.title")}
               </h3>
               {hasAccess ? (
-                <div className="mt-2 space-y-1 text-sm">
-                  <p>
-                    <span className="text-slate-500">{t("common.email")}</span>{" "}
-                    <span className="font-medium">
-                      {listing.ownerContact?.email || t("common.dash")}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-slate-500">{t("common.phone")}</span>{" "}
-                    <span className="font-medium">
-                      {listing.ownerContact?.phone || t("common.dash")}
-                    </span>
-                  </p>
+                <div className="mt-2 space-y-3 text-sm">
+                  <div className="space-y-1">
+                    <p>
+                      <span className="text-slate-500">{t("common.email")}</span>{" "}
+                      <span className="font-medium">
+                        {listing.ownerContact?.email || t("common.dash")}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500">{t("common.phone")}</span>{" "}
+                      <span className="font-medium">
+                        {listing.ownerContact?.phone || t("common.dash")}
+                      </span>
+                    </p>
+                  </div>
+                  {isTenant && chatConversationId ? (
+                    <Link
+                      to={`/chats/${chatConversationId}`}
+                      className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+                    >
+                      {t("chats.openChat")}
+                    </Link>
+                  ) : null}
                 </div>
               ) : (
                 <p className="mt-2 text-xs text-slate-500">
