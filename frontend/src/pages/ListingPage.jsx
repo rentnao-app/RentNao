@@ -50,13 +50,46 @@ function parseFiltersFromSearchParams(searchParams) {
   return { areas: uniqueAreas, category, maxRentKey, minRooms, sort_by, q, page };
 }
 
+function getVisiblePages(page, totalPages, windowSize = 5) {
+  if (totalPages <= windowSize) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const half = Math.floor(windowSize / 2);
+  let start = Math.max(1, page - half);
+  let end = start + windowSize - 1;
+  if (end > totalPages) {
+    end = totalPages;
+    start = end - windowSize + 1;
+  }
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
+
 function Pagination({ page, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
 
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5);
+  const pages = getVisiblePages(page, totalPages);
+  const btnClass =
+    'flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:pointer-events-none disabled:opacity-40';
 
   return (
     <nav className="mt-8 flex items-center justify-center gap-2" aria-label="Pagination">
+      <button
+        type="button"
+        onClick={() => onPageChange(page - 1)}
+        disabled={page <= 1}
+        className={btnClass}
+        aria-label="Previous page"
+      >
+        ‹
+      </button>
+      {pages[0] > 1 ? (
+        <>
+          <button type="button" onClick={() => onPageChange(1)} className={btnClass}>
+            1
+          </button>
+          {pages[0] > 2 ? <span className="px-1 text-slate-400">…</span> : null}
+        </>
+      ) : null}
       {pages.map((p) => (
         <button
           key={p}
@@ -72,6 +105,23 @@ function Pagination({ page, totalPages, onPageChange }) {
           {p}
         </button>
       ))}
+      {pages[pages.length - 1] < totalPages ? (
+        <>
+          {pages[pages.length - 1] < totalPages - 1 ? <span className="px-1 text-slate-400">…</span> : null}
+          <button type="button" onClick={() => onPageChange(totalPages)} className={btnClass}>
+            {totalPages}
+          </button>
+        </>
+      ) : null}
+      <button
+        type="button"
+        onClick={() => onPageChange(page + 1)}
+        disabled={page >= totalPages}
+        className={btnClass}
+        aria-label="Next page"
+      >
+        ›
+      </button>
     </nav>
   );
 }

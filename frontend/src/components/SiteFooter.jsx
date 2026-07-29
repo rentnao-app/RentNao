@@ -22,10 +22,16 @@ function FooterColumn({ title, links }) {
       <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-200">{title}</h3>
       <ul className="mt-4 space-y-2.5">
         {links.map((link) => (
-          <li key={link.to + link.label}>
-            <Link to={link.to} className="text-sm text-emerald-50/85 transition hover:text-white">
-              {link.label}
-            </Link>
+          <li key={(link.to || link.href) + link.label}>
+            {link.href ? (
+              <a href={link.href} className="text-sm text-emerald-50/85 transition hover:text-white">
+                {link.label}
+              </a>
+            ) : (
+              <Link to={link.to} className="text-sm text-emerald-50/85 transition hover:text-white">
+                {link.label}
+              </Link>
+            )}
           </li>
         ))}
       </ul>
@@ -46,13 +52,13 @@ export default function SiteFooter() {
 
   const companyLinks = [
     { to: '/about', label: t('footer.aboutUs') },
-    { to: '/about', label: t('footer.careers') },
+    { to: '/careers', label: t('footer.careers') },
     { to: '/review', label: t('footer.reviews') },
-    { to: '/about', label: t('footer.contact') },
+    { href: 'mailto:hello@rentnao.com', label: t('footer.contact') },
   ];
 
   const resourceLinks = [
-    { to: '/faq', label: t('footer.blog') },
+    { to: '/blogs', label: t('footer.blog') },
     { to: '/faq', label: t('footer.faq') },
     { to: '/faq', label: t('footer.helpCenter') },
     { to: '/services', label: t('footer.services') },
