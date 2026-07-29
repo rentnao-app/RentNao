@@ -54,7 +54,7 @@ export default function SiteFooter() {
     { to: '/about', label: t('footer.aboutUs') },
     { to: '/careers', label: t('footer.careers') },
     { to: '/review', label: t('footer.reviews') },
-    { href: 'mailto:hello@rentnao.com', label: t('footer.contact') },
+    { href: 'mailto:samiuz2001@gmail.com', label: t('footer.contact') },
   ];
 
   const resourceLinks = [
@@ -101,7 +101,7 @@ export default function SiteFooter() {
                 <svg className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                   <path d="M4 5h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2zm0 2l8 5 8-5H4z" />
                 </svg>
-                <span>hello@rentnao.com</span>
+                <span>samiuz2001@gmail.com</span>
               </p>
               <p className="flex items-start gap-2.5">
                 <svg className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
