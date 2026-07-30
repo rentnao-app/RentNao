@@ -40,6 +40,9 @@ const envSchema = z.object({
   BULKSMSBD_API_URL: z.string().url().default('http://bulksmsbd.net/api/smsapi'),
   BULKSMSBD_API_KEY: z.string().optional(),
   BULKSMSBD_SENDER_ID: z.string().optional(),
+  // KYC.bd Configuration
+  KYC_BD_API_KEY: z.string().optional(),
+  KYC_BD_BASE_URL: z.string().url().default('https://sandbox.kyc.bd/api/v1'),
 });
 
 export type Env = z.infer<typeof envSchema>;

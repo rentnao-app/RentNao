@@ -383,3 +383,28 @@ export const verificationStatusResponseSchema = z.object({
     ),
   }),
 });
+
+// KYC Schemas
+// ============================================================================
+
+export const identityVerifyInputSchema = z.object({
+  fullName: z.string(),
+  dateOfBirth: z.string(), // YYYY-MM-DD
+  nationalId: z.string(),
+  mobile: z.string().optional(),
+  referenceId: z.string(),
+});
+
+export type IdentityVerifyInput = z.infer<typeof identityVerifyInputSchema>;
+
+export const kycBdResponseSchema = z.object({
+  status: z.string(),
+  verification_id: z.string().optional(),
+  match_score: z.number().optional(),
+  risk_level: z.string().optional(),
+  timestamp: z.string().optional(),
+  error: z.string().optional(),
+  message: z.string().optional(),
+});
+
+export type KycBdResponse = z.infer<typeof kycBdResponseSchema>;

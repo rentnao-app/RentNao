@@ -678,6 +678,14 @@ model VerificationSubmission {
   reviewed_at       DateTime?                    @db.Timestamptz(6)
   reviewed_by       String? // admin userId
   rejection_reason  String?
+  
+  // KYC.bd tracking
+  kyc_provider      String?
+  kyc_reference_id  String?
+  kyc_match_score   Float?
+  kyc_risk_level    String?
+  auto_verified     Boolean                      @default(false)
+
   created_at        DateTime                     @default(now()) @db.Timestamptz(6)
   updated_at        DateTime?                    @updatedAt @db.Timestamptz(6)
 
