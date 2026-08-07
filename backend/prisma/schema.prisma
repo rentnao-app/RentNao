@@ -252,6 +252,7 @@ model User {
   owner_deals               Deal[]                  @relation("OwnerDeals")
   tenant_deals              Deal[]                  @relation("TenantDeals")
   notifications             Notification[]
+  push_subscriptions        PushSubscription[]
   discount_redemptions      DiscountRedemption[]
   discount_eligibilities    DiscountEligibleUser[]
   testimonials              Testimonial[]
@@ -832,4 +833,21 @@ model Deal {
   @@index([owner_id])
   @@index([tenant_id])
   @@index([property_id])
+}
+
+model PushSubscription {
+  id                   String   @id @default(cuid())
+  user_id              String
+  fcm_token            String   @unique
+  device_name          String?
+  browser              String?
+  platform             String?
+  notification_enabled Boolean  @default(true)
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+  last_active_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([user_id, notification_enabled])
 }

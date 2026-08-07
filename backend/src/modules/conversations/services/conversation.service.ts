@@ -186,7 +186,8 @@ export async function closeConversation(
       conversation_id: conversationId,
       property_id: conv.property_id,
       url: `/chats/${conversationId}`,
-    }
+    },
+    false
   );
 
   return mapConversation({

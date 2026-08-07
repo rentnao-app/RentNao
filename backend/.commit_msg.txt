@@ -1,0 +1,14 @@
+feat(backend): implement scalable bulk push notifications and admin broadcast API
+
+**Backend Changes:**
+- `fcm.service.ts`: Implemented `sendBulkPush()` to fetch FCM tokens in bulk, send via `messaging.sendEach()` in chunks of 500, and automatically clean up dead tokens from the database. Added `firebase-admin` configuration.
+- `notifications.service.ts`: Implemented `createBulkNotifications()` using PostgreSQL `UNNEST` for single-query bulk inserts and chunked `setImmediate` yields to prevent event loop starvation during WebSocket broadcasts.
+- `notifications.controller.ts`: Added `adminBroadcastRoute` to use the new bulk pipeline.
+- `notifications.routes.ts`: Added `target_role` enum filter to the admin broadcast API payload.
+- `rental-requests.service.ts` / `conversation.service.ts`: Optimized low-priority events to send in-app only (`sendPush: false`) to reduce FCM spam.
+- Prisma: Added `PushSubscription` model and migration.
+
+**Frontend Action Required:**
+- **Push Subscription:** You must call `POST /api/push/subscribe` with `{ fcm_token }` when a user enables notifications, and `POST /api/push/unsubscribe` on logout.
+- **Admin Dashboard UI:** Create a UI for sending Admin Broadcasts. It needs to hit `POST /api/push/admin/broadcast` with a payload of `{ title, body, data? }`. You can optionally include `target_role: "TENANT" | "OWNER" | "ADMIN"` to target specific user groups, OR `user_ids: string[]` to target specific individuals.
+- **Payload Data URLs:** The notification `data` payload contains a `url` string (e.g. `data.url = '/tenant-dashboard'`). Ensure the frontend's `normalizeNotification` handles this URL correctly for routing when clicking in-app bells or mobile push alerts.
