@@ -135,7 +135,7 @@ export default function HomePage() {
   useEffect(() => {
     const loadListings = async () => {
       try {
-        const res = await apiFetch('/properties/public/listings?limit=8');
+        const res = await apiFetch('/properties/public/listings?limit=6');
         const body = await res.json().catch(() => ({}));
         if (res.ok) {
           setListings(body?.data?.items || []);

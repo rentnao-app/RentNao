@@ -63,6 +63,7 @@ export default function HomeComparisonSection() {
 
   const rows = useMemo(
     () => [
+      { left: t('home.compareRow0Left'), right: t('home.compareRow0Right') },
       { left: t('home.compareRow1Left'), right: t('home.compareRow1Right') },
       { left: t('home.compareRow2Left'), right: t('home.compareRow2Right') },
       { left: t('home.compareRow3Left'), right: t('home.compareRow3Right') },

@@ -8,6 +8,7 @@ import { buildListingsQuery, expandAreasForQuery } from '../lib/listingSearchQue
 import { toggleWishlist } from '../lib/wishlist';
 import toast from 'react-hot-toast';
 import { useTranslation } from '../lib/i18n';
+import { homeSectionInner } from '../components/home/homeLayout';
 
 const VALID_MAX_TIERS = new Set(['20000', '35000', '50000', '80000', '100000', '200000']);
 
@@ -171,9 +172,9 @@ export default function ListingsPage() {
 
   return (
     <div className="min-h-screen bg-[#f2f7f3] text-slate-800">
-      <AppHeader variant="wide" />
+      <AppHeader centerNav />
 
-      <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-5 sm:py-6 lg:px-6 lg:py-8">
+      <main className={`${homeSectionInner} py-4 sm:py-6 lg:py-8`}>
         <section className="mb-5 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{t('listings.title')}</h1>
           <p className="mt-1 text-sm text-slate-500">{t('listings.subtitle')}</p>
@@ -200,7 +201,7 @@ export default function ListingsPage() {
             {t('listings.empty')}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
             {listings.map((item) => (
               <ListingCard
                 key={item.listingId}
@@ -209,7 +210,6 @@ export default function ListingsPage() {
                 isWishlisted={wishlistIds.has(String(item.listingId))}
                 onToggleWishlist={handleToggleWishlist}
                 onViewCountUpdate={handleViewCountUpdate}
-                showArea
               />
             ))}
           </div>

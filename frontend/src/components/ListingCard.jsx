@@ -1,32 +1,45 @@
 import { Link } from 'react-router-dom';
+import {
+  BadgeCheck,
+  Bath,
+  BedDouble,
+  Eye,
+  Heart,
+  ImageIcon,
+  MapPin,
+  Maximize2,
+} from 'lucide-react';
 import { recordListingView } from '../lib/listingViews';
 import { useTranslation } from '../lib/i18n';
 
-function EyeIcon({ className = 'h-4 w-4' }) {
+const LATEST_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+function isLatestListing(createdAt) {
+  if (!createdAt) return false;
+  const ts = new Date(createdAt).getTime();
+  if (Number.isNaN(ts)) return false;
+  return Date.now() - ts <= LATEST_WINDOW_MS;
+}
+
+function SpecIcon({ children }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.75}
-        d="M2.036 12.322a1 1 0 010-.644C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-      />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
+    <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#E8F4EE] text-[#2A7D4F]">
+      {children}
+    </span>
   );
 }
 
-function PlaceholderImage({ className = 'h-14 w-14 text-emerald-300' }) {
+function PlaceholderImage() {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"
-      />
-    </svg>
+    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#E8F4EE] to-[#f4faf6]">
+      <ImageIcon className="h-11 w-11 text-[#2A7D4F]/30" strokeWidth={1.5} aria-hidden />
+    </div>
   );
+}
+
+function formatAreaName(areaName, t) {
+  if (!areaName) return '';
+  return t(`common.areas.${areaName}`, String(areaName).replaceAll('_', ' '));
 }
 
 export default function ListingCard({
@@ -35,25 +48,24 @@ export default function ListingCard({
   isWishlisted = false,
   onToggleWishlist,
   onViewCountUpdate,
-  showArea = false,
 }) {
   const { t } = useTranslation();
   const listingId = item?.listingId;
   const imageUrl = item?.primaryImageUrl || null;
-  const area = item?.areaName ? String(item.areaName).replaceAll('_', ' ') : '';
   const title = item?.title
-    ? `${item.title.slice(0, 56)}${item.title.length > 56 ? '...' : ''}`
+    ? `${item.title.slice(0, 52)}${item.title.length > 52 ? '…' : ''}`
     : t('components.listingCard.fallbackTitle', { beds: item?.roomCount ?? '?' });
   const rent = Number(item?.rent || 0).toLocaleString();
   const beds = item?.roomCount ?? '?';
   const baths = item?.bathroomCount ?? '?';
   const size = item?.propertySizeSqft ?? '?';
+  const area = formatAreaName(item?.areaName, t);
+  const location = area ? `${area}, ${t('home.locationCity')}` : t('home.locationCity');
   const viewCount = Number(item?.viewCount ?? 0);
-  const listedOn = item?.createdAt ? new Date(item.createdAt).toLocaleDateString() : '';
+  const showLatestBadge = isLatestListing(item?.createdAt);
 
-  const handleCardClick = () => {
+  const handleNavigate = () => {
     if (!listingId) return;
-
     onViewCountUpdate?.(listingId, viewCount + 1);
     void recordListingView(listingId).then((nextCount) => {
       if (nextCount != null) onViewCountUpdate?.(listingId, nextCount);
@@ -61,66 +73,123 @@ export default function ListingCard({
   };
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-      {canWishlist && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onToggleWishlist?.(item);
-          }}
-          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/95 shadow-sm transition hover:bg-white"
-          aria-label={
-            isWishlisted
-              ? t('components.listingCard.removeFromWishlist')
-              : t('components.listingCard.addToWishlist')
-          }
-        >
-          <svg className={`h-5 w-5 ${isWishlisted ? 'fill-current text-rose-500' : 'text-slate-500'}`} viewBox="0 0 24 24">
-            <path d="M12.001 20.729l-1.09-.992C6.14 15.39 3 12.548 3 9.06 3 6.219 5.24 4 8.05 4c1.59 0 3.115.74 4.05 1.9C13.835 4.74 15.36 4 16.95 4 19.76 4 22 6.219 22 9.06c0 3.488-3.14 6.33-7.91 10.677l-1.089.992z" />
-          </svg>
-        </button>
-      )}
-
-      <Link to={`/listings/${listingId}`} className="block" onClick={handleCardClick}>
-        <div className="flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-100 to-emerald-50 sm:h-48">
+    <article className="group flex h-full flex-col overflow-hidden rounded-[1.25rem] bg-white ring-1 ring-[#dfece4] shadow-[0_1px_2px_rgba(26,71,40,0.04)] transition-[transform,box-shadow,ring-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform hover:-translate-y-2 hover:ring-[#2A7D4F]/30 hover:shadow-[0_22px_44px_-18px_rgba(42,125,79,0.35)] motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+      <div className="relative aspect-[5/4] overflow-hidden bg-[#E8F4EE]">
+        <Link to={`/listings/${listingId}`} onClick={handleNavigate} className="block h-full w-full">
           {imageUrl ? (
             <img
               src={imageUrl}
               alt={item?.title || t('components.listingCard.propertyAlt')}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             />
           ) : (
             <PlaceholderImage />
           )}
+        </Link>
+
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1a4728]/70 via-[#1a4728]/10 to-[#1a4728]/10 transition-opacity duration-500 group-hover:from-[#1a4728]/78" />
+
+        <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3.5">
+          <div className="flex flex-wrap gap-1.5">
+            {showLatestBadge ? (
+              <span className="rounded-full bg-[#ecfdf5] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#047857] shadow-sm ring-1 ring-[#a7f3d0]/80">
+                {t('home.badgeLatest')}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {canWishlist ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleWishlist?.(item);
+                }}
+                className={`flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur-sm transition hover:scale-105 ${
+                  isWishlisted ? 'text-rose-500' : 'text-[#8fa898] hover:text-[#2A7D4F]'
+                }`}
+                aria-label={
+                  isWishlisted
+                    ? t('components.listingCard.removeFromWishlist')
+                    : t('components.listingCard.addToWishlist')
+                }
+              >
+                <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} strokeWidth={2} />
+              </button>
+            ) : null}
+
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-[#2A7D4F] shadow-sm backdrop-blur-sm">
+              <BadgeCheck className="h-3 w-3" strokeWidth={2.25} aria-hidden />
+              {t('home.verifiedBadge')}
+            </span>
+          </div>
         </div>
 
-        <div className="space-y-1.5 p-4 sm:p-5">
-          {showArea && area ? (
-            <p className="text-right text-xs font-medium uppercase tracking-wide text-slate-400">{area}</p>
-          ) : null}
-          <h2 className="text-base font-bold text-slate-900 transition group-hover:text-emerald-800 sm:text-lg">{title}</h2>
-          <p className="text-lg font-bold text-emerald-800">
-            BDT {rent}
-            <span className="ml-1 text-sm font-normal text-slate-500">{t('components.listingCard.perMonth')}</span>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3.5 pt-10">
+          <p className="min-w-0 text-[1.35rem] font-bold leading-none tracking-tight text-white">
+            ৳ {rent}
+            <span className="ml-1.5 text-sm font-medium text-white/75">{t('home.perMonthShort')}</span>
           </p>
-          <p className="text-base text-slate-600">
-            {t('components.listingCard.specs', { beds, baths, size })}
-          </p>
-          <p className="flex items-center gap-1.5 text-sm text-slate-600">
-            <EyeIcon className="h-4 w-4 shrink-0" />
-            <span>
-              {t('components.listingCard.propertyViewed', { count: viewCount.toLocaleString() })}
-            </span>
-          </p>
-          {listedOn ? (
-            <p className="text-xs text-slate-400">
-              {t('components.listingCard.listedOn', { date: listedOn })}
-            </p>
-          ) : null}
+          <span
+            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-black/35 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur-sm sm:text-[11px]"
+            title={t('components.listingCard.propertyViewed', { count: viewCount.toLocaleString() })}
+          >
+            <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" strokeWidth={2.25} aria-hidden />
+            <span>{viewCount.toLocaleString()}</span>
+            <span className="font-medium text-white/80">{t('home.viewsLabel')}</span>
+          </span>
         </div>
-      </Link>
-    </div>
+      </div>
+
+      <div className="flex flex-1 flex-col px-3.5 py-3 sm:px-4">
+        <h3 className="line-clamp-2 text-[0.875rem] font-bold leading-tight text-brand-ink sm:text-[0.9375rem]">
+          {title}
+        </h3>
+
+        <div className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug sm:text-xs">
+          <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-[#2A7D4F]" strokeWidth={2} aria-hidden />
+          <p className="min-w-0">
+            <span className="font-medium text-brand-muted">{t('home.propertyLocation')}: </span>
+            <span className="text-brand-ink">{location}</span>
+          </p>
+        </div>
+
+        <div className="mt-2.5 flex items-center justify-between gap-1.5 rounded-lg bg-[#f6fbf8] px-1.5 py-1.5">
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
+            <SpecIcon>
+              <BedDouble className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+            </SpecIcon>
+            <span className="text-[11px] font-semibold leading-none text-brand-ink">{beds}</span>
+            <span className="text-[9px] text-brand-muted">{t('home.bedsLabel')}</span>
+          </div>
+          <div className="h-8 w-px bg-[#dfece4]" aria-hidden />
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
+            <SpecIcon>
+              <Bath className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+            </SpecIcon>
+            <span className="text-[11px] font-semibold leading-none text-brand-ink">{baths}</span>
+            <span className="text-[9px] text-brand-muted">{t('home.bathsLabel')}</span>
+          </div>
+          <div className="h-8 w-px bg-[#dfece4]" aria-hidden />
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
+            <SpecIcon>
+              <Maximize2 className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+            </SpecIcon>
+            <span className="text-[11px] font-semibold leading-none text-brand-ink">{size}</span>
+            <span className="text-[9px] text-brand-muted">{t('home.sqftUnit')}</span>
+          </div>
+        </div>
+
+        <Link
+          to={`/listings/${listingId}`}
+          onClick={handleNavigate}
+          className="mt-2.5 flex h-9 items-center justify-center rounded-lg bg-[#2A7D4F] text-sm font-semibold text-white shadow-[0_4px_14px_-4px_rgba(42,125,79,0.55)] transition-[background-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#246341] group-hover:shadow-[0_8px_18px_-6px_rgba(42,125,79,0.55)] motion-reduce:transition-none"
+        >
+          {t('home.viewDetails')}
+        </Link>
+      </div>
+    </article>
   );
 }

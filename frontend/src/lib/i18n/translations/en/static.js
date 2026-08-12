@@ -171,18 +171,131 @@ export default {
     ],
   },
   terms: {
-    title: 'Terms of Service',
     back: 'Back',
     nav: {
-      about: 'About',
-      faq: 'FAQ',
+      privacy: 'Privacy',
+      cookies: 'Cookies',
+      contact: 'Contact',
     },
-    paragraphs: [
-      'Last updated: 2026.',
-      'By using RentNao you agree to these terms. RentNao provides a platform for listing and discovering rental properties. We do not guarantee the accuracy of listings or the conduct of users. Users are responsible for their own due diligence and transactions.',
-      'Listing access fees and other payments are subject to our payment policy. Refunds are at our discretion. We reserve the right to suspend or terminate accounts that violate our policies or the law.',
-      'For questions, contact us through the Contact page.',
+    eyebrow: 'Legal',
+    title: 'Terms of Service',
+    lastUpdated: 'Last updated: 12 August 2026',
+    intro:
+      'These Terms of Service (“Terms”) govern your access to and use of Rent Nao Limited’s website, apps, and related services (“RentNao”, “we”, “us”). By creating an account or using RentNao, you agree to these Terms.',
+    sections: [
+      {
+        title: '1. Who we are',
+        paragraphs: [
+          'Rent Nao Limited operates a digital marketplace in Bangladesh that helps property owners list spaces and tenants discover, request, and communicate about rentals. Contact: samiuz2001@gmail.com or our Contact page.',
+        ],
+      },
+      {
+        title: '2. Eligibility and accounts',
+        paragraphs: [
+          'You must be at least 18 years old and able to enter a binding agreement. You are responsible for accurate registration details, safeguarding your login credentials, and all activity under your account. Notify us promptly of unauthorized use.',
+        ],
+      },
+      {
+        title: '3. The platform role',
+        paragraphs: [
+          'RentNao provides technology to connect owners and tenants. Unless we expressly state otherwise in writing, we are not a party to rental agreements between users, do not own listed properties, and do not guarantee that any listing, user, or negotiation will lead to a completed rental.',
+          'Owners and tenants remain responsible for due diligence, property condition, legality of the rental, deposits, and any contract they form with each other.',
+        ],
+      },
+      {
+        title: '4. Listings and content',
+        paragraphs: [
+          'Owners must provide accurate, lawful listing information and media they have rights to use. We may review, refuse, edit visibility of, or remove listings or other content that violate these Terms, our policies, or the law, or that we believe harm trust and safety on the platform.',
+        ],
+        bullets: [
+          'Do not post misleading rents, fake availability, stolen photos, or prohibited property types.',
+          'Do not use RentNao to harass, scam, discriminate unlawfully, or collect personal data for unrelated marketing.',
+          'Do not attempt to bypass fees, verification, or security controls.',
+        ],
+      },
+      {
+        title: '5. Verification and trust features',
+        paragraphs: [
+          'Identity verification (KYC) and related checks help improve safety but do not eliminate risk. A “verified” status means we ran our process on submitted information; it is not a warranty of character, solvency, or listing quality. You should still exercise independent judgment.',
+        ],
+      },
+      {
+        title: '6. Fees, wallet, and payments',
+        paragraphs: [
+          'Some features may require fees paid through the in-app wallet or other payment methods we support (for example listing-related charges or unlocks). Prices are shown in BDT unless stated otherwise. Fees are generally non-refundable except where required by law or where we expressly approve a refund.',
+          'You authorize us and our payment partners to process the amounts you confirm. Keep sufficient wallet balance for paid actions you initiate.',
+        ],
+      },
+      {
+        title: '7. Communications',
+        paragraphs: [
+          'In-platform chat and notifications are provided to support rental activity. Do not share illegal content, malware, or spam. We may retain messages as needed for safety, dispute handling, and legal compliance, as described in our Privacy Policy.',
+        ],
+      },
+      {
+        title: '8. Acceptable use',
+        paragraphs: ['You agree not to:'],
+        bullets: [
+          'Interfere with or disrupt the service, scrape without permission, or reverse engineer except where allowed by law.',
+          'Create multiple accounts to evade bans, fees, or verification.',
+          'Impersonate another person or misrepresent your affiliation.',
+          'Use the platform for money laundering, fraud, or other illegal activity.',
+        ],
+      },
+      {
+        title: '9. Intellectual property',
+        paragraphs: [
+          'RentNao’s branding, software, and site design are owned by Rent Nao Limited or its licensors. You retain rights in content you upload, and grant us a non-exclusive license to host, display, and use that content as needed to operate and promote the marketplace.',
+        ],
+      },
+      {
+        title: '10. Suspension and termination',
+        paragraphs: [
+          'We may suspend or terminate access if you breach these Terms, create risk for other users, fail verification, or as required by law. You may stop using RentNao at any time. Provisions that should survive (including fees owed, IP, disclaimers, and liability limits) will continue after termination.',
+        ],
+      },
+      {
+        title: '11. Disclaimers',
+        paragraphs: [
+          'RentNao is provided on an “as is” and “as available” basis. To the fullest extent permitted by law, we disclaim warranties of uninterrupted service, perfect accuracy of listings, or fitness for a particular purpose. User-generated content may contain errors.',
+        ],
+      },
+      {
+        title: '12. Limitation of liability',
+        paragraphs: [
+          'To the fullest extent permitted by applicable law, Rent Nao Limited and its team are not liable for indirect, incidental, special, consequential, or punitive damages, or for lost profits, data, or goodwill arising from your use of the platform or disputes between users. Our aggregate liability for claims relating to the service is limited to the fees you paid us for the feature giving rise to the claim in the three months before the event, or BDT 5,000, whichever is greater, except where liability cannot be limited by law.',
+        ],
+      },
+      {
+        title: '13. Indemnity',
+        paragraphs: [
+          'You agree to defend and indemnify Rent Nao Limited against claims arising from your content, your use of the service, your rental dealings with other users, or your violation of these Terms or applicable law.',
+        ],
+      },
+      {
+        title: '14. Changes',
+        paragraphs: [
+          'We may update these Terms periodically. We will revise the “Last updated” date and may provide additional notice for material changes. Continued use after changes take effect constitutes acceptance of the updated Terms.',
+        ],
+      },
+      {
+        title: '15. Governing law',
+        paragraphs: [
+          'These Terms are governed by the laws of Bangladesh. Courts in Dhaka shall have jurisdiction, without limiting any mandatory consumer protections that apply to you.',
+        ],
+      },
+      {
+        title: '16. Contact',
+        paragraphs: [
+          'Questions about these Terms: samiuz2001@gmail.com or the Contact page. Related policies: Privacy Policy and Cookie Policy.',
+        ],
+      },
     ],
+    related: {
+      privacy: 'Privacy Policy',
+      cookies: 'Cookie Policy',
+      contact: 'Contact',
+    },
   },
   services: {
     back: 'Back',
@@ -341,5 +454,201 @@ export default {
         ],
       },
     ],
+  },
+  contact: {
+    brand: 'RentNao',
+    title: 'Contact',
+    subtitle: 'Reach Rent Nao Limited using the details below.',
+    nameLabel: 'Name',
+    nameValue: 'Rent Nao Limited',
+    emailLabel: 'Email',
+    emailValue: 'samiuz2001@gmail.com',
+    phoneLabel: 'Phone',
+    phoneValue: '+880 1711-111111',
+    addressLabel: 'Address',
+    addressValue: 'Dhaka, Bangladesh',
+  },
+  privacy: {
+    back: 'Back',
+    nav: {
+      terms: 'Terms',
+      cookies: 'Cookies',
+      contact: 'Contact',
+    },
+    eyebrow: 'Legal',
+    title: 'Privacy Policy',
+    lastUpdated: 'Last updated: 12 August 2026',
+    intro:
+      'This Privacy Policy explains how Rent Nao Limited (“RentNao”, “we”, “us”) collects, uses, stores, and shares personal information when you use our website, apps, and related services in Bangladesh.',
+    sections: [
+      {
+        title: '1. Who we are',
+        paragraphs: [
+          'Rent Nao Limited operates a digital marketplace that connects property owners and tenants. For privacy questions, contact us at samiuz2001@gmail.com or via our Contact page.',
+        ],
+      },
+      {
+        title: '2. Information we collect',
+        paragraphs: [
+          'We collect information you provide directly, information generated through your use of the platform, and limited information from partners who help us operate the service.',
+        ],
+        bullets: [
+          'Account details: name, phone number, email, password or OAuth identifiers, role (tenant/owner), and profile information.',
+          'Verification data: government ID and related KYC documents you submit for identity checks.',
+          'Listing and rental activity: property details, media, requests, chats, wishlist items, and unlock history.',
+          'Payment and wallet data: top-ups, fees, transaction records, and related billing metadata (we do not store full card numbers when payments are processed by third parties).',
+          'Device and usage data: IP address, browser type, pages viewed, approximate location derived from IP, and diagnostic logs.',
+          'Communications: messages you send to support or through in-platform chat.',
+        ],
+      },
+      {
+        title: '3. How we use information',
+        paragraphs: ['We use personal information to:'],
+        bullets: [
+          'Provide, operate, secure, and improve the RentNao platform.',
+          'Verify identity, prevent fraud, and keep the community safer.',
+          'Process listing fees, unlocks, wallet activity, and related payments.',
+          'Enable messaging, rental requests, notifications, and customer support.',
+          'Comply with legal obligations and enforce our Terms of Service.',
+          'Analyze product performance in aggregate and show service-related notices.',
+        ],
+      },
+      {
+        title: '4. Legal bases and sharing',
+        paragraphs: [
+          'We process data to perform our contract with you, to pursue legitimate interests such as security and product improvement, and where required by law. We do not sell your personal information.',
+          'We may share information with:',
+        ],
+        bullets: [
+          'Service providers who host infrastructure, send SMS/email, process payments, store files, or provide analytics — under contractual confidentiality obligations.',
+          'Other users, when needed for the rental flow you initiate (for example, limited profile or contact details after an unlock or accepted request).',
+          'Authorities or advisors when required by law, court order, or to protect rights, safety, and integrity of the platform.',
+        ],
+      },
+      {
+        title: '5. Retention',
+        paragraphs: [
+          'We keep personal information only as long as needed for the purposes above, including legal, accounting, dispute, and security requirements. KYC and transaction records may be retained longer where regulation or fraud prevention requires it. When retention is no longer necessary, we delete or anonymize data where feasible.',
+        ],
+      },
+      {
+        title: '6. Security',
+        paragraphs: [
+          'We use administrative, technical, and organizational measures designed to protect personal data, including access controls, encrypted transport (HTTPS), and monitoring. No method of transmission or storage is 100% secure; please use a strong unique password and keep your devices safe.',
+        ],
+      },
+      {
+        title: '7. Your rights and choices',
+        paragraphs: [
+          'Depending on applicable law, you may request access, correction, deletion, or restriction of certain personal data, and you may object to some processing. You can update many profile fields in Account Settings. To exercise rights or raise a concern, email samiuz2001@gmail.com. We may need to verify your identity before responding.',
+        ],
+      },
+      {
+        title: '8. Children’s privacy',
+        paragraphs: [
+          'RentNao is intended for adults who can enter binding agreements. We do not knowingly collect personal information from children under 18. If you believe a minor has provided data, contact us so we can take appropriate action.',
+        ],
+      },
+      {
+        title: '9. Cookies and similar technologies',
+        paragraphs: [
+          'We use cookies and similar technologies to keep you signed in, remember preferences, and understand how the service is used. See our Cookie Policy for details and choices.',
+        ],
+      },
+      {
+        title: '10. Changes to this policy',
+        paragraphs: [
+          'We may update this Privacy Policy from time to time. We will revise the “Last updated” date and, where changes are material, provide additional notice through the product or email when appropriate. Continued use after an update means you acknowledge the revised policy.',
+        ],
+      },
+      {
+        title: '11. Contact',
+        paragraphs: [
+          'Rent Nao Limited — Dhaka, Bangladesh. Privacy inquiries: samiuz2001@gmail.com. You may also use the Contact page.',
+        ],
+      },
+    ],
+    related: {
+      cookies: 'Cookie Policy',
+      terms: 'Terms of Service',
+      contact: 'Contact',
+    },
+  },
+  cookies: {
+    back: 'Back',
+    nav: {
+      privacy: 'Privacy',
+      terms: 'Terms',
+      contact: 'Contact',
+    },
+    eyebrow: 'Legal',
+    title: 'Cookie Policy',
+    lastUpdated: 'Last updated: 12 August 2026',
+    intro:
+      'This Cookie Policy explains how Rent Nao Limited uses cookies and similar technologies on rentnao.co and related services. It should be read together with our Privacy Policy.',
+    sections: [
+      {
+        title: '1. What are cookies?',
+        paragraphs: [
+          'Cookies are small text files stored on your device when you visit a website. Similar technologies include local storage, session storage, and pixels. They help sites remember preferences, keep sessions secure, and understand usage.',
+        ],
+      },
+      {
+        title: '2. How we use cookies',
+        paragraphs: ['We use cookies and similar technologies to:'],
+        bullets: [
+          'Authenticate you and maintain secure sessions.',
+          'Remember language and other interface preferences.',
+          'Protect against abuse and improve reliability.',
+          'Measure product performance and fix issues (in aggregate where possible).',
+          'Support features such as review prompts and temporary UI preferences.',
+        ],
+      },
+      {
+        title: '3. Types of cookies we use',
+        paragraphs: ['Depending on your activity, we may use:'],
+        bullets: [
+          'Strictly necessary: required for login, security, load balancing, and core platform functions. These cannot be switched off in our systems without breaking the service.',
+          'Functional / preference: remember choices such as language so the site works the way you expect.',
+          'Analytics / performance: help us understand which pages are used and how the product performs so we can improve it.',
+        ],
+      },
+      {
+        title: '4. Local storage and similar tools',
+        paragraphs: [
+          'In addition to cookies, we may store limited data in your browser (for example auth tokens, wishlist helpers, or review-prompt state) so features work across page loads. Clearing site data in your browser removes this information.',
+        ],
+      },
+      {
+        title: '5. Managing cookies',
+        paragraphs: [
+          'Most browsers let you block or delete cookies through Settings. If you block strictly necessary cookies, parts of RentNao (including sign-in) may not work. You can also clear local storage for this site from your browser’s privacy tools.',
+          'Browser vendors publish guides for Chrome, Firefox, Safari, and Edge. Management steps differ by device and browser version.',
+        ],
+      },
+      {
+        title: '6. Third-party cookies',
+        paragraphs: [
+          'Some features may rely on trusted providers (for example maps, authentication, or analytics). Those providers may set their own cookies subject to their policies. We only enable integrations needed to operate and improve RentNao.',
+        ],
+      },
+      {
+        title: '7. Updates',
+        paragraphs: [
+          'We may update this Cookie Policy when our practices or technology change. The “Last updated” date will reflect the latest revision.',
+        ],
+      },
+      {
+        title: '8. Contact',
+        paragraphs: [
+          'Questions about cookies or privacy: samiuz2001@gmail.com or our Contact page.',
+        ],
+      },
+    ],
+    related: {
+      privacy: 'Privacy Policy',
+      terms: 'Terms of Service',
+      contact: 'Contact',
+    },
   },
 };
