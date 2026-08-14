@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import BrandLogoLink, { BRAND_LOGO_IMG_CLASS_COMPACT } from '../components/BrandLogoLink';
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
 import { isLoggedIn } from '../lib/api';
 import { useTranslation } from '../lib/i18n';
 
@@ -27,29 +27,10 @@ const highlightIcons = [
   ),
 ];
 
-function navLinkClass(emphasize) {
-  if (emphasize) {
-    return 'font-semibold text-teal-700 hover:text-teal-800 transition py-2.5 px-1 rounded-lg';
-  }
-  return 'text-gray-600 hover:text-teal-700 transition py-2.5 px-1 rounded-lg';
-}
-
 export default function AboutPage() {
   const { messages } = useTranslation();
   const about = messages.about;
-  const services = messages.services;
-  const [menuOpen, setMenuOpen] = useState(false);
   const loggedIn = isLoggedIn();
-  const navigate = useNavigate();
-
-  const headerNav = [
-    { to: '/listings', label: services.nav.listings },
-    { to: '/services', label: about.nav.services },
-    { to: '/faq', label: services.nav.faq },
-    { to: '/login', label: services.nav.login, authOnly: 'guest' },
-    { to: '/signup', label: services.nav.signup, emphasize: true, authOnly: 'guest' },
-  ];
-  const visibleNav = headerNav.filter((item) => !(loggedIn && item.authOnly === 'guest'));
 
   const highlights = useMemo(
     () => [
@@ -73,119 +54,9 @@ export default function AboutPage() {
     [about]
   );
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between gap-3 py-3 sm:py-4">
-            <BrandLogoLink className="min-w-0 shrink-0" onClick={() => setMenuOpen(false)} />
-
-            {loggedIn ? (
-              <button
-                type="button"
-                onClick={handleBack}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shrink-0"
-              >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-                {services.back}
-              </button>
-            ) : (
-              <>
-                <nav className="hidden lg:flex items-center justify-end gap-4 md:gap-6 text-sm shrink-0" aria-label="Main">
-                  {visibleNav.map(({ to, label, emphasize }) => (
-                    <Link key={to} to={to} className={navLinkClass(emphasize)}>
-                      {label}
-                    </Link>
-                  ))}
-                </nav>
-
-                <button
-                  type="button"
-                  className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 shrink-0"
-                  aria-expanded={menuOpen}
-                  aria-controls="about-mobile-nav"
-                  aria-label={menuOpen ? services.nav.closeMenu : services.nav.openMenu}
-                  onClick={() => setMenuOpen((o) => !o)}
-                >
-                  {menuOpen ? (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  )}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {!loggedIn && menuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[100] flex justify-end" role="presentation">
-          <button
-            type="button"
-            className="absolute inset-0 bg-[#1e4732]/45 backdrop-blur-[3px]"
-            aria-label={services.nav.closeMenu}
-            onClick={() => setMenuOpen(false)}
-          />
-          <aside
-            id="about-mobile-nav"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="about-mobile-nav-title"
-            className="relative z-[110] flex h-full w-[min(20rem,88vw)] max-w-sm flex-col bg-white shadow-[-12px_0_40px_rgba(30,71,50,0.12)] border-l border-[#dceadf] pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-[#eef4ef] px-5 py-4">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <BrandLogoLink imgClassName={BRAND_LOGO_IMG_CLASS_COMPACT} onClick={() => setMenuOpen(false)} />
-                <span id="about-mobile-nav-title" className="sr-only">
-                  {services.nav.mainMenu}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMenuOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition shrink-0"
-                aria-label={services.nav.closeMenu}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 flex flex-col gap-1" aria-label="Main mobile">
-              {visibleNav.map(({ to, label, emphasize }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className={
-                    emphasize
-                      ? 'mt-2 mx-1 rounded-xl bg-[#2f8444] hover:bg-[#256c38] text-white text-center text-[15px] font-semibold py-3.5 shadow-sm transition'
-                      : 'rounded-xl px-4 py-3.5 text-[15px] font-medium text-gray-800 hover:bg-gray-50 transition'
-                  }
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
-          </aside>
-        </div>
-      )}
+      <AppHeader variant="wide" centerNav />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
         <p className="text-sm font-semibold uppercase tracking-wide text-teal-700 mb-2">{about.hero.badge}</p>
