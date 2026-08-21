@@ -11,7 +11,7 @@ export const BRAND_LOGO_IMG_CLASS_COMPACT = 'h-8 w-auto max-w-[10rem] object-con
 /**
  * Primary home link in the top-left of every page. Uses `/icon.png` (full wordmark in asset).
  */
-export default function BrandLogoLink({ className = '', imgClassName, onClick }) {
+export default function BrandLogoLink({ className = '', imgClassName, src = '/icon.png', onClick }) {
   const { t } = useTranslation();
 
   return (
@@ -21,7 +21,7 @@ export default function BrandLogoLink({ className = '', imgClassName, onClick })
       className={`inline-flex shrink-0 items-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 ${className}`.trim()}
       aria-label={t('brand.homeAriaLabel')}
     >
-      <img src="/icon.png" alt="" draggable={false} className={imgClassName ?? BRAND_LOGO_IMG_CLASS} />
+      <img src={src} alt="" draggable={false} className={imgClassName ?? BRAND_LOGO_IMG_CLASS} />
     </Link>
   );
 }

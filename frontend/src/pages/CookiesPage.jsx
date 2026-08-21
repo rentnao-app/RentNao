@@ -1,20 +1,20 @@
-﻿import StaticPageShell, {
+import StaticPageShell, {
   LegalRelatedLinks,
   LegalSectionList,
   StaticPageHero,
 } from '../components/StaticPageShell';
 import { useTranslation } from '../lib/i18n';
 
-export default function TermsPage() {
+export default function CookiesPage() {
   const { messages } = useTranslation();
-  const copy = messages.terms;
+  const copy = messages.cookies;
 
   return (
     <StaticPageShell
       backLabel={copy.back}
       navLinks={[
         { to: '/privacy', label: copy.nav.privacy },
-        { to: '/cookies', label: copy.nav.cookies },
+        { to: '/terms', label: copy.nav.terms },
         { to: '/contact', label: copy.nav.contact },
       ]}
     >
@@ -28,7 +28,7 @@ export default function TermsPage() {
       <LegalRelatedLinks
         links={[
           { to: '/privacy', label: copy.related.privacy },
-          { to: '/cookies', label: copy.related.cookies },
+          { to: '/terms', label: copy.related.terms },
           { to: '/contact', label: copy.related.contact },
         ]}
       />

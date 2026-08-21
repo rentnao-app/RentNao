@@ -16,6 +16,7 @@ import {
   isLoggedIn,
   setAuthSession,
 } from '../lib/api';
+import { markPlatformReviewSubmitted } from '../components/PlatformReviewPrompt';
 
 const PAGE_SIZE = 12;
 const MIN_CONTENT = 10;
@@ -210,6 +211,7 @@ export default function ReviewPage() {
   };
 
   const handleSubmitted = (submitted) => {
+    markPlatformReviewSubmitted();
     setMyReview(submitted);
     if (userId) writeLocalReview(userId, submitted);
     setEditing(false);
