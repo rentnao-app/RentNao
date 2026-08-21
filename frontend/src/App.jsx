@@ -76,6 +76,7 @@ function AppLayout() {
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/reviews" element={<ReviewPage />} />
           <Route path="/listings" element={<ListingPage />} />
+          <Route path="/browse" element={<ListingPage />} />
           <Route path="/listings/:id" element={<ListingDetailsPage />} />
           <Route path="/profile/:userId" element={<PublicProfilePage />} />
           <Route path="/tenant-dashboard" element={<ProtectedRoute component={TenantDashboard} requiredRole="TENANT" />} />
