@@ -1,3 +1,7 @@
+FROM caddy:2.10-builder-alpine AS caddybuilder
+RUN xcaddy build \
+	--with github.com/mholt/caddy-ratelimit
+
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* yarn.lock* ./
@@ -12,7 +16,8 @@ ENV VITE_GOOGLE_AUTH_URL=$VITE_GOOGLE_AUTH_URL
 ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 RUN npm run build
 
-FROM caddy:2-alpine
+FROM caddy:2.10-alpine
+COPY --from=caddybuilder /usr/bin/caddy /usr/bin/caddy
 COPY --from=build /app/dist /srv
 COPY Caddyfile /etc/caddy/Caddyfile
 EXPOSE 80

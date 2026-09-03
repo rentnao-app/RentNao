@@ -2,3 +2,10 @@
 .env.app
 backups/
 docs/
+
+# Local research clones (not part of the product)
+_research/
+
+# Rate-limit abuse / harness scripts (local only)
+scripts/rate-limit-tests/
+*.ratelimit-test.log

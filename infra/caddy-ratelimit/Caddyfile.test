@@ -1,0 +1,37 @@
+# Local harness only — intentionally tight limits (like the YouTube demo).
+# Do NOT use these numbers in production.
+
+{
+	auto_https off
+}
+
+:80 {
+	# Exempt health so monitors never trip RL
+	handle /health {
+		respond "ok" 200
+	}
+
+	handle /ws* {
+		respond "ws-ok" 200
+	}
+
+	handle {
+		rate_limit {
+			zone dynamic_zone {
+				key    {remote_host}
+				events 2
+				window 5s
+				ipv6_prefix 64
+			}
+			log_key
+		}
+
+		handle /api/* {
+			reverse_proxy backend:80
+		}
+
+		handle {
+			respond "Welcome to rentnao local rate-limit harness" 200
+		}
+	}
+}

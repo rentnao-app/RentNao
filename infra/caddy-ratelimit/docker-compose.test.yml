@@ -1,0 +1,25 @@
+# Local rate-limit harness (does not touch production).
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d --build
+#   # then run scripts under _research/caddy-rate-limit/harness/
+
+services:
+  backend:
+    image: ealen/echo-server:latest
+    restart: unless-stopped
+    environment:
+      ENABLE_ENVIRONMENT: "false"
+
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rentnao-caddy:2.10-ratelimit
+    container_name: rentnao-caddy-rl-test
+    restart: unless-stopped
+    ports:
+      - "18080:80"
+    volumes:
+      - ./Caddyfile.test:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - backend
