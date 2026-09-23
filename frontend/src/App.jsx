@@ -47,9 +47,11 @@ import ProtectedRoute from './components/ProtectedRoute';
 import SiteFooter from './components/SiteFooter';
 import PlatformReviewPrompt from './components/PlatformReviewPrompt';
 import ArefinDevTestPage from './pages/dev/ArefinDevTestPage';
+import { useRouteAos } from './hooks/useHomeAos';
 
 function AppLayout() {
   const { pathname } = useLocation();
+  useRouteAos();
   const hideFooter =
     pathname.startsWith('/admin-dashboard') ||
     pathname.startsWith('/chats') ||
@@ -60,7 +62,7 @@ function AppLayout() {
     pathname.startsWith('/auth');
 
   return (
-    <div className="min-h-screen flex flex-col overflow-x-clip max-w-full">
+    <div className="min-h-screen flex flex-col overflow-x-hidden max-w-full">
       <div className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage />} />
