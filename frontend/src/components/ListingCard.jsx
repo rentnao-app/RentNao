@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BadgeCheck,
@@ -55,6 +56,10 @@ export default function ListingCard({
   const { t } = useTranslation();
   const listingId = item?.listingId;
   const imageUrl = item?.primaryImageUrl || null;
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => {
+    setImageFailed(false);
+  }, [imageUrl]);
   const title = item?.title
     ? `${item.title.slice(0, 52)}${item.title.length > 52 ? '…' : ''}`
     : t('components.listingCard.fallbackTitle', { beds: item?.roomCount ?? '?' });
@@ -83,11 +88,12 @@ export default function ListingCard({
     <article className="group flex h-full flex-col overflow-hidden rounded-[1.25rem] bg-white ring-1 ring-[#dfece4] shadow-[0_1px_2px_rgba(26,71,40,0.04)] transition-[transform,box-shadow,ring-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform hover:-translate-y-2 hover:ring-[#2A7D4F]/30 hover:shadow-[0_22px_44px_-18px_rgba(42,125,79,0.35)] motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       <div className="relative aspect-[5/4] overflow-hidden bg-[#E8F4EE]">
         <Link to={`/listings/${listingId}`} onClick={handleNavigate} className="block h-full w-full">
-          {imageUrl ? (
+          {imageUrl && !imageFailed ? (
             <img
               src={imageUrl}
               alt={item?.title || t('components.listingCard.propertyAlt')}
               className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+              onError={() => setImageFailed(true)}
             />
           ) : (
             <PlaceholderImage />

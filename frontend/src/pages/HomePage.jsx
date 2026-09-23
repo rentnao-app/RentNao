@@ -241,7 +241,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#fafcfb] text-gray-800">
+    <div className="min-h-screen overflow-x-hidden bg-[#fafcfb] text-gray-800">
       <AppHeader centerNav />
 
       <HomeHeroSection />

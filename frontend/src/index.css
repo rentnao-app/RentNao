@@ -14,7 +14,7 @@
 @layer base {
   html {
     font-family: 'Bear Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    overflow-x: clip;
+    overflow-x: hidden;
     max-width: 100%;
   }
   html[data-lang='bn'] {
@@ -23,11 +23,11 @@
     overflow-wrap: anywhere;
   }
   body {
-    overflow-x: clip;
+    overflow-x: hidden;
     max-width: 100%;
   }
   #root {
-    overflow-x: clip;
+    overflow-x: hidden;
     max-width: 100%;
     min-height: 100%;
   }
