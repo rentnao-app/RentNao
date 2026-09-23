@@ -40,6 +40,13 @@ const envSchema = z.object({
   BULKSMSBD_API_URL: z.string().url().default('http://bulksmsbd.net/api/smsapi'),
   BULKSMSBD_API_KEY: z.string().optional(),
   BULKSMSBD_SENDER_ID: z.string().optional(),
+  // KYC.bd Configuration
+  KYC_BD_API_KEY: z.string().optional(),
+  KYC_BD_BASE_URL: z.string().url().default('https://sandbox.kyc.bd/api/v1'),
+  // Firebase Cloud Messaging (FCM) — Push Notifications
+  FIREBASE_PROJECT_ID: z.string().optional(),
+  FIREBASE_CLIENT_EMAIL: z.string().optional(),
+  FIREBASE_PRIVATE_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -11,6 +11,7 @@ import { upgradeWebSocket, websocket } from 'hono/bun';
 import { env } from '@/config/env';
 import { defaultValidationHook } from '@/config/openapi';
 import { errorHandler } from '@/middlewares/error-handler';
+import { ipRateLimit } from '@/middlewares/ip-rate-limit';
 import { checkDbHealth, closeDbConnection } from '@/db/client';
 import { connectRedis, checkRedisHealth, disconnectRedis } from '@/db/redis';
 import { checkS3Health, ensureS3Bucket } from '@/db/s3';
@@ -56,6 +57,16 @@ app.use(
     origin: corsOrigin,
     credentials: true,
   })
+);
+
+// Defense in depth behind edge Caddy (see infra/caddy-ratelimit). Fails open if Redis is down.
+app.use(
+  '/auth/*',
+  ipRateLimit({ prefix: 'rl:auth', max: 40, windowSeconds: 60 })
+);
+app.use(
+  '/properties/*',
+  ipRateLimit({ prefix: 'rl:properties', max: 120, windowSeconds: 60 })
 );
 
 // Root endpoint

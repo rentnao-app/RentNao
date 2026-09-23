@@ -5,7 +5,7 @@
 
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { AppError, handleDatabaseError, handleValidationError } from '@/errors';
+import { AppError, handleDatabaseError, handleValidationError, RateLimitExceededError } from '@/errors';
 
 export { AppError } from '@/errors';
 
@@ -28,6 +28,9 @@ export const errorHandler = (err: Error, c: Context) => {
 
   // Handle custom AppError and its subclasses
   if (err instanceof AppError) {
+    if (err instanceof RateLimitExceededError && err.retryAfter != null) {
+      c.header('Retry-After', String(err.retryAfter));
+    }
     const details = (err as AppError).details;
     return c.json(
       {

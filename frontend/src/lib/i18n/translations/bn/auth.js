@@ -55,8 +55,8 @@ export default {
   auth: {
     login: {
       title: 'আবার স্বাগতম',
-      subtitle: 'মোবাইল নম্বর বা Google দিয়ে লগ ইন করুন',
-      passwordPlaceholder: 'আপনার পাসওয়ার্ড লিখুন',
+      subtitle: 'আপনার RentNao অ্যাকাউন্টে লগ ইন করুন',
+      passwordPlaceholder: 'পাসওয়ার্ড লিখুন',
       forgotPassword: 'পাসওয়ার্ড ভুলে গেছেন?',
       loggingIn: 'লগ ইন হচ্ছে...',
       loginFailed: 'লগইন ব্যর্থ হয়েছে',
@@ -66,6 +66,21 @@ export default {
       verificationRedirect: 'যাচাই প্রয়োজন। OTP-তে পাঠানো হচ্ছে...',
       successRedirect: 'লগইন সফল! পুনঃনির্দেশিত হচ্ছে...',
       noAccount: 'অ্যাকাউন্ট নেই?',
+      signUpFree: 'বিনামূল্যে সাইন আপ',
+      rememberMe: 'আমাকে মনে রাখুন',
+      showPassword: 'পাসওয়ার্ড দেখান',
+      hidePassword: 'পাসওয়ার্ড লুকান',
+      orContinueWith: 'অথবা চালিয়ে যান',
+      panelTitle: 'বাংলাদেশের ট্রাস্ট-ফার্স্ট রেন্টাল মার্কেটপ্লেস',
+      panelSubtitle:
+        'যাচাইকৃত মালিক ও ভাড়াটিয়া। ডিজিটাল চুক্তি। নিরাপদ ভাড়া সংগ্রহ। স্মার্ট ভাড়ার জন্য যা দরকার সব।',
+      featureVerified: 'যাচাইকৃত মার্কেটপ্লেস',
+      featureEncrypted: 'এনক্রিপ্টেড ডেটা',
+      featurePayments: 'নিরাপদ পেমেন্ট',
+      featureApproval: 'দ্রুত অনুমোদন',
+      socialProofTitle: '১,০০০+ যাচাইকৃত ব্যবহারকারী',
+      socialProofSubtitle: 'সারা বাংলাদেশের মালিক ও ভাড়াটিয়াদের বিশ্বস্ত প্ল্যাটফর্ম।',
+      google: 'Google',
     },
     signup: {
       title: 'অ্যাকাউন্ট তৈরি করুন',

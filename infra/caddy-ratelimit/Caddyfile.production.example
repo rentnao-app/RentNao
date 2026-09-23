@@ -1,0 +1,68 @@
+# EXAMPLE edge Caddyfile for VPS infra (rentnao.co + api.rentnao.co).
+# Merge into the live infra Caddyfile after backing it up — do not replace blindly.
+# Upstream service names must match your infra/app compose network.
+
+{
+	# email for Let's Encrypt if auto_https is on (adjust to your existing global block)
+	# email admin@rentnao.co
+}
+
+rentnao.co, www.rentnao.co {
+	encode gzip zstd
+
+	rate_limit {
+		zone site_ip {
+			key         {remote_host}
+			events      240
+			window      1m
+			ipv6_prefix 64
+		}
+		log_key
+	}
+
+	reverse_proxy frontend:80
+}
+
+api.rentnao.co {
+	encode gzip zstd
+
+	# Uptime / health — never rate-limited
+	handle /health* {
+		reverse_proxy backend:3000
+	}
+
+	# Chat WebSocket — separate generous allowance
+	handle /ws* {
+		rate_limit {
+			zone ws_ip {
+				key         {remote_host}
+				events      120
+				window      1m
+				ipv6_prefix 64
+			}
+		}
+		reverse_proxy backend:3000
+	}
+
+	handle {
+		rate_limit {
+			zone api_ip {
+				key         {remote_host}
+				events      90
+				window      1m
+				ipv6_prefix 64
+			}
+			zone auth_strict {
+				match {
+					path /auth/*
+				}
+				key         {remote_host}
+				events      40
+				window      1m
+				ipv6_prefix 64
+			}
+			log_key
+		}
+		reverse_proxy backend:3000
+	}
+}

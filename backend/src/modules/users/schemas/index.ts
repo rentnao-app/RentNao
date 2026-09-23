@@ -15,6 +15,22 @@ export const createTenantProfileSchema = z.object({
     example: 'Rahman',
     description: 'Last name',
   }),
+  fatherName: z.string().min(2).max(100).openapi({
+    example: 'Karim Rahman',
+    description: 'Father name',
+  }),
+  motherName: z.string().min(2).max(100).openapi({
+    example: 'Fatema Begum',
+    description: 'Mother name',
+  }),
+  fatherNameBn: z.string().min(2).max(100).optional().openapi({
+    example: 'করিম রহমান',
+    description: 'Father name in Bengali',
+  }),
+  motherNameBn: z.string().min(2).max(100).optional().openapi({
+    example: 'ফাতেমা বেগম',
+    description: 'Mother name in Bengali',
+  }),
   dateOfBirth: z.string().date().openapi({
     example: '1995-05-15',
     description: 'Date of birth (YYYY-MM-DD)',
@@ -82,6 +98,22 @@ export const createOwnerProfileSchema = z.object({
   lastName: z.string().min(2).max(50).openapi({
     example: 'Hassan',
     description: 'Last name',
+  }),
+  fatherName: z.string().min(2).max(100).openapi({
+    example: 'Abul Hassan',
+    description: 'Father name',
+  }),
+  motherName: z.string().min(2).max(100).openapi({
+    example: 'Sufia Khatun',
+    description: 'Mother name',
+  }),
+  fatherNameBn: z.string().min(2).max(100).optional().openapi({
+    example: 'আবুল হাসান',
+    description: 'Father name in Bengali',
+  }),
+  motherNameBn: z.string().min(2).max(100).optional().openapi({
+    example: 'সুফিয়া খাতুন',
+    description: 'Mother name in Bengali',
   }),
   dateOfBirth: z.string().date().openapi({
     example: '1990-03-20',
@@ -351,3 +383,28 @@ export const verificationStatusResponseSchema = z.object({
     ),
   }),
 });
+
+// KYC Schemas
+// ============================================================================
+
+export const identityVerifyInputSchema = z.object({
+  fullName: z.string(),
+  dateOfBirth: z.string(), // YYYY-MM-DD
+  nationalId: z.string(),
+  mobile: z.string().optional(),
+  referenceId: z.string(),
+});
+
+export type IdentityVerifyInput = z.infer<typeof identityVerifyInputSchema>;
+
+export const kycBdResponseSchema = z.object({
+  status: z.string(),
+  verification_id: z.string().optional(),
+  match_score: z.number().optional(),
+  risk_level: z.string().optional(),
+  timestamp: z.string().optional(),
+  error: z.string().optional(),
+  message: z.string().optional(),
+});
+
+export type KycBdResponse = z.infer<typeof kycBdResponseSchema>;

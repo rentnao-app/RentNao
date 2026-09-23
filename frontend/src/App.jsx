@@ -32,6 +32,9 @@ import BlogsPage from './pages/BlogsPage';
 import BlogPostPage from './pages/BlogPostPage';
 import ServicesPage from './pages/ServicesPage';
 import ReviewPage from './pages/ReviewPage';
+import ContactPage from './pages/ContactPage';
+import PrivacyPage from './pages/PrivacyPage';
+import CookiesPage from './pages/CookiesPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import ListingPage from './pages/ListingPage';
@@ -47,7 +50,14 @@ import ArefinDevTestPage from './pages/dev/ArefinDevTestPage';
 
 function AppLayout() {
   const { pathname } = useLocation();
-  const hideFooter = pathname.startsWith('/admin-dashboard') || pathname.startsWith('/chats');
+  const hideFooter =
+    pathname.startsWith('/admin-dashboard') ||
+    pathname.startsWith('/chats') ||
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/auth');
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-clip max-w-full">
@@ -67,6 +77,9 @@ function AppLayout() {
           <Route path="/verification-holding" element={<VerificationHoldingPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/cookies" element={<CookiesPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/careers" element={<CareersPage />} />
           <Route path="/blogs" element={<BlogsPage />} />

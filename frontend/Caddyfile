@@ -1,6 +1,17 @@
 :80 {
-    root * /srv
-    encode gzip zstd
-    file_server
-    try_files {path} /index.html
+	# Per-IP soft ceiling for SPA scrapers (generous enough for normal page loads).
+	# Requires custom Caddy binary with github.com/mholt/caddy-ratelimit (see Dockerfile).
+	rate_limit {
+		zone spa_ip {
+			key         {remote_host}
+			events      300
+			window      1m
+			ipv6_prefix 64
+		}
+	}
+
+	root * /srv
+	encode gzip zstd
+	file_server
+	try_files {path} /index.html
 }

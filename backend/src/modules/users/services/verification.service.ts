@@ -13,6 +13,7 @@ import type {
   DocumentVerificationStatusType,
 } from '@/types/enums';
 import type { UploadUrlRequest, SubmitVerificationInput } from '../schemas';
+import { KycBdService } from './kyc-bd.service';
 
 function createId() {
   return crypto.randomUUID();
@@ -73,7 +74,7 @@ export async function submitVerification(
 }> {
   // Verify user exists and profile is complete
   const userResult = await db.query(
-    `SELECT u.user_id, u.onboarding_status, bp.id as profile_id
+    `SELECT u.user_id, u.onboarding_status, u.contact_phone, bp.id as profile_id, bp.first_name, bp.last_name, bp.date_of_birth
      FROM "User" u
      LEFT JOIN "BaseUserProfile" bp ON u.user_id = bp.user_id
      WHERE u.user_id = $1`,
@@ -84,7 +85,7 @@ export async function submitVerification(
     throw new AppError(404, 'User not found');
   }
 
-  const { profile_id } = userResult.rows[0];
+  const { profile_id, first_name, last_name, date_of_birth, contact_phone } = userResult.rows[0];
   if (!profile_id) {
     throw new AppError(403, 'Profile must be completed before submitting documents');
   }
@@ -219,7 +220,13 @@ export async function submitVerification(
     }
 
     // Insert documents
+    let targetNidNumber: string | null = null;
+    
     for (const doc of validatedDocuments) {
+      if (doc.documentType === 'NATIONAL_ID' && doc.documentNumber) {
+        targetNidNumber = doc.documentNumber;
+      }
+
       await client.query(
         `INSERT INTO "UserIdentityDocument" 
          (id, user_id, submission_id, document_type, file_path, file_name, mime_type, file_size_bytes, document_number)
@@ -238,12 +245,58 @@ export async function submitVerification(
       );
     }
 
-    // Update User KYC status to PENDING (awaiting admin review)
+    // KYC.bd Integration 
+    let kycMatchScore: number | null = null;
+    let kycRiskLevel: string | null = null;
+    let kycReferenceId: string | null = null;
+    let isAutoVerified = false;
+    let finalSubmissionStatus = 'UNDER_REVIEW'; // Default to manual review
+
+    if (targetNidNumber && first_name && date_of_birth) {
+      const kycResponse = await KycBdService.verifyIdentity({
+        fullName: `${first_name} ${last_name || ''}`.trim(),
+        dateOfBirth: date_of_birth,
+        nationalId: targetNidNumber,
+        mobile: contact_phone || undefined,
+        referenceId: submissionId,
+      });
+
+      if (kycResponse.status === 'verified') {
+        kycMatchScore = kycResponse.match_score ?? null;
+        kycRiskLevel = kycResponse.risk_level ?? null;
+        kycReferenceId = kycResponse.verification_id ?? null;
+
+        // Threshold evaluation
+        if (kycMatchScore !== null && kycMatchScore >= 90) {
+          isAutoVerified = true;
+          finalSubmissionStatus = 'APPROVED';
+        }
+      }
+    }
+
+    // Update Submission with KYC result
+    await client.query(
+      `UPDATE "VerificationSubmission" 
+       SET submission_status = $1, 
+           kyc_provider = 'KYC.BD',
+           kyc_reference_id = $2,
+           kyc_match_score = $3,
+           kyc_risk_level = $4,
+           auto_verified = $5,
+           updated_at = NOW()
+       WHERE id = $6`,
+      [finalSubmissionStatus, kycReferenceId, kycMatchScore, kycRiskLevel, isAutoVerified, submissionId]
+    );
+
+    // Update User KYC status
+    const newKycStatus = isAutoVerified ? 'APPROVED' : 'PENDING';
+    const newOnboardingStatus = isAutoVerified ? 'COMPLETED' : 'UNDER_REVIEW';
+
     await client.query(
       `UPDATE "User" 
-       SET kyc_verification_status = 'PENDING', onboarding_status = 'UNDER_REVIEW', updated_at = NOW()
-       WHERE user_id = $1`,
-      [userId]
+       SET kyc_verification_status = $1, onboarding_status = $2, updated_at = NOW()
+       WHERE user_id = $3`,
+      [newKycStatus, newOnboardingStatus, userId]
     );
 
     await client.query('COMMIT');

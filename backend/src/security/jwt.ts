@@ -50,3 +50,20 @@ export function getRemainingTokenTtlSeconds(payload: Pick<AccessTokenPayload, 'e
   const now = Math.floor(Date.now() / 1000);
   return Math.max(0, payload.exp - now);
 }
+
+/**
+ * Sign a short-lived internal token (e.g. OAuth state token, exchange code)
+ * These are NOT session tokens — they carry no issuer/audience claims and
+ * are only used for server-to-server or redirect handshakes.
+ */
+export function signInternalToken(payload: object, expiresIn: jwt.SignOptions['expiresIn']): string {
+  return jwt.sign(payload, env.JWT_SECRET as string, { expiresIn });
+}
+
+/**
+ * Verify a token signed by signInternalToken.
+ * Throws if the token is expired or tampered with.
+ */
+export function verifyInternalToken<T = Record<string, unknown>>(token: string): T {
+  return jwt.verify(token, env.JWT_SECRET as string) as T;
+}

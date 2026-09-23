@@ -141,7 +141,7 @@ export async function createRentalRequest(
     listing_id: listingId,
     rental_request_id: requestId,
     url: `/tenant-dashboard/applications`,
-  });
+  }, false);
 
   return { request_id: requestId };
 }
@@ -244,13 +244,13 @@ export async function withdrawRentalRequest(tenantUserId: string, role: string, 
       listing_id: listingId,
       rental_request_id: requestId,
       url: `/owner-dashboard/requests`,
-    });
+    }, false);
   }
   await createNotification(tenantUserId, 'Request cancelled', 'You cancelled your rental request.', {
     listing_id: listingId,
     rental_request_id: requestId,
     url: `/tenant-dashboard/applications`,
-  });
+  }, false);
 }
 
 export async function acceptRentalRequest(ownerUserId: string, role: string, requestId: string): Promise<void> {
@@ -315,6 +315,7 @@ export async function deleteRentalRequestByOwner(ownerUserId: string, role: stri
     {
       listing_id: meta.listingId,
       url: `/tenant-dashboard/applications`,
-    }
+    },
+    false
   );
 }

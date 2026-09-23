@@ -34,6 +34,7 @@
     "@prisma/client": "^5.22.0",
     "@scalar/hono-api-reference": "^0.9.46",
     "@types/ioredis": "^5.0.0",
+    "firebase-admin": "^14.2.0",
     "hono": "^4.12.3",
     "ioredis": "^5.10.0",
     "jsonwebtoken": "^9.0.3",

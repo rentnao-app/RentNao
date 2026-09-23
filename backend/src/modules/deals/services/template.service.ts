@@ -24,6 +24,8 @@ export async function compileDeedTemplate(dealId: string): Promise<string> {
 
        -- Owner
        owner_prof.full_name_bn  AS owner_name_bn,
+       owner_prof.father_name_bn AS owner_father_name_bn,
+       owner_prof.mother_name_bn AS owner_mother_name_bn,
        owner_prof.religion_bn   AS owner_religion_bn,
        owner_prof.profession_bn AS owner_profession_bn,
        owner_prof.nid_bn        AS owner_nid_bn,
@@ -31,6 +33,8 @@ export async function compileDeedTemplate(dealId: string): Promise<string> {
 
        -- Tenant 
        tenant_prof.full_name_bn  AS tenant_name_bn,
+       tenant_prof.father_name_bn AS tenant_father_name_bn,
+       tenant_prof.mother_name_bn AS tenant_mother_name_bn,
        tenant_prof.religion_bn   AS tenant_religion_bn,
        tenant_prof.profession_bn AS tenant_profession_bn,
        tenant_prof.nid_bn        AS tenant_nid_bn,
@@ -59,6 +63,8 @@ export async function compileDeedTemplate(dealId: string): Promise<string> {
 
     // Owner
     owner_name_bn: row.owner_name_bn ?? '',
+    owner_father_name_bn: row.owner_father_name_bn ?? '',
+    owner_mother_name_bn: row.owner_mother_name_bn ?? '',
     owner_religion_bn: row.owner_religion_bn ?? '',
     owner_profession_bn: row.owner_profession_bn ?? '',
     owner_nid_bn: row.owner_nid_bn ?? '',
@@ -66,6 +72,8 @@ export async function compileDeedTemplate(dealId: string): Promise<string> {
 
     // Tenant
     tenant_name_bn: row.tenant_name_bn ?? '',
+    tenant_father_name_bn: row.tenant_father_name_bn ?? '',
+    tenant_mother_name_bn: row.tenant_mother_name_bn ?? '',
     tenant_religion_bn: row.tenant_religion_bn ?? '',
     tenant_profession_bn: row.tenant_profession_bn ?? '',
     tenant_nid_bn: row.tenant_nid_bn ?? '',

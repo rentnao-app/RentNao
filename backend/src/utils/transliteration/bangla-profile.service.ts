@@ -35,9 +35,10 @@ export function generateBanglaProfile(data: EnglishProfileData): BanglaProfileDa
   const flat_no_bn = data.flatNo ? toBengaliDigits(data.flatNo) : null;
 
   // ── Module 2: Phonetic text fields ──
-  // Batch them in a single call for clean positional mapping
   const textInputs = [
     data.fullName,
+    data.fatherName,
+    data.motherName,
     data.propertyAddress,
     data.profession,
     data.religion,
@@ -45,6 +46,8 @@ export function generateBanglaProfile(data: EnglishProfileData): BanglaProfileDa
 
   const [
     full_name_bn,
+    father_name_bn,
+    mother_name_bn,
     property_address_bn,
     profession_bn,
     religion_bn,
@@ -56,6 +59,8 @@ export function generateBanglaProfile(data: EnglishProfileData): BanglaProfileDa
     floor_no_bn,
     flat_no_bn,
     full_name_bn: full_name_bn ?? null,
+    father_name_bn: father_name_bn ?? null,
+    mother_name_bn: mother_name_bn ?? null,
     property_address_bn: property_address_bn ?? null,
     profession_bn: profession_bn ?? null,
     religion_bn: religion_bn ?? null,
@@ -86,6 +91,8 @@ export async function persistBanglaProfile(
 
   // Map BanglaProfileData keys to DB column names
   addIfPresent('full_name_bn', bangla.full_name_bn);
+  addIfPresent('father_name_bn', bangla.father_name_bn);
+  addIfPresent('mother_name_bn', bangla.mother_name_bn);
   addIfPresent('property_address_bn', bangla.property_address_bn);
   addIfPresent('profession_bn', bangla.profession_bn);
   addIfPresent('religion_bn', bangla.religion_bn);

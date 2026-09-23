@@ -25,6 +25,11 @@
  *   POST   /auth/password-reset/verify   - Verify reset token
  *   POST   /auth/password-reset/confirm  - Confirm password reset
  * 
+ * Google OAuth Routes (google-oauth.routes.ts):
+ *   GET    /auth/google                  - Initiate Google OAuth flow
+ *   GET    /auth/google/callback         - Handle Google redirect callback
+ *   POST   /auth/google/exchange         - Exchange code for JWT tokens
+ *
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -52,3 +57,10 @@ export {
 
 // Helpers (re-export for external use if needed)
 export { commonErrors } from './helpers';
+
+// Google OAuth routes
+export {
+  googleInitiateRoute,
+  googleCallbackRoute,
+  googleExchangeRoute,
+} from './google-oauth.routes';

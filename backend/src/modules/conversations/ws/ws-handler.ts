@@ -331,7 +331,7 @@ async function handleMessage(
           {
             conversation_id: conversationId,
             sender_user_id: userId,
-            url: `/conversations/${conversationId}`,
+            url: `/chats/${conversationId}`,
           }
         );
       }

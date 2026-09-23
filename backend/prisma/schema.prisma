@@ -252,6 +252,7 @@ model User {
   owner_deals               Deal[]                  @relation("OwnerDeals")
   tenant_deals              Deal[]                  @relation("TenantDeals")
   notifications             Notification[]
+  push_subscriptions        PushSubscription[]
   discount_redemptions      DiscountRedemption[]
   discount_eligibilities    DiscountEligibleUser[]
   testimonials              Testimonial[]
@@ -318,6 +319,8 @@ model BaseUserProfile {
   religion      String?
   profession    String?
   job_category  JobCategory?
+  father_name   String       @default("")
+  mother_name   String       @default("")
 
   profile_picture_path String?
 
@@ -329,9 +332,11 @@ model BaseUserProfile {
   // Transliteration (Bengali)
   full_name_bn  String?
   profession_bn String?
-  religion_bn   String?
-  phone_bn      String?
-  nid_bn        String?
+  religion_bn    String?
+  phone_bn       String?
+  nid_bn         String?
+  father_name_bn String?
+  mother_name_bn String?
 
   created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @updatedAt @db.Timestamptz(6)
@@ -689,6 +694,14 @@ model VerificationSubmission {
   reviewed_at       DateTime?                    @db.Timestamptz(6)
   reviewed_by       String? // admin userId
   rejection_reason  String?
+  
+  // KYC.bd tracking
+  kyc_provider      String?
+  kyc_reference_id  String?
+  kyc_match_score   Float?
+  kyc_risk_level    String?
+  auto_verified     Boolean                      @default(false)
+
   created_at        DateTime                     @default(now()) @db.Timestamptz(6)
   updated_at        DateTime?                    @updatedAt @db.Timestamptz(6)
 
@@ -820,4 +833,21 @@ model Deal {
   @@index([owner_id])
   @@index([tenant_id])
   @@index([property_id])
+}
+
+model PushSubscription {
+  id                   String   @id @default(cuid())
+  user_id              String
+  fcm_token            String   @unique
+  device_name          String?
+  browser              String?
+  platform             String?
+  notification_enabled Boolean  @default(true)
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+  last_active_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([user_id, notification_enabled])
 }

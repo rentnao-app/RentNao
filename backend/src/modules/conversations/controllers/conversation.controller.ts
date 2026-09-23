@@ -1,5 +1,5 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { requireAuth } from '@/security/middlewares/auth';
+import { requireAuth } from '@/security';
 import * as routes from '../routes/conversation.routes';
 import * as service from '../services/conversation.service';
 import { createWsTicket } from '../ws/ws-ticket';
@@ -163,7 +163,7 @@ app.openapi(routes.sendMessageRoute, async (c) => {
         {
           conversation_id: conversationId,
           sender_user_id: user.userId,
-          url: `/conversations/${conversationId}`,
+          url: `/chats/${conversationId}`,
         }
       );
     }

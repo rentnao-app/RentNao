@@ -1,41 +1,85 @@
 import { Link } from 'react-router-dom';
+import { aosFadeUp, aosStagger } from '../lib/aos';
 import { useFooterAos } from '../hooks/useHomeAos';
 import { useTranslation } from '../lib/i18n';
 
-function SocialIcon({ href, label, children }) {
+const SOCIAL_LINKS = {
+  facebook: 'https://www.facebook.com/profile.php?id=61591516107861',
+  linkedin: 'https://www.linkedin.com/company/rent-nao-limited/',
+  instagram: 'https://www.instagram.com/rentnaolimited?igsh=N2Nqb3k3ZGc3cnVn',
+};
+
+function FooterLink({ to, href, children, external = false }) {
+  const className =
+    'inline-block text-sm text-[#5f6f68] transition hover:text-[#1a4728] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2A7D4F]';
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        className={className}
+        {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      >
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <Link to={to} className={className}>
+      {children}
+    </Link>
+  );
+}
+
+function FooterNavColumn({ title, children, aosDelay = 0 }) {
+  return (
+    <div {...aosFadeUp(aosDelay)}>
+      <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-[#2A7D4F]">{title}</h3>
+      <ul className="mt-4 space-y-2.5">{children}</ul>
+    </div>
+  );
+}
+
+function FooterNavItem({ children }) {
+  return <li>{children}</li>;
+}
+
+function SocialIconButton({ href, label, children }) {
   return (
     <a
       href={href}
+      aria-label={label}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={label}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/15 transition hover:bg-emerald-400 hover:text-emerald-950 hover:ring-emerald-300/60"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#cfe0d6] bg-white/70 text-[#5f6f68] transition hover:border-[#2A7D4F] hover:bg-white hover:text-[#1a4728] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2A7D4F]"
     >
       {children}
     </a>
   );
 }
 
-function FooterColumn({ title, links }) {
+function FacebookIcon() {
   return (
-    <div>
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-200">{title}</h3>
-      <ul className="mt-4 space-y-2.5">
-        {links.map((link) => (
-          <li key={(link.to || link.href) + link.label}>
-            {link.href ? (
-              <a href={link.href} className="text-sm text-emerald-50/85 transition hover:text-white">
-                {link.label}
-              </a>
-            ) : (
-              <Link to={link.to} className="text-sm text-emerald-50/85 transition hover:text-white">
-                {link.label}
-              </Link>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M13.5 9.5V7.75c0-.69.56-1.25 1.25-1.25H16V4h-2.01c-2.07 0-3.49 1.27-3.49 3.61v1.89H9v2.75h1.5V20h3v-7.75h2.54l.46-2.75H13.5z" />
+    </svg>
+  );
+}
+
+function LinkedInIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M6.5 8.75h3v10.5h-3V8.75zM8 4a1.75 1.75 0 110 3.5A1.75 1.75 0 018 4zm4.25 4.75h2.88v1.43h.04c.4-.76 1.38-1.56 2.84-1.56 3.04 0 3.6 2 3.6 4.59v5.64h-3v-5c0-1.19-.02-2.72-1.66-2.72-1.66 0-1.91 1.29-1.91 2.62v5.1h-3V8.75z" />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zm0 10.162a3.999 3.999 0 110-8.001 3.999 3.999 0 010 8.001zm6.406-11.845a1.44 1.44 0 11-2.881 0 1.44 1.44 0 012.881 0z" />
+    </svg>
   );
 }
 
@@ -43,114 +87,99 @@ export default function SiteFooter() {
   const { t } = useTranslation();
   useFooterAos();
 
-  const productLinks = [
-    { to: '/listings', label: t('footer.browseProperties') },
-    { to: '/owner-dashboard/create-listing', label: t('footer.listProperty') },
-    { to: '/verification', label: t('footer.verification') },
-    { to: '/wallet', label: t('footer.wallet') },
-  ];
-
-  const companyLinks = [
-    { to: '/about', label: t('footer.aboutUs') },
-    { to: '/careers', label: t('footer.careers') },
-    { to: '/review', label: t('footer.reviews') },
-    { href: 'mailto:samiuz2001@gmail.com', label: t('footer.contact') },
-  ];
-
-  const resourceLinks = [
-    { to: '/blogs', label: t('footer.blog') },
-    { to: '/faq', label: t('footer.faq') },
-    { to: '/faq', label: t('footer.helpCenter') },
-    { to: '/services', label: t('footer.services') },
-  ];
-
-  const legalLinks = [
-    { to: '/terms', label: t('footer.privacyPolicy') },
-    { to: '/terms', label: t('footer.termsOfUse') },
-    { to: '/terms', label: t('footer.cookiePolicy') },
-  ];
-
   return (
-    <footer className="relative overflow-hidden bg-gradient-to-br from-[#0f2e22] via-[#1a4d38] to-[#2f8444] text-emerald-50">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-30"
-        aria-hidden
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 20% 20%, rgba(110, 231, 183, 0.35), transparent 45%), radial-gradient(circle at 80% 0%, rgba(52, 211, 153, 0.25), transparent 40%)',
-        }}
-      />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-300 via-lime-300 to-emerald-400" aria-hidden />
-
-      <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-14">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-5 lg:gap-8">
-          <div className="lg:col-span-2">
-            <Link to="/" className="inline-flex items-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300">
-              <img src="/icon.png" alt="" className="h-10 w-auto max-w-[11rem] brightness-0 invert" draggable={false} />
+    <footer className="border-t border-[#b8d4c8] bg-gradient-to-b from-[#e4efe8] via-[#d4e8de] to-[#c0d9ce] text-[#1a1f1c]">
+      <div className="mx-auto max-w-home px-4 py-12 sm:px-6 sm:py-14 lg:px-8 lg:py-16">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.35fr)_repeat(3,minmax(0,1fr))] lg:gap-x-10 lg:gap-y-10">
+          <div className="sm:col-span-2 lg:col-span-1" {...aosFadeUp(0)}>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2.5 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2A7D4F]"
+            >
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#dfece4] bg-white shadow-sm">
+                <img
+                  src="/tab-image.png"
+                  alt=""
+                  className="h-7 w-7 object-contain"
+                  draggable={false}
+                />
+              </span>
+              <span className="text-xl font-bold tracking-tight text-[#1a4728]">RentNao</span>
             </Link>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-emerald-100/90">{t('footer.tagline')}</p>
 
-            <div className="mt-6 space-y-2.5 text-sm text-emerald-50/90">
-              <p className="flex items-start gap-2.5">
-                <svg className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M6.62 10.79a15.54 15.54 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.11.37 2.3.56 3.58.56a1 1 0 011 1V20a1 1 0 01-1 1C10.85 21 3 13.15 3 3a1 1 0 011-1h3.5a1 1 0 011 1c0 1.28.19 2.47.56 3.58a1 1 0 01-.24 1.01l-2.2 2.2z" />
-                </svg>
-                <span>+8801766886915</span>
-              </p>
-              <p className="flex items-start gap-2.5">
-                <svg className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M4 5h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2zm0 2l8 5 8-5H4z" />
-                </svg>
-                <span>samiuz2001@gmail.com</span>
-              </p>
-              <p className="flex items-start gap-2.5">
-                <svg className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M12 2a7 7 0 00-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 00-7-7zm0 9.5A2.5 2.5 0 1112 6a2.5 2.5 0 010 5.5z" />
-                </svg>
-                <span>{t('footer.addressValue')}</span>
-              </p>
-            </div>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-[#5f6f68]">{t('footer.description')}</p>
 
-            <div className="mt-6 flex flex-wrap gap-2.5">
-              <SocialIcon href="https://facebook.com" label="Facebook">
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                </svg>
-              </SocialIcon>
-              <SocialIcon href="https://twitter.com" label="Twitter">
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                </svg>
-              </SocialIcon>
-              <SocialIcon href="https://instagram.com" label="Instagram">
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
-                </svg>
-              </SocialIcon>
+            <div className="mt-6 flex items-center gap-3">
+              <SocialIconButton href={SOCIAL_LINKS.facebook} label={t('footer.socialFacebook')}>
+                <FacebookIcon />
+              </SocialIconButton>
+              <SocialIconButton href={SOCIAL_LINKS.linkedin} label={t('footer.socialLinkedIn')}>
+                <LinkedInIcon />
+              </SocialIconButton>
+              <SocialIconButton href={SOCIAL_LINKS.instagram} label={t('footer.socialInstagram')}>
+                <InstagramIcon />
+              </SocialIconButton>
             </div>
           </div>
 
-          <FooterColumn title={t('footer.product')} links={productLinks} />
-          <FooterColumn title={t('footer.company')} links={companyLinks} />
-          <div className="space-y-8">
-            <FooterColumn title={t('footer.resources')} links={resourceLinks} />
-            <FooterColumn title={t('footer.legal')} links={legalLinks} />
-          </div>
+          <FooterNavColumn title={t('footer.platform')} aosDelay={aosStagger(1, 70)}>
+            <FooterNavItem>
+              <FooterLink to="/listings">{t('footer.browseListings')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/owner-dashboard/create-listing">{t('footer.listProperty')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/services">{t('footer.services')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/faq">{t('footer.faq')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/verification">{t('footer.verification')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/wallet">{t('footer.wallet')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/review">{t('footer.reviews')}</FooterLink>
+            </FooterNavItem>
+          </FooterNavColumn>
+
+          <FooterNavColumn title={t('footer.company')} aosDelay={aosStagger(2, 70)}>
+            <FooterNavItem>
+              <FooterLink to="/about">{t('footer.about')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/careers">{t('footer.careers')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/blogs">{t('footer.blogs')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/contact">{t('footer.contact')}</FooterLink>
+            </FooterNavItem>
+          </FooterNavColumn>
+
+          <FooterNavColumn title={t('footer.legal')} aosDelay={aosStagger(3, 70)}>
+            <FooterNavItem>
+              <FooterLink to="/terms">{t('footer.termsOfService')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/privacy">{t('footer.privacyPolicy')}</FooterLink>
+            </FooterNavItem>
+            <FooterNavItem>
+              <FooterLink to="/cookies">{t('footer.cookiePolicy')}</FooterLink>
+            </FooterNavItem>
+          </FooterNavColumn>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-white/15 pt-6 text-xs text-emerald-100/80 sm:flex-row sm:items-center sm:justify-between sm:text-sm">
+        <div
+          className="mt-12 flex flex-col gap-2 border-t border-[#aec9bc] pt-7 text-xs text-[#5f6f68] sm:flex-row sm:items-center sm:justify-between sm:text-sm"
+          {...aosFadeUp(120)}
+        >
           <p>{t('footer.copyright')}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            <Link to="/terms" className="transition hover:text-white">
-              {t('footer.privacyShort')}
-            </Link>
-            <Link to="/terms" className="transition hover:text-white">
-              {t('footer.termsShort')}
-            </Link>
-            <Link to="/terms" className="transition hover:text-white">
-              {t('footer.cookiesShort')}
-            </Link>
-          </div>
+          <p className="text-[#5f6f68]">{t('footer.tagline')}</p>
         </div>
       </div>
     </footer>

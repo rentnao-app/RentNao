@@ -11,54 +11,59 @@ import {
 } from '../lib/api';
 import { useTranslation } from '../lib/i18n';
 
-const PROMPT_DELAY_MS = 5 * 1000;
+const PROMPT_INTERVAL_MS = 2 * 60 * 1000;
+const MAX_PROMPT_SHOWS = 3;
 const MIN_CONTENT = 10;
 const MAX_CONTENT = 1000;
-const DISMISSED_KEY = 'rentnao_review_prompt_dismissed';
-const SUBMITTED_KEY = 'rentnao_review_prompt_submitted';
-const VISIT_START_KEY = 'rentnao_visit_started_at';
 
-const EXCLUDED_PATH_PREFIXES = ['/login', '/signup', '/admin-dashboard', '/auth'];
+const SHOW_COUNT_KEY = 'rentnao_review_prompt_show_count';
+const SUBMITTED_KEY = 'rentnao_review_prompt_submitted';
+/** Legacy key from earlier one-dismiss behavior — no longer used for skipping. */
+const LEGACY_DISMISSED_KEY = 'rentnao_review_prompt_dismissed';
+
+const EXCLUDED_PATH_PREFIXES = ['/login', '/signup', '/admin-dashboard', '/auth', '/review', '/reviews'];
 
 function isExcludedPath(pathname) {
   return EXCLUDED_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
-function shouldSkipPrompt() {
+function readShowCount() {
   try {
-    return localStorage.getItem(DISMISSED_KEY) === '1' || localStorage.getItem(SUBMITTED_KEY) === '1';
+    const n = Number(localStorage.getItem(SHOW_COUNT_KEY) || '0');
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeShowCount(count) {
+  try {
+    localStorage.setItem(SHOW_COUNT_KEY, String(Math.max(0, count)));
+  } catch {
+    // ignore
+  }
+}
+
+function hasSubmittedReviewPrompt() {
+  try {
+    return localStorage.getItem(SUBMITTED_KEY) === '1';
   } catch {
     return false;
   }
 }
 
-function markDismissed() {
-  try {
-    localStorage.setItem(DISMISSED_KEY, '1');
-  } catch {
-    // ignore
-  }
-}
-
-function markSubmitted() {
+/** Call after a successful testimonial submit so the prompt never returns. */
+export function markPlatformReviewSubmitted() {
   try {
     localStorage.setItem(SUBMITTED_KEY, '1');
+    localStorage.removeItem(LEGACY_DISMISSED_KEY);
   } catch {
     // ignore
   }
 }
 
-function getRemainingPromptDelay() {
-  try {
-    let start = sessionStorage.getItem(VISIT_START_KEY);
-    if (!start) {
-      start = String(Date.now());
-      sessionStorage.setItem(VISIT_START_KEY, start);
-    }
-    return Math.max(0, PROMPT_DELAY_MS - (Date.now() - Number(start)));
-  } catch {
-    return PROMPT_DELAY_MS;
-  }
+function canShowPrompt() {
+  return !hasSubmittedReviewPrompt() && readShowCount() < MAX_PROMPT_SHOWS;
 }
 
 export default function PlatformReviewPrompt() {
@@ -66,6 +71,8 @@ export default function PlatformReviewPrompt() {
   const location = useLocation();
   const navigate = useNavigate();
   const dialogRef = useRef(null);
+  const timerRef = useRef(null);
+  const openRef = useRef(false);
 
   const [open, setOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(() => isLoggedIn());
@@ -73,14 +80,65 @@ export default function PlatformReviewPrompt() {
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  openRef.current = open;
+
   const trimmed = content.trim();
   const canSubmitReview =
     loggedIn && trimmed.length >= MIN_CONTENT && trimmed.length <= MAX_CONTENT && rating >= 1 && rating <= 5;
 
+  const clearTimer = useCallback(() => {
+    if (timerRef.current != null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const tryOpenPromptRef = useRef(async () => {});
+
+  tryOpenPromptRef.current = async () => {
+    if (!canShowPrompt() || openRef.current) return;
+
+    if (isExcludedPath(window.location.pathname)) {
+      if (!canShowPrompt()) return;
+      clearTimer();
+      timerRef.current = window.setTimeout(() => {
+        void tryOpenPromptRef.current();
+      }, PROMPT_INTERVAL_MS);
+      return;
+    }
+
+    if (isLoggedIn()) {
+      try {
+        const res = await apiFetch('/testimonials/me');
+        const body = await res.json().catch(() => ({}));
+        if (res.ok && body?.data?.hasReview === true) {
+          markPlatformReviewSubmitted();
+          clearTimer();
+          return;
+        }
+      } catch {
+        // still show prompt if check fails
+      }
+    }
+
+    if (!canShowPrompt() || openRef.current) return;
+
+    writeShowCount(readShowCount() + 1);
+    setOpen(true);
+  };
+
+  const scheduleNextPrompt = useCallback(() => {
+    clearTimer();
+    if (!canShowPrompt()) return;
+    timerRef.current = window.setTimeout(() => {
+      void tryOpenPromptRef.current();
+    }, PROMPT_INTERVAL_MS);
+  }, [clearTimer]);
+
   const dismiss = useCallback(() => {
     setOpen(false);
-    markDismissed();
-  }, []);
+    scheduleNextPrompt();
+  }, [scheduleNextPrompt]);
 
   useEffect(() => {
     const syncAuth = () => setLoggedIn(isLoggedIn());
@@ -89,36 +147,9 @@ export default function PlatformReviewPrompt() {
   }, []);
 
   useEffect(() => {
-    if (shouldSkipPrompt()) return undefined;
-
-    let cancelled = false;
-    const remaining = getRemainingPromptDelay();
-
-    const timer = window.setTimeout(async () => {
-      if (cancelled || shouldSkipPrompt()) return;
-      if (isExcludedPath(window.location.pathname)) return;
-
-      if (isLoggedIn()) {
-        try {
-          const res = await apiFetch('/testimonials/me');
-          const body = await res.json().catch(() => ({}));
-          if (res.ok && body?.data?.hasReview === true) {
-            markSubmitted();
-            return;
-          }
-        } catch {
-          // still show prompt if check fails
-        }
-      }
-
-      if (!cancelled) setOpen(true);
-    }, remaining);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, []);
+    scheduleNextPrompt();
+    return clearTimer;
+  }, [scheduleNextPrompt, clearTimer]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -166,7 +197,8 @@ export default function PlatformReviewPrompt() {
         throw new Error(getApiErrorMessage(body, t('reviews.toast.submitFailed')));
       }
 
-      markSubmitted();
+      markPlatformReviewSubmitted();
+      clearTimer();
       toast.success(t('reviews.toast.submitted'));
       setOpen(false);
     } catch (err) {

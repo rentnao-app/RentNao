@@ -310,6 +310,7 @@ export default function ListingsPage() {
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-[2rem]">
           {t('listings.title')}
         </h1>
+        <p className="mt-1 text-sm text-slate-500">{t('listings.subtitle')}</p>
 
         <div className="mt-5 space-y-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -430,7 +431,7 @@ export default function ListingsPage() {
             <div
               className={
                 viewMode === 'grid'
-                  ? 'mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3'
+                  ? 'mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5'
                   : 'mt-5 flex flex-col gap-4'
               }
             >
@@ -438,8 +439,6 @@ export default function ListingsPage() {
                 <ListingCard
                   key={item.listingId}
                   item={item}
-                  variant="browse"
-                  layout={viewMode}
                   canWishlist={canWishlist}
                   isWishlisted={wishlistIds.has(String(item.listingId))}
                   onToggleWishlist={handleToggleWishlist}
