@@ -1,220 +1,158 @@
-# RentNao
+# RentNao backend
 
-A modern rental property management backend API built with Hono, TypeScript, and PostgreSQL.
+Hono + Bun + Prisma API for the Bangladesh rental marketplace.
 
-## Quick Start
+Agent context: [`../CLAUDE.md`](../CLAUDE.md). OpenAPI: http://localhost:3000/docs after `bun run dev`.
+
+## Quick start
 
 ### Prerequisites
 
-Install [Bun](https://bun.sh) and [Docker](https://www.docker.com/products/docker-desktop):
+[Bun](https://bun.sh) and [Docker](https://www.docker.com/products/docker-desktop).
 
-**macOS (Homebrew):**
 ```bash
+# macOS
 brew install oven-sh/bun/bun
 brew install --cask docker
-```
 
-**Linux (Ubuntu/Debian):**
-```bash
+# Ubuntu/Debian
 curl -fsSL https://bun.sh/install | bash
-sudo apt-get install docker.io docker-compose
-sudo usermod -aG docker $USER  # Add user to docker group
+sudo apt-get install docker.io docker-compose-v2
 ```
 
-**Windows:**
-Download and install from:
-- [Bun](https://bun.sh)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop)
+### Run
 
-### Installation
-
-1. **Clone & Install dependencies:**
-   ```bash
-   bun install
-   ```
-
-2. **Start Docker containers** (PostgreSQL, Redis, MinIO):
-   ```bash
-   docker compose up -d
-   ```
-
-3. **Setup the database:**
-   ```bash
-   bun run db:push
-   ```
-
-4. **Start development server:**
-   ```bash
-   bun run dev
-   ```
-
-   Server runs at `http://localhost:3000`  
-   OpenAPI docs: `http://localhost:3000/docs`
-
-## Docker Services
-
-The `docker-compose.yml` includes three containerized services:
-
-| Service | Port | Credentials | Volume |
-|---------|------|-------------|--------|
-| **PostgreSQL** | 5432 | user/password | `postgres_data` |
-| **Redis** | 6379 | (no auth) | `redis_data` |
-| **MinIO (S3)** | 9000, 9001 | minioadmin/minioadmin | `minio_data` |
-
-**Start containers:**
-```bash
-docker-compose up -d
-```
-
-**Stop containers:**
-```bash
-docker-compose down
-```
-
-**View logs:**
-```bash
-docker-compose logs -f
-```
-
-**Access MinIO console:**
-Open `http://localhost:9001` with credentials: `minioadmin` / `minioadmin`
-
-## Environment Setup
-
-1. **Copy example env file:**
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **For Docker services, use defaults:**
-   - Database: `postgresql://user:password@localhost:5432/rentnao?schema=public`
-   - Redis: `localhost:6379`
-   - MinIO S3: `http://localhost:9000` (minioadmin/minioadmin)
-
-## Available Commands
+From **`backend/`**:
 
 ```bash
-bun run dev              # Watch mode development server
-bun run start            # Start production server
-bun run build            # Build for production
-bun run db:push          # Sync Prisma schema to database
-bun run db:migrate       # Run database migrations
-bun run db:generate      # Generate Prisma client
-bun run db:studio        # Open Prisma Studio
-bun run lint             # Check code style
-bun run format           # Format code with Prettier
+docker compose up -d          # Postgres, Redis, MinIO
+bun install
+cp .env.example .env          # then fix DATABASE_URL port — see below
+bun run db:push               # or: bunx prisma migrate deploy
+bun run dev
 ```
 
-## Project Structure
+- API: http://localhost:3000
+- Docs: http://localhost:3000/docs
+- Health: http://localhost:3000/health
 
-```
-src/
-├── index.ts                              # Application entry point
-├── config/
-│   ├── env.ts                           # Environment variables
-│   └── openapi.ts                       # Scalar configuration
-├── db/
-│   ├── client.ts                        # PostgreSQL connection pool
-│   └── redis.ts                         # Redis cache client
-├── errors/
-│   ├── base.ts                          # AppError base class
-│   ├── auth.ts                          # Auth-specific errors
-│   ├── admin.ts                         # Admin-specific errors
-│   ├── database.ts                      # Database errors
-│   ├── validation.ts                    # Validation errors
-│   ├── redis.ts                         # Redis errors
-│   └── index.ts                         # Error exports
-├── middlewares/
-│   └── error-handler.ts                 # Global error handler
-├── modules/
-│   ├── admin/                           # Admin operations
-│   │   ├── controllers/                 # Request handlers
-│   │   ├── services/                    # Business logic
-│   │   ├── routes/                      # API routes
-│   │   ├── schemas/                     # Zod validation schemas
-│   │   └── middlewares/
-│   │       └── admin-auth.ts            # Admin authorization
-│   ├── auth/                            # Authentication & JWT
-│   │   ├── controllers/                 # Login, register, password, verification handlers
-│   │   ├── services/                    # Auth logic, token storage
-│   │   ├── routes/                      # Auth endpoints
-│   │   ├── schemas/                     # Request/response validation
-│   │   ├── middlewares/
-│   │   │   └── auth.ts                  # JWT verification
-│   │   ├── config/
-│   │   │   └── token-ttl.ts             # Token expiration times
-│   │   ├── types/
-│   │   │   └── auth.types.ts            # TypeScript types
-│   │   └── utils/                       # JWT, password, token utilities
-│   ├── health/
-│   │   └── routes.ts                    # Health check endpoint
-│   └── users/
-│       ├── controllers/                 # Profile, verification handlers
-│       ├── services/                    # User profile, KYC logic
-│       ├── routes/                      # User endpoints
-│       ├── schemas/                     # User validation schemas
-│       └── types/                       # User types
-├── types/
-│   ├── common.ts                        # Shared types
-│   └── enums.ts                         # Enums (UserRole, Status, etc)
-└── utils/
-    └── response.ts                      # Response utilities
+## Docker services (`backend/docker-compose.yml`)
+
+| Service | Host port | Credentials |
+|---------|-----------|-------------|
+| PostgreSQL 16 | **5433** → 5432 | `user` / `password` / db `rentnao` |
+| Redis 7 | 6379 | none |
+| MinIO | 9000 (S3), 9001 (console) | `minioadmin` / `minioadmin` |
+
+**Use host port 5433 in `DATABASE_URL`.** Port 5432 is often a different Postgres on the host and will fail with `password authentication failed`.
+
+```env
+DATABASE_URL="postgresql://user:password@127.0.0.1:5433/rentnao?schema=public"
 ```
 
-## API Documentation
+`.env.example` still shows `:5432` — override it.
 
-Full OpenAPI documentation available after starting the server:
-```
-http://localhost:3000/docs
-```
-
-## Development
-
-**Code style:**
 ```bash
-bun run format      # Auto-format code
-bun run lint        # Check formatting
+docker compose up -d
+docker compose logs -f postgres
+docker compose down            # keep volumes
+docker compose down -v         # wipe data
 ```
 
-**Database changes:**
+MinIO console: http://localhost:9001
+
+## Environment
+
+Copy `.env.example` → `.env`. Essential:
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | Postgres (**5433** locally) |
+| `JWT_SECRET` | Auth tokens |
+| `REDIS_HOST` / `REDIS_PORT` | Cache, sessions, IP rate limit |
+| `S3_INTERNAL_ENDPOINT` | Backend → MinIO (`http://localhost:9000`) |
+| `S3_PUBLIC_ENDPOINT` | Browser URLs (prod: `https://cdn.rentnao.co`) |
+| `CORS_ORIGIN` | Comma-separated SPA origins |
+
+Optional: `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `PUBLIC_API_ORIGIN`, `FIREBASE_*` (FCM), SMS OTP (`SMS_OTP_*`, `BULKSMSBD_*`).
+
+IP rate limits (Redis, fail-open if Redis is down): `/auth` 40/min, `/properties` 120/min. See `src/middlewares/ip-rate-limit.ts`.
+
+## Commands
+
 ```bash
-# Edit prisma/schema.prisma, then:
+bun run dev              # watch server
+bun run start            # production
+bun run build            # bundle
+bun run db:push          # sync schema (dev)
+bun run db:migrate       # create/apply migrations
+bun run db:generate      # Prisma client
+bun run db:studio        # Prisma Studio
+bun run lint
+bun run format
+```
+
+After editing `prisma/schema.prisma`:
+
+```bash
 bun run db:migrate
 ```
 
-## Production Build
+On production, prefer `bunx prisma migrate deploy` inside the backend container.
 
-```bash
-bun run build       # Creates dist/index.js (2.52MB)
-bun run dist/index.js
+## Modules (mounted in `src/index.ts`)
+
+| Prefix | Module |
+|--------|--------|
+| `/health` | Health |
+| `/auth` | Login, OTP, Google OAuth, password |
+| `/users` | Profiles, KYC |
+| `/properties` | Listings, search, unlock |
+| `/wallet` | Balance, topup, fees |
+| `/wishlists` | Tenant wishlist |
+| `/requests` | Rental requests |
+| `/notifications` | In-app + FCM + admin broadcast |
+| `/testimonials` | Reviews |
+| `/conversations` | Chat REST |
+| `/ws` | Chat WebSocket |
+| `/deals` | Rent-deed PDF |
+| `/admin` | Admin dashboard |
+
+There is **no `/api` prefix**. Frontend calls `apiFetch('/auth/login', …)`.
+
+## Project structure
+
+```text
+src/
+├── index.ts                 # App entry, CORS, rate limits, route mount
+├── config/                  # env, OpenAPI
+├── db/                      # Postgres, Redis, S3
+├── errors/
+├── middlewares/             # error-handler, ip-rate-limit
+├── modules/                 # domain modules (auth, users, properties, …)
+├── jobs/                    # cron (conversation expiry, …)
+└── utils/
+prisma/
+├── schema.prisma
+└── migrations/
+scripts/                     # seeds and one-off admin scripts
+docker-compose.yml           # local infra only
 ```
 
 ## Troubleshooting
 
-**Port already in use:**
-```bash
-# Kill process using port 3000
-lsof -ti:3000 | xargs kill -9
-```
+| Symptom | Fix |
+|---------|-----|
+| `connect ECONNREFUSED 127.0.0.1:5433` | `docker compose up -d` |
+| `password authentication failed` on 5432 | You hit host Postgres. Use **5433** |
+| `Cannot find module 'firebase-admin'` | `bun install` |
+| Port 3000 in use | `lsof -ti:3000 \| xargs kill -9` |
+| Prod `column … does not exist` | `bunx prisma migrate deploy` on the VPS |
 
-**Docker container issues:**
-```bash
-# Remove containers and volumes (data loss)
-docker-compose down -v
+## Production
 
-# Rebuild from scratch
-docker-compose up -d --build
-```
-
-**Database connection error:**
-```bash
-# Check PostgreSQL is running
-docker-compose ps
-
-# View logs
-docker-compose logs postgres
-```
+Images: `ghcr.io/rentnao-app/rentnao-backend`. Deployed from `main` via GitHub Actions. VPS app dir: `/home/rentnao_admin/opt/rentnao/app`.
 
 ---
 
-Built with [Hono](https://hono.dev), [Bun](https://bun.sh), and [Prisma](https://www.prisma.io)
+Built with [Hono](https://hono.dev), [Bun](https://bun.sh), and [Prisma](https://www.prisma.io).

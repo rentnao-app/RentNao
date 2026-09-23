@@ -26,7 +26,7 @@ Bangladesh rental marketplace: **React/Vite SPA** + **Hono/Bun API** + **Postgre
 
 ## Local development (correct commands)
 
-Root `README.md` mentions `.env.service` and `docker-compose.service.yml` — **those files are not in this repo**. Use `backend/docker-compose.yml` instead.
+Root `README.md` and `CLAUDE.md` match the tree: local infra is `backend/docker-compose.yml`. Root compose/Caddy files are **not** in this repo (VPS only).
 
 ### 1. Start infra
 
@@ -216,4 +216,4 @@ Run `prisma migrate deploy` on VPS after schema changes.
 
 ## More detail
 
-See [reference.md](reference.md) for migrations list, env vars, and team branch tips.
+See [CLAUDE.md](../../../CLAUDE.md) (agent entry) and [reference.md](reference.md) (migrations, env, VPS RL plan).

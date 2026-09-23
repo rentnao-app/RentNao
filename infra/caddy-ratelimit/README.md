@@ -2,6 +2,8 @@
 
 Custom Caddy image with [`mholt/caddy-ratelimit`](https://github.com/mholt/caddy-ratelimit) for DDoS / scrape / brute-force mitigation at the HTTP edge.
 
+Project context: [`../../CLAUDE.md`](../../CLAUDE.md). This package is **in-repo**; applying it on the VPS infra Caddy is still a manual step.
+
 ## Why here
 
 Public traffic hits **VPS infra Caddy** first (`opt/rentnao/infra`), then `frontend` / `backend`. App-level OTP/WS limits do not stop bandwidth burn. This package is the edge control plane.

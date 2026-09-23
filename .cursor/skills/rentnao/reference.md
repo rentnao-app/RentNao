@@ -15,8 +15,9 @@ RentNao/
 │   ├── src/pages/              # Route pages
 │   ├── src/components/         # Shared UI
 │   └── src/lib/i18n/           # EN/BN translations
-├── scripts/db-backup.sh        # Postgres backup (expects .env.service — may need adapt)
-└── README.md                   # Note: references some root compose files not present in repo
+├── scripts/db-backup.sh        # Postgres dump (needs POSTGRES_* via ENV_FILE)
+├── CLAUDE.md                   # Claude / agent entry point
+└── README.md                   # Human overview (aligned with this tree)
 ```
 
 ## Recent backend migrations (merge branch)

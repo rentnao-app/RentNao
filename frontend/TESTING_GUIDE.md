@@ -1,7 +1,9 @@
 # Frontend Testing Guide — Manual Test Checklist
 
-Use this guide to test every frontend implementation in the browser.  
-**Prerequisites:** Backend API running (e.g. `http://localhost:3000`), frontend dev server running (`npm run dev`).
+Use this guide to test frontend flows in the browser.  
+**Prerequisites:** Backend on `http://localhost:3000`, frontend `npm run dev`.
+
+**API paths have no `/api` prefix.** Example: `POST /requests`, not `POST /api/requests`. Chat routes are **`/chats`** and **`/chats/:conversationId`**, not `/chat`. Full route list: `README.md` and `src/App.jsx`.
 
 ---
 
@@ -11,10 +13,10 @@ Use this guide to test every frontend implementation in the browser.
 
 | Step | Action | Expect |
 |------|--------|--------|
-| 1.1 | Open `/` | Hero, “Some Listings” section, footer with About / Terms / FAQ |
-| 1.2 | Type an area in search box (e.g. “Gulshan”), click **Search** | Navigate to `/listings?area=Gulshan` |
-| 1.3 | Check listing cards | First property image shown when API returns `property.images` or `listing.images`; otherwise placeholder icon |
-| 1.4 | Click **About**, **Terms**, **FAQ** in footer | Go to `/about`, `/terms`, `/faq` |
+| 1.1 | Open `/` | Figma-style hero, featured listings, why/comparison/payments/CTA, footer |
+| 1.2 | Use the search bar (area / type / budget), click **Search** | Navigate to `/listings` with query params |
+| 1.3 | Check listing cards | First property image when the API returns images; otherwise placeholder |
+| 1.4 | Footer legal links | `/about`, `/terms`, `/faq`, `/privacy`, `/contact` as implemented |
 
 ### Listings browse (`/listings`)
 
@@ -32,11 +34,11 @@ Use this guide to test every frontend implementation in the browser.
 | 3.1 | Open any listing e.g. `/listings/1` | ImageGallery (or placeholder if no images), stats row, property info, sidebar |
 | 3.2 | Not logged in | “Log In to Apply” in sidebar; no wishlist heart in stats row |
 | 3.3 | Logged in, no access | “Unlock address & map for X BDT” block; “Unlock contact (X BDT)” in Contact Owner; owner name may link to profile |
-| 3.4 | Click **Unlock** | Payment modal or flow appears (calls `POST /api/payments/listing-access`) |
+| 3.4 | Click **Unlock** | Wallet/fee flow (listing unlock via properties/wallet APIs — no `/api` prefix) |
 | 3.5 | After access (or if backend says hasAccess) | MapView (if lat/lng), address in Property Information, full contact, “Message Owner” button |
-| 3.6 | Logged-in tenant: click **Apply for this Listing** | POST `/api/requests`; toast success/error |
-| 3.7 | Logged in: click heart in stats row | Add/remove wishlist (POST/DELETE `/api/wishlists`); toast; heart fills/unfills |
-| 3.8 | Click **Message Owner** (with access) | POST `/api/conversations`, then navigate to `/chat/:conversationId` |
+| 3.6 | Logged-in tenant: click **Apply for this Listing** | POST `/requests`; toast success/error |
+| 3.7 | Logged in: click heart in stats row | Add/remove wishlist (POST/DELETE `/wishlists`); toast; heart fills/unfills |
+| 3.8 | Click **Message Owner** (with access) | POST `/conversations`, then navigate to `/chats/:conversationId` |
 | 3.9 | Click owner name (when link present) | Go to `/profile/:userId` |
 
 ### Static & 404
@@ -79,24 +81,24 @@ Use this guide to test every frontend implementation in the browser.
 | 7.3 | Click **My Applications** | `/tenant-dashboard/applications` |
 | 7.4 | Click **My Rentals** | `/dashboard/rentals` |
 | 7.5 | Click **Wishlist** | `/tenant-dashboard/wishlist` |
-| 7.6 | Click **Chat** | `/chat` |
+| 7.6 | Click **Chat** | `/chats` |
 | 7.7 | Click **Profile** | `/account` |
 
 ### My Applications (`/tenant-dashboard/applications`)
 
 | Step | Action | Expect |
 |------|--------|--------|
-| 8.1 | Open page | List from `GET /api/requests/mine`; each card shows listing, status |
-| 8.2 | Click **Withdraw** on pending | POST `/api/requests/:id/withdraw`; card updates |
-| 8.3 | Click **Confirm Move-in** on accepted | POST `/api/rentals/:id/confirm`; toast/card update |
+| 8.1 | Open page | List from `GET /requests/mine`; each card shows listing, status |
+| 8.2 | Click **Withdraw** on pending | POST `/requests/:id/withdraw`; card updates |
+| 8.3 | Click **Confirm Move-in** on accepted | POST `/rentals/:id/confirm`; toast/card update |
 
 ### Wishlist (`/tenant-dashboard/wishlist`)
 
 | Step | Action | Expect |
 |------|--------|--------|
-| 9.1 | Open page | List from `GET /api/wishlists`; grid of listing cards |
+| 9.1 | Open page | List from `GET /wishlists`; grid of listing cards |
 | 9.2 | Click a card | Go to listing detail |
-| 9.3 | Click remove on a listing | DELETE `/api/wishlists/:listingId`; card removed |
+| 9.3 | Click remove on a listing | DELETE `/wishlists/:listingId`; card removed |
 
 ---
 
@@ -109,7 +111,7 @@ Use this guide to test every frontend implementation in the browser.
 | 10.1 | Log in as **owner**, open `/owner-dashboard` | NotificationBell in header; cards for My Properties, Create Listing, Tenant Requests, Payments, My Rentals, Messages, Profile |
 | 10.2 | **Tenant Requests** | `/owner-dashboard/requests` |
 | 10.3 | **My Rentals** | `/dashboard/rentals` |
-| 10.4 | **Messages** | `/chat` |
+| 10.4 | **Messages** | `/chats` |
 
 ### Create listing (`/owner-dashboard/create-listing`)
 
@@ -117,22 +119,22 @@ Use this guide to test every frontend implementation in the browser.
 |------|--------|--------|
 | 11.1 | Open page | Form: property type, size, area, **address**, **MapPicker**, rent, availability |
 | 11.2 | Click map | Pin placed; lat/lng stored |
-| 11.3 | Submit form | POST `/api/users/owner/listings` with `address`, `exact_lat`, `exact_lng` |
-| 11.4 | After success | “Listing created” section with **ImageUploader**; add photos (POST `/api/properties/:id/images`); “Done — My Properties” link |
+| 11.3 | Submit form | POST `/users/owner/listings` with `address`, `exact_lat`, `exact_lng` |
+| 11.4 | After success | “Listing created” section with **ImageUploader**; add photos (POST `/properties/:id/images`); “Done — My Properties” link |
 
 ### Incoming requests (`/owner-dashboard/requests`)
 
 | Step | Action | Expect |
 |------|--------|--------|
-| 12.1 | Open page | List from `GET /api/requests/incoming`; grouped by listing |
-| 12.2 | **Accept** on a request | POST `/api/requests/:id/accept` |
-| 12.3 | **Reject** on a request | POST `/api/requests/:id/reject` |
+| 12.1 | Open page | List from `GET /requests/incoming`; grouped by listing |
+| 12.2 | **Accept** on a request | POST `/requests/:id/accept` |
+| 12.3 | **Reject** on a request | POST `/requests/:id/reject` |
 
 ### My properties (`/owner-dashboard/my-properties`)
 
 | Step | Action | Expect |
 |------|--------|--------|
-| 13.1 | Open page | List from `GET /api/users/owner/properties`; links to edit/detail as implemented |
+| 13.1 | Open page | List from `GET /users/owner/properties`; links to edit/detail as implemented |
 
 ---
 
@@ -142,23 +144,23 @@ Use this guide to test every frontend implementation in the browser.
 
 | Step | Action | Expect |
 |------|--------|--------|
-| 14.1 | Open page (tenant or owner) | List from `GET /api/rentals/mine`; active vs past rentals |
-| 14.2 | **Mark Complete** on active | POST `/api/rentals/:id/complete` |
-| 14.3 | **Leave Review** on completed | ReviewForm modal; submit POST `/api/reviews` |
-| 14.4 | If reviews exist | Loaded via `GET /api/reviews/rental/:rentalId`; ReviewCard list |
+| 14.1 | Open page (tenant or owner) | List from `GET /rentals/mine`; active vs past rentals |
+| 14.2 | **Mark Complete** on active | POST `/rentals/:id/complete` |
+| 14.3 | **Leave Review** on completed | ReviewForm modal; submit POST `/reviews` |
+| 14.4 | If reviews exist | Loaded via `GET /reviews/rental/:rentalId`; ReviewCard list |
 
 ---
 
 ## 6. Chat
 
-### Chat page (`/chat`, `/chat/:id`)
+### Chat page (`/chats`, `/chats/:conversationId`)
 
 | Step | Action | Expect |
 |------|--------|--------|
-| 15.1 | Open `/chat` (logged in) | Left: conversation list (`GET /api/conversations`); right: “Select a conversation” or messages |
-| 15.2 | Click a conversation | Right panel loads messages (`GET /api/conversations/:id/messages`); input at bottom |
-| 15.3 | Send a message | POST `/api/conversations/:id/messages`; message appears (and Realtime if subscribed) |
-| 15.4 | Start from listing detail | “Message Owner” → POST `/api/conversations` → redirect to `/chat/:id` |
+| 15.1 | Open `/chats` (logged in) | Left: conversation list (`GET /conversations`); right: “Select a conversation” or messages |
+| 15.2 | Click a conversation | Right panel loads messages (`GET /conversations/:id/messages`); input at bottom |
+| 15.3 | Send a message | POST `/conversations/:id/messages`; message appears (WebSocket `/ws` if connected) |
+| 15.4 | Start from listing detail | “Message Owner” → POST `/conversations` → redirect to `/chats/:conversationId` |
 
 ---
 
@@ -168,15 +170,15 @@ Use this guide to test every frontend implementation in the browser.
 
 | Step | Action | Expect |
 |------|--------|--------|
-| 16.1 | Log in, open any dashboard | Bell icon in header; unread count badge if `GET /api/notifications/unread-count` returns > 0 |
-| 16.2 | Click bell | Dropdown with recent notifications (`GET /api/notifications?limit=5`); “View All” link |
+| 16.1 | Log in, open any dashboard | Bell icon in header; unread count badge if `GET /notifications/unread-count` returns > 0 |
+| 16.2 | Click bell | Dropdown with recent notifications (`GET /notifications?limit=5`); “View All” link |
 
 ### Notifications page (`/notifications`)
 
 | Step | Action | Expect |
 |------|--------|--------|
-| 17.1 | Open `/notifications` | Full list (`GET /api/notifications?limit=50`); read/unread styling |
-| 17.2 | Click **Mark all as read** | PATCH `/api/notifications/read-all`; list updates |
+| 17.1 | Open `/notifications` | Full list (`GET /notifications?limit=50`); read/unread styling |
+| 17.2 | Click **Mark all as read** | PATCH `/notifications/read-all`; list updates |
 
 ---
 
@@ -186,7 +188,7 @@ Use this guide to test every frontend implementation in the browser.
 
 | Step | Action | Expect |
 |------|--------|--------|
-| 18.1 | Open e.g. `/profile/<owner-user-id>` (from listing detail owner link) | `GET /api/users/:userId/profile`; username, role, member since; rating breakdown; review count; list of ReviewCards |
+| 18.1 | Open e.g. `/profile/<owner-user-id>` (from listing detail owner link) | `GET /users/:userId/profile`; username, role, member since; rating breakdown; review count; list of ReviewCards |
 
 ---
 
@@ -197,9 +199,9 @@ Use this guide to test every frontend implementation in the browser.
 | Step | Action | Expect |
 |------|--------|--------|
 | 19.1 | Log in as **admin** | RentNao header; NotificationBell; stats; Pending Payments section |
-| 19.2 | **Pending Payments** | Table from `GET /api/admin/payments/pending`; Confirm / Reject per row |
-| 19.3 | **Confirm** a payment | POST `/api/admin/payments/:id/confirm`; row removed |
-| 19.4 | **Reject** a payment | POST `/api/admin/payments/:id/reject`; row removed |
+| 19.2 | **Pending Payments** | Table from `GET /admin/payments/pending`; Confirm / Reject per row |
+| 19.3 | **Confirm** a payment | POST `/admin/payments/:id/confirm`; row removed |
+| 19.4 | **Reject** a payment | POST `/admin/payments/:id/reject`; row removed |
 | 19.5 | Unverified users | List, select user, review documents; Approve/Reject user; Accept/Reject document (existing behavior) |
 
 ---

@@ -1,189 +1,189 @@
 # RentNao
 
-RentNao is a role-based rental platform designed for the Bangladesh market, connecting tenants and property owners through a verified onboarding and listing workflow.
+RentNao is a trust-first rental marketplace for Bangladesh. Tenants and owners complete verified onboarding, then use role-based dashboards for listings, requests, chat, wallet, and admin review.
 
-This repository contains the full business application stack:
-- Customer-facing web app (tenant/owner/admin experiences)
-- Backend API and business logic
+**For Claude / agents:** start with [`CLAUDE.md`](CLAUDE.md). It is the source of truth for commands, ports, and what is *not* in this repo.
 
-## Business Context
+## Stack
 
-RentNao is structured as a trust-first rental marketplace. The product emphasizes:
-- **Verified onboarding** for both tenants and owners
-- **Role-based journeys** from sign-up to dashboard access
-- **Operational readiness** with audit-friendly modules (auth, wallet, requests, notifications)
+| Layer | Path | Tech |
+|-------|------|------|
+| Web app | `frontend/` | React 19, Vite 7, Tailwind, react-router-dom 7, EN/BN i18n, Google Maps |
+| API | `backend/` | Hono, Bun, Prisma, PostgreSQL, Redis, MinIO/S3 |
+| Local infra | `backend/docker-compose.yml` | Postgres **5433**, Redis 6379, MinIO 9000/9001 |
+| Edge RL (template) | `infra/caddy-ratelimit/` | Custom Caddy + mholt rate limit (VPS apply is manual) |
+| CI | `.github/workflows/deploy.yml` | GHCR images on push to **`main`**, SSH deploy |
 
-Core onboarding flow:
-1. User signs up (email/password, phone, or Google) and selects role.
-2. User completes role-specific registration (`tenant` or `owner`).
-3. User submits verification documents.
-4. User is routed to role dashboard for operational use.
+Roles: **TENANT**, **OWNER**, **ADMIN**.
 
-## Repository Structure
+## Onboarding flow
+
+1. Sign up (phone, email/password, or Google) and pick a role.
+2. Complete tenant or owner registration.
+3. Submit KYC / verification documents.
+4. Use the role dashboard (listings, requests, chat, wallet).
+
+## Repository layout
 
 ```text
 RentNao/
-├── README.md                      # This document (business + technical entry point)
-├── docker-compose.service.yml     # Local infra: Postgres, Redis, MinIO
-├── docker-compose.app.yml         # Optional: backend + frontend images + Caddy
-├── Caddyfile                      # Used by docker-compose.app.yml
-├── .env.service.example           # Template for service compose (copy to .env.service)
-├── .env.app.example               # Template for app compose (copy to .env.app)
-├── scripts/
-│   └── db-backup.sh               # Host backup for Postgres container
-├── .github/workflows/
-│   └── deploy.yml                 # GHCR image builds on push to main
-├── backend/                       # Hono/Bun API, Prisma, auth, wallet, modules
-└── frontend/                      # React/Vite SPA (tenant/owner/admin UX)
+├── CLAUDE.md                      # Agent / Claude Pro context (read first)
+├── README.md                      # This file
+├── .github/workflows/deploy.yml   # Production deploy (main only)
+├── backend/                       # API + local Docker infra
+│   └── docker-compose.yml         # Postgres, Redis, MinIO
+├── frontend/                      # SPA
+├── infra/caddy-ratelimit/         # Custom Caddy image + example Caddyfile
+└── scripts/db-backup.sh           # Postgres dump (needs POSTGRES_* env)
 ```
 
-## Platform Architecture
+**Not in this repo** (production-only, on the VPS):
 
-### Frontend (`frontend`)
-- React + Vite single-page application
-- Role-based pages and guarded routes
-- Integrates with backend via `VITE_API_URL`
-- Handles signup, onboarding, listings, requests, wallet, notifications
+- `docker-compose.app.yml` / `docker-compose.service.yml`
+- Root `Caddyfile`, `.env.app`, `.env.service`
 
-### Backend (`backend`)
-- TypeScript + Hono + Bun
-- Module-oriented domain structure (`auth`, `users`, `properties`, `wallet`, `wishlists`, `rental-requests`, `notifications`, `admin`, etc.)
-- PostgreSQL via Prisma, with Redis and MinIO in local Docker stack
-- JWT-based auth and refresh-token flows
-- Google OAuth support with secure code exchange
+Do not recreate those here unless you are deliberately moving infra into git.
 
-## Quick Start (Local Development)
+## Quick start (local)
 
-### 1) Prerequisites
+### Prerequisites
 
-- Node.js 20+
+- Node.js 20.19+ or 22.12+ (Vite 7)
 - Bun (latest stable)
 - Docker + Docker Compose
 
-### 2) Clone
+### 1. Infrastructure
 
 ```bash
-git clone <your-repo-url>
-cd RentNao
+cd backend
+docker compose up -d
+docker ps   # rentnao-postgres, rentnao-redis, rentnao-minio
 ```
 
-### 3) Start infrastructure (from repository root)
+Postgres is published as **`localhost:5433`** so it does not clash with a host Postgres on 5432.
 
-Postgres, Redis, and MinIO are defined at the repo root (not inside `backend/`).
-
-```bash
-cp .env.service.example .env.service   # once; edit POSTGRES_* if needed
-docker compose -f docker-compose.service.yml --env-file .env.service up -d
-```
-
-Wait until the containers are healthy, then continue.
-
-### 4) Backend
+### 2. Backend
 
 ```bash
 cd backend
 bun install
 cp .env.example .env
-# Ensure DATABASE_URL, REDIS_*, and S3_* in .env match your .env.service / local ports
-bun run db:push
+# Set DATABASE_URL to port 5433 (see below)
+bun run db:push    # or: bunx prisma migrate deploy
 bun run dev
 ```
 
-Backend default URL: `http://localhost:3000`  
-OpenAPI UI: `http://localhost:3000/docs`
+- API: http://localhost:3000
+- OpenAPI: http://localhost:3000/docs
 
-### 5) Frontend
+```env
+DATABASE_URL="postgresql://user:password@127.0.0.1:5433/rentnao?schema=public"
+```
+
+### 3. Frontend
 
 ```bash
-cd ../frontend
+cd frontend
 npm install
 cp .env.example .env
-# Set VITE_API_URL (and VITE_GOOGLE_AUTH_URL if using Google) in .env
+# VITE_API_URL=http://localhost:3000
+# VITE_GOOGLE_MAPS_API_KEY=...   # required for MapPicker / MapView
 npm run dev
 ```
 
-Frontend default URL: `http://localhost:5173`
+- SPA: http://localhost:5173
+- Dev server proxies API paths (`/auth`, `/properties`, …) to `:3000`.  
+  `[vite] http proxy error` + `ECONNREFUSED` means the backend is down.
 
-### Optional: full app stack with Caddy
+## Environment (minimum)
 
-For containerized backend + frontend behind Caddy, see `docker-compose.app.yml` and `.env.app.example`.
+**Frontend** (`frontend/.env`)
 
-## Environment Configuration
+| Variable | Purpose |
+|----------|---------|
+| `VITE_API_URL` | API origin (no `/api` prefix on paths) |
+| `VITE_GOOGLE_AUTH_URL` | `…/auth/google` if using Google login |
+| `VITE_GOOGLE_MAPS_API_KEY` | Maps JavaScript API (baked in at **build** time in Docker) |
 
-At minimum, verify these areas before running:
+Ignore leftover `VITE_SUPABASE_*` keys in `.env.example` — the app does not use Supabase.
 
-- **Frontend** (`frontend/.env`)
-  - `VITE_API_URL` — backend API base URL
-  - `VITE_GOOGLE_AUTH_URL` — backend Google OAuth initiate endpoint (if using Google)
+**Backend** (`backend/.env`)
 
-- **Backend** (`backend/.env`)
-  - `DATABASE_URL` — must reach the Postgres started by `docker-compose.service.yml`
-  - JWT secret(s)
-  - Google OAuth credentials (if enabled)
-  - Redis and S3/MinIO endpoints for local services
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | Postgres on **5433** locally |
+| `JWT_SECRET` | Auth |
+| `REDIS_HOST` / `REDIS_PORT` | Cache / rate limit / sessions |
+| `S3_*` | MinIO locally; `S3_PUBLIC_ENDPOINT` is `https://cdn.rentnao.co` in prod |
+| `CORS_ORIGIN` | Include `http://localhost:5173` |
 
-- **Compose** (root)
-  - `.env.service` — credentials and DB name for `docker-compose.service.yml`
-  - `.env.app` — image tags and app wiring for `docker-compose.app.yml`
+Optional: `GOOGLE_CLIENT_*`, `FIREBASE_*` (FCM), `KYC_BD_*`, SMS OTP (`BULKSMSBD_*`).
 
-Use each service’s README for variable details:
-- `backend/README.md`
-- `frontend/README.md`
+Details: `backend/README.md`, `frontend/README.md`.
 
-## Operational Notes
+## Branches and deploy
 
-- Role routing is central to business logic:
-  - Signup → role registration → verification → role dashboard
-- Admin workflows depend on submitted verification artifacts.
-- Payment and wallet behavior in local development should be validated against backend configuration.
-- Keep environment files out of version control.
+| Branch | Purpose |
+|--------|---------|
+| `main` | Production. GitHub Actions deploys **only** from `main` |
+| `merge` | Integration. Land `plabon` / `arefin` / `nihal` here first |
+| `plabon` | Frontend / homepage / i18n |
+| `arefin` | Backend features (deals, chat, FCM, KYC) |
+| `nihal` | Smaller UI/footer work |
 
-## Database Backups (Option A)
+Typical flow: feature branch → `merge` → PR into `main` → Actions builds GHCR `:latest` + SHA tags → VPS `docker compose pull && up`.
 
-This repo includes a host-based backup script for the Docker Postgres container.
+Frontend env (`VITE_*`) is injected as **Docker build args**. Updating a GitHub secret does nothing until the frontend image is rebuilt.
 
-**Script:** `scripts/db-backup.sh`
-
-**Defaults:**
-- Reads `POSTGRES_*` from `.env.service`
-- Stores backups in `./backups/`
-- Retains backups for 30 days
-
-**Run manually (from repo root):**
+After new Prisma migrations on production:
 
 ```bash
-bash scripts/db-backup.sh
+cd /home/rentnao_admin/opt/rentnao/app
+docker compose exec backend bunx prisma migrate deploy
+docker compose restart backend
 ```
 
-**Cron example (daily at 2:00 AM):**
+Live: https://rentnao.co — API: https://api.rentnao.co — files: https://cdn.rentnao.co
 
-```cron
-0 2 * * * cd /path/to/RentNao && bash scripts/db-backup.sh >> backups/backup.log 2>&1
-```
+## Production notes
 
-**Restore example:**
+- **Bandwidth:** public CDN (`cdn.rentnao.co` → MinIO) previously burned ~5 TB outbound. Edge rate limiting lives in `infra/caddy-ratelimit/` and still needs applying on the VPS infra Caddy.
+- **502 on API:** check Caddy/TLS/DNS, not only the backend process. Backend `/health` can be 200 while `https://api.rentnao.co` is 502.
+- **Stale UI:** frontend container image is often weeks old if `build-frontend` was skipped or `docker pull` failed (HostTier throttle).
+- Keep secrets out of git.
+
+## Database backups
+
+`scripts/db-backup.sh` dumps the `rentnao-postgres` container. It expects `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` in an env file (`ENV_FILE`, default `.env.service` which is **not** in the repo).
 
 ```bash
-# Pick a backup file from ./backups
+# Example: export vars or point at a local env file
+ENV_FILE=./.env.backup bash scripts/db-backup.sh
+```
+
+Restore:
+
+```bash
 docker exec -i rentnao-postgres pg_restore -U user -d rentnao --clean --if-exists < backups/rentnao_YYYYMMDD_HHMMSS.dump
 ```
 
-Adjust `-U` and database name to match your `.env.service` values.
+## Quality checks
 
-## Quality and Governance
+```bash
+cd backend && bun run lint && bun run build
+cd frontend && npm run lint && npm run build
+```
 
-Recommended checks before merging:
-- Run frontend lint/build and backend lint/build locally.
-- Validate onboarding and role-routing flows end-to-end.
-- Confirm no credentials/secrets are committed.
-- Keep API and UI behavior aligned when updating auth or onboarding.
+Also verify onboarding + role routing, and that no secrets were committed.
 
-## Additional Documentation
+## More documentation
 
-- Backend technical details: `backend/README.md`
-- Frontend routes and client notes: `frontend/README.md`
-- Frontend testing guidance: `frontend/TESTING_GUIDE.md`
+- [`CLAUDE.md`](CLAUDE.md) — agent context, gotchas, VPS
+- [`backend/README.md`](backend/README.md) — API commands and modules
+- [`frontend/README.md`](frontend/README.md) — routes and client notes
+- [`frontend/TESTING_GUIDE.md`](frontend/TESTING_GUIDE.md) — manual QA
+- [`infra/caddy-ratelimit/README.md`](infra/caddy-ratelimit/README.md) — edge rate limit
 
 ## License
 
-This project is proprietary unless otherwise specified by the repository owner.
+Proprietary unless the repository owner states otherwise.
