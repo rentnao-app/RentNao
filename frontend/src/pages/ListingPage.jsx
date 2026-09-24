@@ -226,6 +226,7 @@ export default function ListingsPage() {
 
         setListings(merged);
       } catch (e) {
+        setListings([]);
         setError(e.message || t('listings.errors.loadFailed'));
       } finally {
         setLoading(false);

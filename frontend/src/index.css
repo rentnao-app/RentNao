@@ -9,12 +9,15 @@
   src: local('Bear Sans'), local('BEAR SANS'), local('BearSans');
   font-style: normal;
   font-weight: 100 900;
+  /* Some local Bear Sans files omit U+0020; fall back so words do not jam together. */
+  unicode-range: U+0021-10FFFF;
 }
 
 @layer base {
   html {
     font-family: 'Bear Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    overflow-x: hidden;
+    overflow-x: clip;
+    overflow-y: auto;
     max-width: 100%;
   }
   html[data-lang='bn'] {
@@ -22,13 +25,12 @@
     word-break: break-word;
     overflow-wrap: anywhere;
   }
-  body {
-    overflow-x: hidden;
+  body,
+  #root {
+    overflow: visible;
     max-width: 100%;
   }
   #root {
-    overflow-x: hidden;
-    max-width: 100%;
     min-height: 100%;
   }
   body, button, input, select, textarea {

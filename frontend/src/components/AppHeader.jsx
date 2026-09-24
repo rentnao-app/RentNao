@@ -76,7 +76,7 @@ export default function AppHeader({ variant = 'app', centerNav = false }) {
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-emerald-100 bg-white/95 backdrop-blur shadow-[0_2px_10px_rgba(15,23,42,0.06)] overflow-x-hidden">
+      <header className="sticky top-0 z-30 overflow-visible border-b border-emerald-100 bg-white/95 shadow-[0_2px_10px_rgba(15,23,42,0.06)] backdrop-blur">
         <div
           className={
             centerNav

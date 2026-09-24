@@ -173,11 +173,12 @@ export default function ListingDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, [isTenant, listing?.propertyId, listing?.isUnlocked]);
+  }, [isTenant, listing?.propertyId, listing?.isUnlocked, id]);
 
   useEffect(() => {
     let cancelled = false;
     if (!listing) return undefined;
+
     const areaKey = listing.areaName;
     if (!areaKey) {
       setRelated([]);

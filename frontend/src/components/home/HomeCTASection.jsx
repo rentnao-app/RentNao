@@ -1,16 +1,13 @@
 import { Link } from 'react-router-dom';
-import { getCurrentUser, getUserRole, isLoggedIn } from '../../lib/api';
 import { aosFadeUp } from '../../lib/aos';
 import { homeSectionInner, homeSectionPy } from './homeLayout';
+import { getHomeHeroCtas, useHomeAuth } from './homeCtas';
 import { useTranslation } from '../../lib/i18n';
 
 export default function HomeCTASection() {
   const { t } = useTranslation();
-  const loggedIn = isLoggedIn();
-  const role = getUserRole(getCurrentUser());
-
-  const listPropertyTo =
-    loggedIn && role === 'OWNER' ? '/owner-dashboard/create-listing' : '/owner-registration';
+  const { loggedIn, role } = useHomeAuth();
+  const { primary, secondary } = getHomeHeroCtas(role, loggedIn, t);
 
   return (
     <section className={`bg-white ${homeSectionPy}`} aria-labelledby="home-cta-heading">
@@ -50,16 +47,16 @@ export default function HomeCTASection() {
 
             <div className="mt-7 flex w-full max-w-[22rem] flex-col items-stretch gap-3 sm:mt-8 sm:max-w-none sm:w-auto sm:flex-row sm:items-center sm:justify-center sm:gap-4">
               <Link
-                to={listPropertyTo}
+                to={primary.to}
                 className="inline-flex h-11 items-center justify-center rounded-full bg-white px-7 text-sm font-semibold text-[#1a4728] no-underline transition hover:bg-[#f5fbf7] sm:min-w-[11.5rem] sm:px-8"
               >
-                {t('home.listPropertyFree')}
+                {primary.label}
               </Link>
               <Link
-                to="/listings"
+                to={secondary.to}
                 className="inline-flex h-11 items-center justify-center rounded-full border border-white/80 bg-transparent px-7 text-sm font-semibold text-white no-underline transition hover:bg-white/10 sm:min-w-[11.5rem] sm:px-8"
               >
-                {t('home.browseProperties')}
+                {secondary.label}
               </Link>
             </div>
           </div>

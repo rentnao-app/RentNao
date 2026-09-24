@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { useTranslation } from '../lib/i18n';
@@ -8,7 +8,9 @@ const CATEGORY_IDS = ['all', 'tenants', 'owners', 'wallet', 'kyc', 'agreements']
 function ChevronIcon({ open }) {
   return (
     <svg
-      className={`h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180 text-emerald-700' : ''}`}
+      className={`mt-0.5 h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        open ? 'rotate-180 text-emerald-700' : ''
+      }`}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -43,9 +45,59 @@ function FaqAnswer({ item }) {
   );
 }
 
+function AccordionItem({ item, open, onToggle, categoryLabel }) {
+  const itemId = item.id || item.q;
+  const panelId = `faq-panel-${itemId}`;
+  const buttonId = `faq-button-${itemId}`;
+
+  return (
+    <div
+      className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-[border-color,box-shadow] duration-300 ${
+        open ? 'border-emerald-200 shadow-md' : 'border-slate-200/80 hover:border-emerald-200'
+      }`}
+    >
+      <button
+        id={buttonId}
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="flex w-full items-start gap-3 px-5 py-4 text-left sm:px-6 sm:py-5"
+      >
+        <div className="min-w-0 flex-1">
+          {categoryLabel ? (
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+              {categoryLabel}
+            </p>
+          ) : null}
+          <h2 className="mt-1 text-base font-bold text-[#1e4732] sm:text-lg">{item.q}</h2>
+        </div>
+        <ChevronIcon open={open} />
+      </button>
+      <div
+        id={panelId}
+        role="region"
+        aria-labelledby={buttonId}
+        className="grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div
+            className={`transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+              open ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <FaqAnswer item={item} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FAQPage() {
   const { t, messages } = useTranslation();
-  const faq = messages.faq;
+  const faq = messages.faq || {};
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [openId, setOpenId] = useState(null);
@@ -74,6 +126,12 @@ export default function FAQPage() {
       return haystack.includes(q);
     });
   }, [faq.items, activeCategory, query]);
+
+  useEffect(() => {
+    if (!openId) return;
+    const stillVisible = filteredItems.some((item) => (item.id || item.q) === openId);
+    if (!stillVisible) setOpenId(null);
+  }, [filteredItems, openId]);
 
   const toggleItem = (id) => {
     setOpenId((prev) => (prev === id ? null : id));
@@ -131,10 +189,7 @@ export default function FAQPage() {
                 <button
                   key={id}
                   type="button"
-                  onClick={() => {
-                    setActiveCategory(id);
-                    setOpenId(null);
-                  }}
+                  onClick={() => setActiveCategory(id)}
                   className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                     active
                       ? 'bg-emerald-800 text-white shadow-sm'
@@ -158,28 +213,15 @@ export default function FAQPage() {
             </div>
           ) : (
             filteredItems.map((item) => {
-              const open = openId === item.id;
+              const itemId = item.id || item.q;
               return (
-                <div
-                  key={item.id}
-                  className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:border-emerald-200"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleItem(item.id)}
-                    className="flex w-full items-start gap-3 px-5 py-4 text-left sm:px-6 sm:py-5"
-                    aria-expanded={open}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                        {categoryLabels[item.category]}
-                      </p>
-                      <h2 className="mt-1 text-base font-bold text-[#1e4732] sm:text-lg">{item.q}</h2>
-                    </div>
-                    <ChevronIcon open={open} />
-                  </button>
-                  {open ? <FaqAnswer item={item} /> : null}
-                </div>
+                <AccordionItem
+                  key={itemId}
+                  item={item}
+                  open={openId === itemId}
+                  onToggle={() => toggleItem(itemId)}
+                  categoryLabel={categoryLabels[item.category]}
+                />
               );
             })
           )}
@@ -188,12 +230,20 @@ export default function FAQPage() {
         <section className="mt-10 rounded-2xl bg-emerald-50 px-6 py-10 text-center ring-1 ring-emerald-100 sm:px-10">
           <h2 className="text-xl font-bold text-[#1e4732] sm:text-2xl">{faq.ctaTitle}</h2>
           <p className="mx-auto mt-2 max-w-lg text-sm text-slate-600 sm:text-base">{faq.ctaBody}</p>
-          <Link
-            to="/about"
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-emerald-800 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-900"
-          >
-            {faq.ctaButton}
-          </Link>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/about"
+              className="inline-flex items-center justify-center rounded-full bg-emerald-800 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-900"
+            >
+              {faq.ctaButton}
+            </Link>
+            <Link
+              to="/contact"
+              className="inline-flex items-center justify-center rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-50"
+            >
+              {t('footer.contact')}
+            </Link>
+          </div>
         </section>
       </main>
     </div>

@@ -59,6 +59,8 @@ const existingMerged = {
     heroSubtitle:
       'টু-লেট খরচ ছাড়াই যাচাইকৃত ভাড়াটিয়া খুঁজুন। বিনামূল্যে সম্পত্তি তালিকাভুক্ত করুন, ডিজিটালি ভাড়া পরিচালনা করুন এবং স্বয়ংক্রিয়ভাবে ভাড়া সংগ্রহ করুন।',
     listPropertyFree: 'বিনামূল্যে সম্পত্তি তালিকা',
+    heroCtaOwner: 'সম্পত্তি তালিকাভুক্ত করুন',
+    heroCtaTenant: 'সম্পত্তি খুঁজুন',
     browseProperties: 'সম্পত্তি ব্রাউজ করুন',
     statProperties: '৫০০+',
     statPropertiesLabel: 'সম্পত্তি',

@@ -139,9 +139,11 @@ export default function HomePage() {
         const body = await res.json().catch(() => ({}));
         if (res.ok) {
           setListings(body?.data?.items || []);
+        } else {
+          setListings([]);
         }
       } catch {
-        // no-op
+        setListings([]);
       } finally {
         setLoading(false);
       }
@@ -241,7 +243,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#fafcfb] text-gray-800">
+    <div className="min-h-screen overflow-x-clip bg-[#fafcfb] text-gray-800">
       <AppHeader centerNav />
 
       <HomeHeroSection />

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { getUserRole, isLoggedIn } from '../../lib/api';
 import { aosFadeLeft, aosFadeUp } from '../../lib/aos';
 import { homeHeroPy, homeSectionInner } from './homeLayout';
+import { getHomeHeroCtas, useHomeAuth } from './homeCtas';
 import { useTranslation } from '../../lib/i18n';
 import PropertySearchBar from '../PropertySearchBar';
 import HomeHeroVisuals from './HomeHeroVisuals';
@@ -34,11 +34,8 @@ function HeroSearchIcon({ className = 'h-4 w-4' }) {
 
 export default function HomeHeroSection() {
   const { t } = useTranslation();
-  const loggedIn = isLoggedIn();
-  const role = getUserRole();
-
-  const listPropertyTo =
-    loggedIn && role === 'OWNER' ? '/owner-dashboard/create-listing' : '/owner-registration';
+  const { loggedIn, role } = useHomeAuth();
+  const { primary, secondary } = getHomeHeroCtas(role, loggedIn, t);
 
   return (
     <section className={`relative overflow-hidden bg-gradient-to-b from-[#f6fbf8] via-[#fafcfb] to-[#fafcfb] ${homeHeroPy}`}>
@@ -75,18 +72,18 @@ export default function HomeHeroSection() {
 
             <div className="relative z-20 mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
-                to={listPropertyTo}
+                to={primary.to}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#2D6A4F] px-6 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#255a43] sm:min-w-[11.5rem]"
               >
-                {t('home.listPropertyFree')}
+                {primary.label}
                 <HeroCtaArrowIcon />
               </Link>
               <Link
-                to="/listings"
+                to={secondary.to}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#2D6A4F] bg-white px-6 text-sm font-semibold text-[#2D6A4F] no-underline transition-colors hover:bg-[#2D6A4F]/5 sm:min-w-[11.5rem]"
               >
-                <HeroSearchIcon />
-                {t('home.browseProperties')}
+                {secondary.to === '/listings' ? <HeroSearchIcon /> : null}
+                {secondary.label}
               </Link>
             </div>
           </div>

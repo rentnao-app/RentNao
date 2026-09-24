@@ -59,6 +59,8 @@ const existingMerged = {
     heroSubtitle:
       'Find verified tenants without spending on To-Let promotions. List properties for free, manage rentals digitally, and collect rent automatically.',
     listPropertyFree: 'List Property Free',
+    heroCtaOwner: 'List Property',
+    heroCtaTenant: 'Find Property',
     browseProperties: 'Browse Properties',
     statProperties: '500+',
     statPropertiesLabel: 'Properties',

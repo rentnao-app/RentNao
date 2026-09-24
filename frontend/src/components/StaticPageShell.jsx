@@ -1,3 +1,4 @@
+import { useId, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BrandLogoLink from './BrandLogoLink';
 import { isLoggedIn } from '../lib/api';
@@ -66,31 +67,83 @@ export function StaticPageHero({ eyebrow, title, subtitle, lastUpdated }) {
   );
 }
 
-export function LegalSectionList({ sections }) {
+function AccordionChevron({ open }) {
   return (
-    <div className="space-y-6">
-      {sections.map((section) => (
-        <section
-          key={section.title}
-          className="rounded-2xl border border-[#dfece4] bg-white p-5 shadow-sm sm:p-6"
-        >
-          <h2 className="text-lg font-semibold text-slate-900">{section.title}</h2>
-          {Array.isArray(section.paragraphs)
-            ? section.paragraphs.map((p) => (
-                <p key={p.slice(0, 48)} className="mt-3 text-sm leading-relaxed text-slate-600">
-                  {p}
-                </p>
-              ))
-            : null}
-          {Array.isArray(section.bullets) && section.bullets.length > 0 ? (
-            <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-slate-600">
-              {section.bullets.map((item) => (
-                <li key={item.slice(0, 48)}>{item}</li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
-      ))}
+    <svg
+      className={`mt-0.5 h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        open ? 'rotate-180 text-emerald-700' : ''
+      }`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      aria-hidden
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+}
+
+export function LegalSectionList({ sections = [] }) {
+  const [openId, setOpenId] = useState(null);
+  const baseId = useId();
+
+  return (
+    <div className="space-y-3">
+      {sections.map((section, index) => {
+        const itemId = `${baseId}-${index}`;
+        const panelId = `legal-panel-${itemId}`;
+        const buttonId = `legal-button-${itemId}`;
+        const open = openId === itemId;
+
+        return (
+          <div
+            key={section.title || itemId}
+            className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-[border-color,box-shadow] duration-300 ${
+              open ? 'border-emerald-200 shadow-md' : 'border-slate-200/80 hover:border-emerald-200'
+            }`}
+          >
+            <button
+              id={buttonId}
+              type="button"
+              onClick={() => setOpenId((prev) => (prev === itemId ? null : itemId))}
+              aria-expanded={open}
+              aria-controls={panelId}
+              className="flex w-full items-start gap-3 px-5 py-4 text-left sm:px-6 sm:py-5"
+            >
+              <h2 className="min-w-0 flex-1 text-base font-bold text-[#1e4732] sm:text-lg">
+                {section.title}
+              </h2>
+              <AccordionChevron open={open} />
+            </button>
+            <div
+              id={panelId}
+              role="region"
+              aria-labelledby={buttonId}
+              className="grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+              style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <div
+                  className={`space-y-3 border-t border-slate-100 px-5 pb-5 pt-3 text-sm leading-relaxed text-slate-600 transition-opacity duration-300 ease-out motion-reduce:transition-none sm:px-6 ${
+                    open ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  {Array.isArray(section.paragraphs)
+                    ? section.paragraphs.map((p) => <p key={p.slice(0, 48)}>{p}</p>)
+                    : null}
+                  {Array.isArray(section.bullets) && section.bullets.length > 0 ? (
+                    <ul className="list-disc space-y-1.5 pl-5">
+                      {section.bullets.map((item) => (
+                        <li key={item.slice(0, 48)}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
