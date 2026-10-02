@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi';
-import { AreaName, BuildingFacing, ListingStatus, TenantType, PropertyType, PropertyCategory } from '@/types/enums';
+import { AreaName, BuildingFacing, ListingStatus, TenantType, PropertyType, PropertyCategory, BillboardType } from '@/types/enums';
 
 export const propertyIdParamSchema = z.object({
   propertyId: z.string().openapi({
@@ -56,6 +56,8 @@ export const createPropertySchema = z.object({
   intendedTenantType: TenantType,
   // propertyType accepted when provided (defaults to APARTMENT in DB)
   propertyType: PropertyType.optional(),
+  billboardType: BillboardType.optional(),
+  billboardSize: z.string().max(100).optional().openapi({ example: '10x20 ft' }),
   floorNo: z.number().int().positive().openapi({ example: 4 }),
   flatNo: z.string().max(50).optional().openapi({ example: '4A' }),
 });
@@ -99,6 +101,8 @@ export const propertyResponseSchema = z.object({
   propertyAddressBn: z.string().nullable().optional(),
   floorNoBn: z.string().nullable().optional(),
   flatNoBn: z.string().nullable().optional(),
+  billboardType: BillboardType.nullable().optional(),
+  billboardSize: z.string().nullable().optional(),
   createdAt: z.string(),
 });
 
@@ -324,6 +328,8 @@ export const publicListingSummarySchema = z.object({
   bathroomCount: z.number(),
   balconyCount: z.number(),
   intendedTenantType: TenantType,
+  billboardType: BillboardType.nullable().optional(),
+  billboardSize: z.string().nullable().optional(),
   primaryImagePath: z.string().nullable(),
   primaryImageUrl: z.string().url().nullable().optional(),
   viewCount: z.number().int().nonnegative(),

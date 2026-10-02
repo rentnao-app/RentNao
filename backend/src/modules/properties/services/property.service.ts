@@ -50,6 +50,8 @@ function mapProperty(row: any) {
     propertyId: row.property_id,
     ownerId: row.owner_id,
     propertyType: row.property_type,
+    billboardType: row.billboard_type || null,
+    billboardSize: row.billboard_size || null,
     propertySizeSqft: toNumberOrNull(row.property_size_sqft),
     roomCount: toNumberOrNull(row.room_count),
     bathroomCount: toNumberOrNull(row.bathroom_count),
@@ -238,11 +240,15 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       nearby_supershop,
       intended_tenant_type,
       floor_no,
-      flat_no
+      flat_no,
+      billboard_type,
+      billboard_size
     ) VALUES (
       $1, $2, $3::"PropertyType", $4, $5, $6, $7, $8, $9, $10,
       $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-      $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33
+      $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33,
+      $34::"BillboardType",
+      $35
     )
     RETURNING *`,
     [
@@ -279,6 +285,8 @@ export async function createProperty(userId: string, input: CreatePropertyInput)
       input.intendedTenantType,
       input.floorNo || 1,
       input.flatNo || null,
+      input.billboardType || null,
+      input.billboardSize || null,
     ]
   );
 
@@ -350,6 +358,8 @@ export async function updateMyPropertyById(userId: string, propertyId: string, i
   if (input.nearbySupershop !== undefined) addUpdate('nearby_supershop', input.nearbySupershop);
   if (input.intendedTenantType !== undefined) addUpdate('intended_tenant_type', input.intendedTenantType);
   if (input.propertyType !== undefined) addUpdate('property_type', input.propertyType);
+  if (input.billboardType !== undefined) addUpdate('billboard_type', input.billboardType);
+  if (input.billboardSize !== undefined) addUpdate('billboard_size', input.billboardSize);
   if (input.floorNo !== undefined) addUpdate('floor_no', input.floorNo);
   if (input.flatNo !== undefined) addUpdate('flat_no', input.flatNo);
 
@@ -625,6 +635,8 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
       l.view_count,
       l.created_at,
       p.title,
+      p.billboard_type,
+      p.billboard_size,
       p.description,
       p.area_name,
       p.property_size_sqft,
@@ -648,6 +660,8 @@ export async function listPublicListings(query: PublicListingsQueryInput) {
       listingId: row.listing_id,
       propertyId: row.property_id,
       title: row.title,
+    billboardType: row.billboard_type || null,
+    billboardSize: row.billboard_size || null,
       description: row.description,
       rent: Number(row.rent),
       securityDepositMonths: Number(row.security_deposit_months ?? 0),
@@ -786,6 +800,8 @@ export async function listListingsForAdmin(query: AdminListingsQueryInput) {
       l.view_count,
       l.created_at,
       p.title,
+      p.billboard_type,
+      p.billboard_size,
       p.description,
       p.area_name,
       p.property_size_sqft,
@@ -808,6 +824,8 @@ export async function listListingsForAdmin(query: AdminListingsQueryInput) {
       listingId: row.listing_id,
       propertyId: row.property_id,
       title: row.title,
+    billboardType: row.billboard_type || null,
+    billboardSize: row.billboard_size || null,
       description: row.description,
       rent: Number(row.rent),
       securityDepositMonths: Number(row.security_deposit_months ?? 0),
@@ -852,6 +870,8 @@ export async function getPublicListingDetail(listingId: string) {
       l.view_count,
       l.created_at,
       p.title,
+      p.billboard_type,
+      p.billboard_size,
       p.description,
       p.area_name,
       p.property_size_sqft,
@@ -928,6 +948,8 @@ export async function getPublicListingDetail(listingId: string) {
     listingId: row.listing_id,
     propertyId: row.property_id,
     title: row.title,
+    billboardType: row.billboard_type || null,
+    billboardSize: row.billboard_size || null,
     description: row.description,
     rent: Number(row.rent),
     securityDepositMonths: Number(row.security_deposit_months ?? 0),
@@ -972,6 +994,8 @@ export async function getListingDetailForAdmin(listingId: string) {
       l.view_count,
       l.created_at,
       p.title,
+      p.billboard_type,
+      p.billboard_size,
       p.description,
       p.area_name,
       p.property_type,
@@ -1049,6 +1073,8 @@ export async function getListingDetailForAdmin(listingId: string) {
     listingId: row.listing_id,
     propertyId: row.property_id,
     title: row.title,
+    billboardType: row.billboard_type || null,
+    billboardSize: row.billboard_size || null,
     description: row.description,
     rent: Number(row.rent),
     securityDepositMonths: Number(row.security_deposit_months ?? 0),
@@ -1257,6 +1283,8 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
         l.listing_status,
         l.created_at,
         p.title,
+      p.billboard_type,
+      p.billboard_size,
         p.description,
         p.area_name,
         p.property_size_sqft,
@@ -1334,6 +1362,8 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       listingId: row.listing_id,
       propertyId: row.property_id,
       title: row.title,
+    billboardType: row.billboard_type || null,
+    billboardSize: row.billboard_size || null,
       description: row.description,
       rent: Number(row.rent),
       securityDepositMonths: Number(row.security_deposit_months ?? 0),
@@ -1412,6 +1442,8 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
       l.view_count,
       l.created_at,
       p.title,
+      p.billboard_type,
+      p.billboard_size,
       p.description,
       p.area_name,
       p.property_size_sqft,
@@ -1488,6 +1520,8 @@ export async function getUnlockedListingDetailForTenant(userId: string, role: st
     listingId: row.listing_id,
     propertyId: row.property_id,
     title: row.title,
+    billboardType: row.billboard_type || null,
+    billboardSize: row.billboard_size || null,
     description: row.description,
     rent: Number(row.rent),
     securityDepositMonths: Number(row.security_deposit_months ?? 0),

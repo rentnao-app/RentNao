@@ -101,8 +101,11 @@ export type IncomeRangeType = z.infer<typeof IncomeRange>;
 export const TenantType = z.enum(['FAMILY', 'BACHELOR', 'BOTH']);
 export type TenantTypeType = z.infer<typeof TenantType>;
 
-export const PropertyCategory = z.enum(['RESIDENTIAL', 'COMMERCIAL']);
+export const PropertyCategory = z.enum(['RESIDENTIAL', 'COMMERCIAL', 'BILLBOARD']);
 export type PropertyCategoryType = z.infer<typeof PropertyCategory>;
+
+export const BillboardType = z.enum(['DIGITAL', 'BANNER']);
+export type BillboardTypeType = z.infer<typeof BillboardType>;
 
 export const PropertyType = z.enum(['APARTMENT', 'COMMERCIAL_SPACE']);
 export type PropertyTypeType = z.infer<typeof PropertyType>;
