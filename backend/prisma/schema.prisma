@@ -610,6 +610,7 @@ model Listing {
   listing_id         String        @id @default(cuid())
   property_id        String
   rent               Decimal
+  security_deposit_months Int      @default(0)
   listing_start_date DateTime      @db.Timestamptz(6)
   listing_end_date   DateTime?     @db.Timestamptz(6)
   listing_status     ListingStatus @default(DRAFT)

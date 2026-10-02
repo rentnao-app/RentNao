@@ -170,6 +170,7 @@ export const propertyImageListResponseSchema = z.object({
 export const createListingSchema = z
   .object({
     rent: z.number().positive().openapi({ example: 35000 }),
+    securityDepositMonths: z.number().int().nonnegative().optional().default(0).openapi({ example: 2 }),
     listingStartDate: z.string().datetime().openapi({
       example: '2026-04-15T00:00:00.000Z',
       description: 'Listing start date-time (ISO 8601)',
@@ -196,6 +197,7 @@ export const listingResponseSchema = z.object({
   listingId: z.string(),
   propertyId: z.string(),
   rent: z.number(),
+  securityDepositMonths: z.number().int().nonnegative(),
   listingStartDate: z.string(),
   listingEndDate: z.string().nullable(),
   listingStatus: ListingStatus,
@@ -310,6 +312,7 @@ export const publicListingSummarySchema = z.object({
   title: z.string(),
   description: z.string(),
   rent: z.number(),
+  securityDepositMonths: z.number().int().nonnegative(),
   listingStartDate: z.string(),
   listingEndDate: z.string().nullable(),
   listingStatus: ListingStatus,
