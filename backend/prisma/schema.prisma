@@ -82,9 +82,15 @@ enum TenantType {
   BOTH
 }
 
+enum BillboardType {
+  DIGITAL
+  BANNER
+}
+
 enum PropertyCategory {
   RESIDENTIAL
   COMMERCIAL
+  BILLBOARD
 }
 
 enum PropertyType {
@@ -432,8 +438,13 @@ model Property {
   conversations Conversation[]
   deals         Deal[]
 
+  // Billboard specific
+  billboard_type BillboardType?
+  billboard_size String?
+
   @@index([owner_id])
 }
+
 
 model WalletAccount {
   id                String       @id @default(cuid())
@@ -610,6 +621,7 @@ model Listing {
   listing_id         String        @id @default(cuid())
   property_id        String
   rent               Decimal
+  security_deposit_months Int      @default(0)
   listing_start_date DateTime      @db.Timestamptz(6)
   listing_end_date   DateTime?     @db.Timestamptz(6)
   listing_status     ListingStatus @default(DRAFT)
